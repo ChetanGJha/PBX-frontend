@@ -336,6 +336,11 @@ export const apiService = {
     if (!res.ok) throw new Error('Failed to fetch IVRs');
     return res.json();
   },
+  async getIvrDetails(token: string, ivrId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch IVR details');
+    return res.json();
+  },
   async createIvr(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/ivr`, {
       method: 'POST',
@@ -344,6 +349,43 @@ export const apiService = {
     });
     if (!res.ok) throw new Error('Failed to create IVR');
     return res.json();
+  },
+  async updateIvr(token: string, ivrId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update IVR');
+    return res.json();
+  },
+  async deleteIvr(token: string, ivrId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete IVR');
+  },
+  async getIvrNodes(token: string, ivrId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}/nodes`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch IVR key nodes');
+    return res.json();
+  },
+  async upsertIvrNode(token: string, ivrId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}/nodes`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to save DTMF key action');
+    return res.json();
+  },
+  async deleteIvrNode(token: string, ivrId: string, nodeId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr/${ivrId}/nodes/${nodeId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete DTMF key action');
   },
   async getTrunks(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, { headers: getHeaders(token) });
@@ -407,4 +449,70 @@ export const apiService = {
     });
     return res.text();
   },
+
+  // ─── Call Forwarding ────────────────────────────────────────────────────────
+  async getCallForwardingAll(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/call-forwarding/all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch call forwarding rules');
+    return res.json();
+  },
+
+  async getExtensionForwarding(token: string, extensionId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/forwarding`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch extension forwarding');
+    return res.json();
+  },
+
+  async updateExtensionForwarding(token: string, extensionId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/forwarding`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update extension forwarding');
+    return res.json();
+  },
+
+  // ─── Voicemail Boxes ────────────────────────────────────────────────────────
+  async getVoicemailBoxesAll(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/voicemail-boxes/all`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch voicemail boxes');
+    return res.json();
+  },
+
+  async getExtensionVoicemail(token: string, extensionId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/voicemail`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch extension voicemail');
+    return res.json();
+  },
+
+  async updateExtensionVoicemail(token: string, extensionId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/voicemail`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update extension voicemail');
+    return res.json();
+  },
+
+  // ─── Sub-Admin Permissions ──────────────────────────────────────────────────
+  async updateUserPermissions(token: string, userId: string, allowed_modules: string[]) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ allowed_modules }),
+    });
+    if (!res.ok) throw new Error('Failed to update user permissions');
+    return res.json();
+  },
+
 };

@@ -35,6 +35,7 @@ export interface User {
   tenant_id?: string;
   tenant_domain?: string;
   sip_domain?: string;
+  allowed_modules?: string[];
 }
 
 export interface AuthState {
