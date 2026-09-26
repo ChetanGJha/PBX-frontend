@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
@@ -7,6 +8,7 @@ interface QueuesViewProps {
 }
 
 export const QueuesView: React.FC<QueuesViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [queues, setQueues] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,9 +79,10 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token }) => {
         await apiService.createQueue(token, payload);
       }
       setShowModal(false);
+      showSuccessModal('Call Queue Saved', `Queue "${formData.name}" (ext/${formData.queue_number}) has been saved.`);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to save call queue');
+      showErrorModal('Failed to Save Queue', err.message || 'Failed to save call queue');
     }
   };
 
@@ -87,9 +90,10 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token }) => {
     if (!window.confirm('Are you sure you want to delete this queue?')) return;
     try {
       await apiService.deleteQueue(token, queueId);
+      showSuccessModal('Queue Deleted', 'Call queue has been removed.');
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete queue');
+      showErrorModal('Failed to Delete Queue', err.message || 'Failed to delete queue');
     }
   };
 

@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Mic, Upload, Volume2 } from 'lucide-react';
@@ -7,6 +8,7 @@ interface AudioViewProps {
 }
 
 export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      alert('Please select an audio file to upload');
+      showErrorModal('Upload Warning', 'Please select an audio file to upload');
       return;
     }
     const formData = new FormData();
@@ -49,10 +51,11 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
     try {
       await apiService.uploadAudioFile(token, formData);
       setShowModal(false);
+      showSuccessModal('Audio File Uploaded', `Audio prompt "${selectedFile?.name}" has been uploaded.`);
       setSelectedFile(null);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to upload audio file');
+      showErrorModal('Upload Failed', err.message || 'Failed to upload audio file');
     }
   };
 

@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { PhoneForwarded, Clock, RefreshCw, Edit2, CheckCircle, AlertCircle, X, Smartphone, ArrowRight } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -23,10 +24,11 @@ interface ForwardingRuleItem {
 }
 
 export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [rules, setRules] = useState<ForwardingRuleItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  
 
   // Edit Modal State
   const [editingRule, setEditingRule] = useState<ForwardingRuleItem | null>(null);
@@ -84,12 +86,13 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
         forward_no_answer_timeout: Number(noAnswerTimeout) || 20,
       });
 
-      setSuccessMsg(`Call forwarding for ext/${editingRule.extension_number} updated.`);
-      setTimeout(() => setSuccessMsg(null), 4000);
+      showSuccessModal('Forwarding Settings Updated', `Call forwarding rules for ext/${editingRule.extension_number} have been updated.`);
       setEditingRule(null);
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Update Failed', msg);
     } finally {
       setSaving(false);
     }

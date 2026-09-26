@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Voicemail, Mail, Key, RefreshCw, Edit2, CheckCircle, AlertCircle, X, Music } from 'lucide-react';
+import { Voicemail, Mail, Key, RefreshCw, Edit2, AlertCircle, X, Music } from 'lucide-react';
 import { apiService } from '../services/api';
-import type { User } from '../types';
+import { useToast } from './ToastProvider';
 
 interface VoicemailViewProps {
   token: string | null;
-  user: User | null;
 }
 
 interface VoicemailBoxItem {
@@ -23,11 +22,11 @@ interface VoicemailBoxItem {
 }
 
 export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [boxes, setBoxes] = useState<VoicemailBoxItem[]>([]);
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Edit Modal State
   const [editingBox, setEditingBox] = useState<VoicemailBoxItem | null>(null);
@@ -95,12 +94,16 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
         greeting_path: greetingPath || undefined,
       });
 
-      setSuccessMsg(`Voicemail box for extension ${editingBox.extension_number} updated.`);
-      setTimeout(() => setSuccessMsg(null), 4000);
+      showSuccessModal(
+        'Voicemail Configured Successfully',
+        `Voicemail box settings for ext/${editingBox.extension_number} have been updated.`
+      );
       setEditingBox(null);
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Voicemail Configuration Failed', msg);
     } finally {
       setSaving(false);
     }
@@ -130,13 +133,6 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
         <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
         </div>
       )}
 

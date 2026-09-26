@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { PhoneForwarded, Plus } from 'lucide-react';
@@ -7,6 +8,7 @@ interface HuntGroupsViewProps {
 }
 
 export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [huntGroups, setHuntGroups] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,10 +49,11 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token }) => {
       if (!payload.tenant_id) delete payload.tenant_id;
       await apiService.createHuntGroup(token, payload);
       setShowModal(false);
+      showSuccessModal('Hunt Group Created', `Hunt group "${formData.name}" (ext/${formData.extension_number}) configured.`);
       setFormData({ name: '', extension_number: '', strategy: 'sequential', members: '1001, 1002', timeout: 20, tenant_id: '' });
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to create hunt group');
+      showErrorModal('Failed to Create Hunt Group', err.message || 'Failed to create hunt group');
     }
   };
 

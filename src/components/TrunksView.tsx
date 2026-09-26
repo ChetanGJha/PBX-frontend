@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Network, Plus, Search, Server, ShieldCheck, Activity, CheckCircle2 } from 'lucide-react';
@@ -7,6 +8,7 @@ interface TrunksViewProps {
 }
 
 export const TrunksView: React.FC<TrunksViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [trunks, setTrunks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,6 +48,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token }) => {
     try {
       await apiService.createTrunk(token, formData);
       setShowModal(false);
+      showSuccessModal('SIP Trunk Registered', `SIP trunk "${formData.name}" (${formData.host}:${formData.port}) created successfully.`);
       setFormData({
         name: '',
         host: '',
@@ -60,7 +63,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token }) => {
       });
       loadTrunks();
     } catch (err: any) {
-      alert(err.message || 'Failed to create SIP trunk');
+      showErrorModal('Failed to Create Trunk', err.message || 'Failed to create SIP trunk');
     }
   };
 

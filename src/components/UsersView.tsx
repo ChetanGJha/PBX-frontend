@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, ShieldAlert, Settings } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -23,6 +24,7 @@ const AVAILABLE_MODULES = [
 ];
 
 export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenantScoped = false }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [usersList, setUsersList] = useState<UserType[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,6 +106,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         allowed_modules: role === 'SUB_ADMIN' ? selectedModules : [],
       });
       setShowModal(false);
+      showSuccessModal(
+        'User Account Provisioned',
+        `User account "${username}" (${email}) has been successfully created with role ${role}.`
+      );
       setUsername('');
       setEmail('');
       setPassword('');
@@ -112,7 +118,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
       setSelectedModules(['extensions', 'reports']);
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Failed to Create User', msg);
     } finally {
       setLoading(false);
     }
@@ -124,10 +132,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     setSavingPerms(true);
     try {
       await apiService.updateUserPermissions(token, permModalUser.id, editModules);
+      showSuccessModal(
+        'Sub-Admin Permissions Saved',
+        `Module permissions for ${permModalUser.username} have been updated successfully.`
+      );
       setPermModalUser(null);
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Failed to Update Permissions', msg);
     } finally {
       setSavingPerms(false);
     }
@@ -137,9 +151,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     if (!token || !confirm('Are you sure you want to deactivate/delete this user?')) return;
     try {
       await apiService.deleteUser(token, id);
+      showSuccessModal('User Deactivated', 'The user account has been deactivated successfully.');
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Failed to Deactivate User', msg);
     }
   };
 

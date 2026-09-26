@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface ExtensionsViewProps {
 }
 
 export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,7 +55,8 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
         setTenantId(tnts[0].id);
       }
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -68,18 +71,25 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
     if (!token) return;
     setLoading(true);
     try {
+      const cleanEmail = email && email.trim() ? email.trim() : undefined;
       await apiService.createExtension(token, {
-        tenant_id: tenantId || undefined,
+        tenant_id: tenantId || (user?.tenant_id ?? undefined),
         extension_number: extNumber,
         display_name: displayName,
-        email,
+        email: cleanEmail,
         sip_password: sipPassword,
         voicemail_pin: voicemailPin,
       });
       setShowModal(false);
+      showSuccessModal(
+        'Extension Provisioned Successfully',
+        `Extension ext/${extNumber} (${displayName}) has been created and registered for SIP and WebRTC softphones.`
+      );
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Failed to Provision Extension', msg);
     } finally {
       setLoading(false);
     }
@@ -98,9 +108,12 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       setSelectedExtId(null);
       setNewSipPwd('');
       setNewVmPin('');
+      showSuccessModal('Credentials Reset', 'SIP authentication password and voicemail PIN have been updated successfully.');
       fetchData();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Password Reset Failed', msg);
     } finally {
       setLoading(false);
     }

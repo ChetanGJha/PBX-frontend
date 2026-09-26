@@ -8,7 +8,7 @@ interface IvrViewProps {
 }
 
 export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
-  const { toastError } = useToast();
+  const { showSuccessModal, showErrorModal, toastError } = useToast();
   const [ivrs, setIvrs] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [extensions, setExtensions] = useState<any[]>([]);

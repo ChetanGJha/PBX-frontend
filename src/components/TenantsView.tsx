@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { Building2, Plus, RefreshCw, Trash2, Search, X, AlertCircle } from 'lucide-react';
 
@@ -9,6 +10,7 @@ interface TenantsViewProps {
 }
 
 export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +51,18 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
     try {
       await apiService.createTenant(token, { name, domain, sip_domain: sipDomain });
       setShowModal(false);
+      showSuccessModal(
+        'Tenant Domain Created',
+        `Tenant "${name}" (${domain}) has been registered with SIP domain ${sipDomain || domain}.`
+      );
       setName('');
       setDomain('');
       setSipDomain('');
       fetchTenants();
     } catch (err: any) {
-      setModalError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setModalError(msg);
+      showErrorModal('Failed to Create Tenant', msg);
     } finally {
       setLoading(false);
     }
@@ -64,9 +72,12 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
     if (!token || !confirm('Are you sure you want to delete this tenant?')) return;
     try {
       await apiService.deleteTenant(token, id);
+      showSuccessModal('Tenant Deleted', 'Tenant domain has been deleted successfully.');
       fetchTenants();
     } catch (err: any) {
-      setError(err.message);
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Failed to Delete Tenant', msg);
     }
   };
 

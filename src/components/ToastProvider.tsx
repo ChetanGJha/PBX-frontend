@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -12,11 +12,22 @@ interface Toast {
   duration?: number;
 }
 
+export interface AckModalState {
+  open: boolean;
+  type: ToastType;
+  title: string;
+  message: string;
+  onAcknowledge?: () => void;
+}
+
 interface ToastContextValue {
   toastSuccess: (title: string, message?: string) => void;
   toastError: (title: string, message?: string) => void;
   toastWarning: (title: string, message?: string) => void;
   toastInfo: (title: string, message?: string) => void;
+  showSuccessModal: (title: string, message: string, onAcknowledge?: () => void) => void;
+  showErrorModal: (title: string, message: string, onAcknowledge?: () => void) => void;
+  showWarningModal: (title: string, message: string, onAcknowledge?: () => void) => void;
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -25,13 +36,16 @@ const ToastContext = createContext<ToastContextValue>({
   toastError: () => {},
   toastWarning: () => {},
   toastInfo: () => {},
+  showSuccessModal: () => {},
+  showErrorModal: () => {},
+  showWarningModal: () => {},
 });
 
 export const useToast = () => useContext(ToastContext);
 
 // ─── Toast Item Component ─────────────────────────────────────────────────────
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle size={18} />,
+  success: <CheckCircle2 size={18} />,
   error: <XCircle size={18} />,
   warning: <AlertTriangle size={18} />,
   info: <Info size={18} />,
@@ -80,9 +94,15 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void }> = (
   );
 };
 
-// ─── Toast Provider ───────────────────────────────────────────────────────────
+// ─── Toast & Acknowledgement Provider ─────────────────────────────────────────
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [ackModal, setAckModal] = useState<AckModalState>({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+  });
 
   const dismiss = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
@@ -96,17 +116,38 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [dismiss]);
 
+  const showAckModal = useCallback((type: ToastType, title: string, message: string, onAcknowledge?: () => void) => {
+    setAckModal({
+      open: true,
+      type,
+      title,
+      message,
+      onAcknowledge,
+    });
+  }, []);
+
+  const closeAckModal = () => {
+    if (ackModal.onAcknowledge) {
+      try { ackModal.onAcknowledge(); } catch (e) { console.error(e); }
+    }
+    setAckModal(prev => ({ ...prev, open: false }));
+  };
+
   const value: ToastContextValue = {
     toastSuccess: (t, m) => addToast('success', t, m),
     toastError:   (t, m) => addToast('error', t, m, 6000),
     toastWarning: (t, m) => addToast('warning', t, m),
     toastInfo:    (t, m) => addToast('info', t, m),
+    showSuccessModal: (title, message, onAck) => showAckModal('success', title, message, onAck),
+    showErrorModal:   (title, message, onAck) => showAckModal('error', title, message, onAck),
+    showWarningModal: (title, message, onAck) => showAckModal('warning', title, message, onAck),
   };
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast Container */}
+
+      {/* Toast Notification Container */}
       <div style={{
         position: 'fixed',
         top: '80px',
@@ -123,10 +164,151 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           </div>
         ))}
       </div>
+
+      {/* ── Explicit Acknowledgement Modal ───────────────────────────────── */}
+      {ackModal.open && (
+        <div className="modal-backdrop" style={{ zIndex: 10000 }}>
+          <div
+            className="terrix-modal"
+            style={{
+              maxWidth: '460px',
+              animation: 'modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              borderRadius: '16px',
+            }}
+          >
+            <div className="modal-head" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background:
+                    ackModal.type === 'success'
+                      ? '#DCFCE7'
+                      : ackModal.type === 'error'
+                      ? '#FEE2E2'
+                      : '#FEF3C7',
+                  color:
+                    ackModal.type === 'success'
+                      ? '#15803D'
+                      : ackModal.type === 'error'
+                      ? '#B91C1C'
+                      : '#B45309',
+                }}
+              >
+                {ackModal.type === 'success' && <CheckCircle2 size={26} />}
+                {ackModal.type === 'error' && <XCircle size={26} />}
+                {ackModal.type === 'warning' && <AlertTriangle size={26} />}
+                {ackModal.type === 'info' && <Info size={26} />}
+              </div>
+              <div style={{ flex: 1, marginLeft: '14px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                  {ackModal.title}
+                </h3>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color:
+                      ackModal.type === 'success'
+                        ? '#16A34A'
+                        : ackModal.type === 'error'
+                        ? '#DC2626'
+                        : '#D97706',
+                  }}
+                >
+                  {ackModal.type === 'success' ? 'Operation Completed' : ackModal.type === 'error' ? 'Action Failed' : 'Notice'}
+                </span>
+              </div>
+              <button
+                className="modal-close"
+                onClick={closeAckModal}
+                style={{
+                  background: '#F1F5F9',
+                  border: 'none',
+                  borderRadius: '8px',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748B',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '20px 24px 24px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#334155',
+                  lineHeight: '1.6',
+                  background: ackModal.type === 'error' ? '#FFF5F5' : '#F8FAFC',
+                  border: `1px solid ${ackModal.type === 'error' ? '#FED7D7' : '#E2E8F0'}`,
+                  borderRadius: '10px',
+                  padding: '14px 16px',
+                  wordBreak: 'break-word',
+                  fontFamily: ackModal.type === 'error' ? 'monospace' : 'inherit',
+                }}
+              >
+                {ackModal.message}
+              </div>
+            </div>
+
+            <div
+              className="modal-foot"
+              style={{
+                borderTop: '1px solid #F1F5F9',
+                padding: '16px 24px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                type="button"
+                onClick={closeAckModal}
+                style={{
+                  background:
+                    ackModal.type === 'success'
+                      ? '#16A34A'
+                      : ackModal.type === 'error'
+                      ? '#DC2626'
+                      : '#FF5430',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  padding: '9px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                Acknowledge & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slideInRight {
           from { transform: translateX(110%); opacity: 0; }
           to   { transform: translateX(0);   opacity: 1; }
+        }
+        @keyframes modalScaleIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to   { transform: scale(1);    opacity: 1; }
         }
       `}</style>
     </ToastContext.Provider>
@@ -150,7 +332,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!open) return null;
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" style={{ zIndex: 10000 }}>
       <div className="terrix-modal" style={{ maxWidth: '440px' }}>
         <div className="modal-head">
           <div className={`modal-icon ${danger ? 'red' : 'orange'}`}>

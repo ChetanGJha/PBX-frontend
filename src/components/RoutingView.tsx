@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Route as RouteIcon, Plus, Search, Trash2 } from 'lucide-react';
@@ -7,6 +8,7 @@ interface RoutingViewProps {
 }
 
 export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [routes, setRoutes] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,7 +56,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
       setFormData({ name: '', did_number: '', route_type: 'inbound_did', destination_type: 'queue', destination: '7001', priority: 1, gateway_id: '', tenant_id: '' });
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to create route');
+      showErrorModal('Failed to Create Route', err.message || 'Failed to create route');
     }
   };
 
@@ -62,9 +64,10 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
     if (!window.confirm('Are you sure you want to delete this routing rule?')) return;
     try {
       await apiService.deleteRoute(token, routeId);
+      showSuccessModal('Route Deleted', 'Routing rule removed.');
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete route');
+      showErrorModal('Failed to Delete Route', err.message || 'Failed to delete route');
     }
   };
 

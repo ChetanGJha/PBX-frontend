@@ -1,3 +1,4 @@
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Hash, Plus, Link2, Unlink, Search, CheckCircle2 } from 'lucide-react';
@@ -7,6 +8,7 @@ interface DidsViewProps {
 }
 
 export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [dids, setDids] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [trunks, setTrunks] = useState<any[]>([]);
@@ -49,7 +51,7 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
       setAddForm({ did_number: '', trunk_id: '', destination_type: 'extension', destination: '' });
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to add DID');
+      showErrorModal('Failed to Add DID', err.message || 'Failed to add DID');
     }
   };
 
@@ -62,16 +64,17 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
       setSelectedTenantId('');
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to assign DID');
+      showErrorModal('Failed to Assign DID', err.message || 'Failed to assign DID');
     }
   };
 
   const handleUnassignDid = async (didId: string) => {
     try {
       await apiService.unassignDid(token, didId);
+      showSuccessModal('DID Unassigned', 'DID returned to unallocated pool.');
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to unassign DID');
+      showErrorModal('Failed to Unassign DID', err.message || 'Failed to unassign DID');
     }
   };
 

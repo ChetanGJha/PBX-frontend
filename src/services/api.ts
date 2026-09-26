@@ -1,3 +1,21 @@
+
+export function parseErrorDetail(errData: any, fallback: string): string {
+  if (!errData) return fallback;
+  const detail = errData.detail || errData.message;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d: any) => {
+      const field = d.loc ? d.loc.filter((x: string) => x !== 'body').join('.') : '';
+      return field ? `${field}: ${d.msg}` : (d.msg || JSON.stringify(d));
+    }).join('; ');
+  }
+  if (typeof detail === 'object') {
+    return JSON.stringify(detail);
+  }
+  return String(detail);
+}
+
 import type { Tenant, Extension, User, SystemStatus } from '../types';
 
 let API_BASE_URL = 'http://localhost:8000';
@@ -127,8 +145,8 @@ export const apiService = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to create extension');
+      const err = await res.json().catch(() => ({ detail: 'Failed to create extension' }));
+      throw new Error(parseErrorDetail(err, 'Failed to create extension'));
     }
     return res.json();
   },
@@ -139,7 +157,10 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to reset password');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to reset password' }));
+      throw new Error(parseErrorDetail(err, 'Failed to reset password'));
+    }
     return res.json();
   },
 
