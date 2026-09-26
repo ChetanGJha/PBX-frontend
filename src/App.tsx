@@ -76,6 +76,8 @@ export const App: React.FC = () => {
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [extensions, setExtensions] = useState<Extension[]>([]);
+  const [dids, setDids] = useState<any[]>([]);
+  const [gateways, setGateways] = useState<any[]>([]);
 
   // Health probe polling
   useEffect(() => {
@@ -88,10 +90,14 @@ export const App: React.FC = () => {
   // Fetch counts when token changes
   useEffect(() => {
     if (token) {
-      apiService.getTenants(token).then(setTenants).catch(() => {});
+      if (user?.role === 'SUPER_ADMIN') {
+        apiService.getTenants(token).then(setTenants).catch(() => {});
+      }
       apiService.getExtensions(token).then(setExtensions).catch(() => {});
+      apiService.getDids(token).then(setDids).catch(() => {});
+      apiService.getGateways(token).then(setGateways).catch(() => {});
     }
-  }, [token]);
+  }, [token, user?.role]);
 
   const handleLoginSuccess = (newToken: string, newUser: User) => {
     setToken(newToken);
@@ -155,6 +161,8 @@ export const App: React.FC = () => {
                 user={user}
                 tenantCount={tenants.length}
                 extensionCount={extensions.length}
+                didCount={dids.length}
+                gatewayCount={gateways.length}
                 setActiveTab={handleSetTab}
               />
             )}

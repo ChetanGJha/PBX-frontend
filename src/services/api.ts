@@ -511,7 +511,10 @@ export const apiService = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ allowed_modules }),
     });
-    if (!res.ok) throw new Error('Failed to update user permissions');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: 'Failed to update user permissions' }));
+      throw new Error(errData.detail || 'Failed to update user permissions');
+    }
     return res.json();
   },
 
