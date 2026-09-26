@@ -2,7 +2,7 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { Mic, Upload, Volume2 } from 'lucide-react';
+import { Mic, Upload, Play, Pause } from 'lucide-react';
 
 interface AudioViewProps {
   token: string;
@@ -38,6 +38,39 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
   useEffect(() => {
     loadData();
   }, [token]);
+
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null);
+
+  const handlePlayAudio = (a: any) => {
+    if (playingId === a.id && audioPlayer) {
+      audioPlayer.pause();
+      setPlayingId(null);
+      return;
+    }
+    if (audioPlayer) {
+      audioPlayer.pause();
+    }
+    try {
+      const audioUrl = `/api/v1/audio/${a.id || a.file_name}/stream`;
+      const player = new Audio(audioUrl);
+      player.onended = () => setPlayingId(null);
+      player.onerror = () => {
+        setPlayingId(null);
+        showErrorModal('Audio Playback Error', `Failed to stream audio file: ${a.file_name}`);
+      };
+      player.play().then(() => {
+        setAudioPlayer(player);
+        setPlayingId(a.id);
+        showSuccessModal('Audio Playing', `Now playing: ${a.file_name} (${a.category.toUpperCase()})`);
+      }).catch(err => {
+        setPlayingId(null);
+        showErrorModal('Playback Blocked', err.message || 'Browser blocked audio autoplay');
+      });
+    } catch (err: any) {
+      showErrorModal('Audio Error', err.message);
+    }
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,8 +135,20 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
                     <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{a.file_path}</code></td>
                     <td>{a.created_at}</td>
                     <td>
-                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => showSuccessModal("Audio Playback Test", `Playback buffer loaded for: ${a.file_name} (${a.category})`)}>
-                        <Volume2 size={13} style={{ marginRight: '4px' }} /> Test Audio
+                      <button
+                        className={playingId === a.id ? "btn-primary" : "btn-secondary"}
+                        style={{ padding: '5px 12px', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => handlePlayAudio(a)}
+                      >
+                        {playingId === a.id ? (
+                          <>
+                            <Pause size={13} /> Stop Playing
+                          </>
+                        ) : (
+                          <>
+                            <Play size={13} /> Play Audio
+                          </>
+                        )}
                       </button>
                     </td>
                   </tr>

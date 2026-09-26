@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { PhoneForwarded, Clock, RefreshCw, Edit2, AlertCircle, X, Smartphone, ArrowRight } from 'lucide-react';
+import { PhoneForwarded, Clock, RefreshCw, Edit2, AlertCircle, X, Smartphone, ArrowRight, Plus } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 
@@ -59,6 +59,15 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
     fetchData();
   }, [token]);
 
+  const openCreateModal = () => {
+    const firstRule = rules.length > 0 ? rules[0] : null;
+    if (firstRule) {
+      openEditModal(firstRule);
+    } else {
+      showErrorModal('No Extensions Found', 'Please provision a SIP extension first before configuring forwarding.');
+    }
+  };
+
   const openEditModal = (rule: ForwardingRuleItem) => {
     setEditingRule(rule);
     setAlwaysEnabled(rule.forward_always_enabled);
@@ -115,6 +124,10 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
+          </button>
+          <button onClick={openCreateModal} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={16} />
+            <span>Configure Forwarding Rule</span>
           </button>
         </div>
       </div>

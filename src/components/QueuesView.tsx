@@ -73,7 +73,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
     e.preventDefault();
     try {
       const payload: any = { ...formData };
-      if (user?.tenant_id) payload.tenant_id = user.tenant_id;
+      if (user?.role !== 'SUPER_ADMIN' && user?.tenant_id) payload.tenant_id = user.tenant_id;
       else if (!payload.tenant_id) delete payload.tenant_id;
 
       if (editingQueue) {
@@ -183,13 +183,15 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
                     <label className="form-label">Virtual Extension Number</label>
                     <input required className="form-control" value={formData.queue_number} onChange={e => setFormData({...formData, queue_number: e.target.value})} placeholder="e.g. 7001" />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Target Tenant (Optional)</label>
-                    <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
-                      <option value="">-- Global / Select Tenant --</option>
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                    </select>
-                  </div>
+                  {user?.role === 'SUPER_ADMIN' && (
+                    <div className="form-group">
+                      <label className="form-label">Target Tenant (Optional)</label>
+                      <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
+                        <option value="">-- Global / Select Tenant --</option>
+                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label className="form-label">Distribution Strategy</label>
                     <select className="form-control" value={formData.strategy} onChange={e => setFormData({...formData, strategy: e.target.value})}>

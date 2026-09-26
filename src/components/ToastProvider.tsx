@@ -165,27 +165,58 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ))}
       </div>
 
-      {/* ── Explicit Acknowledgement Modal ───────────────────────────────── */}
+            {/* Explicit Acknowledgement Modal */}
       {ackModal.open && (
-        <div className="modal-backdrop" style={{ zIndex: 10000 }}>
+        <div className="modal-backdrop" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
             className="terrix-modal"
             style={{
               maxWidth: '460px',
-              animation: 'modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              width: '92%',
+              animation: 'modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
               borderRadius: '16px',
+              padding: '0',
+              overflow: 'hidden',
+              background: '#FFFFFF',
+              position: 'relative'
             }}
           >
-            <div className="modal-head" style={{ borderBottom: 'none', paddingBottom: '0' }}>
+            {/* Top Close Button */}
+            <button
+              type="button"
+              onClick={closeAckModal}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: '#F1F5F9',
+                border: 'none',
+                borderRadius: '8px',
+                width: '32px',
+                height: '32px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748B',
+                zIndex: 1
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            {/* Header Content */}
+            <div style={{ padding: '32px 28px 16px', textAlign: 'center' }}>
               <div
                 style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  margin: '0 auto 16px',
                   background:
                     ackModal.type === 'success'
                       ? '#DCFCE7'
@@ -194,68 +225,78 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       : '#FEF3C7',
                   color:
                     ackModal.type === 'success'
-                      ? '#15803D'
+                      ? '#16A34A'
                       : ackModal.type === 'error'
-                      ? '#B91C1C'
-                      : '#B45309',
+                      ? '#DC2626'
+                      : '#D97706',
+                  boxShadow:
+                    ackModal.type === 'success'
+                      ? '0 4px 12px rgba(22, 163, 74, 0.15)'
+                      : ackModal.type === 'error'
+                      ? '0 4px 12px rgba(220, 38, 38, 0.15)'
+                      : '0 4px 12px rgba(217, 119, 6, 0.15)',
                 }}
               >
-                {ackModal.type === 'success' && <CheckCircle2 size={26} />}
-                {ackModal.type === 'error' && <XCircle size={26} />}
-                {ackModal.type === 'warning' && <AlertTriangle size={26} />}
-                {ackModal.type === 'info' && <Info size={26} />}
+                {ackModal.type === 'success' && <CheckCircle2 size={30} />}
+                {ackModal.type === 'error' && <XCircle size={30} />}
+                {ackModal.type === 'warning' && <AlertTriangle size={30} />}
+                {ackModal.type === 'info' && <Info size={30} />}
               </div>
-              <div style={{ flex: 1, marginLeft: '14px' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0F172A', margin: 0 }}>
-                  {ackModal.title}
-                </h3>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color:
-                      ackModal.type === 'success'
-                        ? '#16A34A'
-                        : ackModal.type === 'error'
-                        ? '#DC2626'
-                        : '#D97706',
-                  }}
-                >
-                  {ackModal.type === 'success' ? 'Operation Completed' : ackModal.type === 'error' ? 'Action Failed' : 'Notice'}
-                </span>
-              </div>
-              <button
-                className="modal-close"
-                onClick={closeAckModal}
-                style={{
-                  background: '#F1F5F9',
-                  border: 'none',
-                  borderRadius: '8px',
-                  width: '32px',
-                  height: '32px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#64748B',
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <div className="modal-body" style={{ padding: '20px 24px 24px' }}>
               <div
                 style={{
-                  fontSize: '13px',
+                  display: 'inline-block',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  padding: '3px 12px',
+                  borderRadius: '20px',
+                  marginBottom: '10px',
+                  background:
+                    ackModal.type === 'success'
+                      ? '#ECFDF5'
+                      : ackModal.type === 'error'
+                      ? '#FEF2F2'
+                      : '#FFFBEB',
+                  color:
+                    ackModal.type === 'success'
+                      ? '#059669'
+                      : ackModal.type === 'error'
+                      ? '#DC2626'
+                      : '#D97706',
+                }}
+              >
+                {ackModal.type === 'success' ? 'Operation Completed' : ackModal.type === 'error' ? 'Action Failed' : 'Notice'}
+              </div>
+
+              <h3
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 800,
+                  color: '#0F172A',
+                  margin: '0 0 8px',
+                  lineHeight: '1.35',
+                  wordBreak: 'break-word',
+                  textAlign: 'center'
+                }}
+              >
+                {ackModal.title}
+              </h3>
+            </div>
+
+            {/* Message Body */}
+            <div style={{ padding: '0 28px 24px' }}>
+              <div
+                style={{
+                  fontSize: '13.5px',
                   color: '#334155',
                   lineHeight: '1.6',
+                  textAlign: 'center',
                   background: ackModal.type === 'error' ? '#FFF5F5' : '#F8FAFC',
                   border: `1px solid ${ackModal.type === 'error' ? '#FED7D7' : '#E2E8F0'}`,
-                  borderRadius: '10px',
-                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
                   wordBreak: 'break-word',
                   fontFamily: ackModal.type === 'error' ? 'monospace' : 'inherit',
                 }}
@@ -264,19 +305,20 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               </div>
             </div>
 
+            {/* Footer */}
             <div
-              className="modal-foot"
               style={{
                 borderTop: '1px solid #F1F5F9',
-                padding: '16px 24px',
+                padding: '16px 28px 24px',
                 display: 'flex',
-                justifyContent: 'flex-end',
+                justifyContent: 'center',
               }}
             >
               <button
                 type="button"
                 onClick={closeAckModal}
                 style={{
+                  width: '100%',
                   background:
                     ackModal.type === 'success'
                       ? '#16A34A'
@@ -284,13 +326,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       ? '#DC2626'
                       : '#FF5430',
                   color: '#FFFFFF',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  padding: '9px 24px',
-                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  padding: '12px 24px',
+                  borderRadius: '10px',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
                   transition: 'opacity 0.15s ease',
                 }}
               >
@@ -300,6 +342,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           </div>
         </div>
       )}
+
 
       <style>{`
         @keyframes slideInRight {

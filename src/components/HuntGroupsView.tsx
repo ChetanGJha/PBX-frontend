@@ -123,13 +123,15 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
             </div>
             <form onSubmit={handleCreate}>
               <div className="modal-body">
-                <div className="form-group mb-3">
-                  <label className="form-label">Target Tenant (Optional)</label>
-                  <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
-                    <option value="">-- Global / Select Tenant --</option>
-                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                  </select>
-                </div>
+                {user?.role === 'SUPER_ADMIN' && (
+                  <div className="form-group mb-3">
+                    <label className="form-label">Target Tenant (Optional)</label>
+                    <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
+                      <option value="">-- Global / Select Tenant --</option>
+                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group mb-3">
                   <label className="form-label">Hunt Group Name</label>
                   <input required className="form-control" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Sales Team Hunt Group" />

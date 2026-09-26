@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Voicemail, Mail, Key, RefreshCw, Edit2, AlertCircle, X, Music } from 'lucide-react';
+import { Voicemail, Mail, Key, RefreshCw, Edit2, AlertCircle, X, Music, Plus } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 
@@ -69,6 +69,15 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
     fetchData();
   }, [token]);
 
+  const openCreateModal = () => {
+    const firstBox = boxes.length > 0 ? boxes[0] : null;
+    if (firstBox) {
+      openEditModal(firstBox);
+    } else {
+      showErrorModal('No Extensions Found', 'Please provision a SIP extension first before configuring voicemail.');
+    }
+  };
+
   const openEditModal = (box: VoicemailBoxItem) => {
     setEditingBox(box);
     setMailboxPin('1234');
@@ -126,6 +135,10 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
+          </button>
+          <button onClick={openCreateModal} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={16} />
+            <span>Configure Voicemail Box</span>
           </button>
         </div>
       </div>

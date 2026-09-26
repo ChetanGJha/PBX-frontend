@@ -54,9 +54,11 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       if (!payload.gateway_id) delete payload.gateway_id;
       if (user?.tenant_id) payload.tenant_id = user.tenant_id;
     else if (!payload.tenant_id) delete payload.tenant_id;
+      const createdName = payload.name;
       await apiService.createRoute(token, payload);
       setShowModal(false);
       setFormData({ name: '', did_number: '', route_type: 'inbound_did', destination_type: 'queue', destination: '7001', priority: 1, gateway_id: '', tenant_id: user?.tenant_id || '' });
+      showSuccessModal('Routing Rule Configured', `Routing rule "${createdName}" has been successfully established and synced.`);
       loadData();
     } catch (err: any) {
       showErrorModal('Failed to Create Route', err.message || 'Failed to create route');
