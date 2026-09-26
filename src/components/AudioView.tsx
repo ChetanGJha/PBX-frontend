@@ -1,0 +1,154 @@
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../services/api';
+import { Mic, Upload, Volume2 } from 'lucide-react';
+
+interface AudioViewProps {
+  token: string;
+}
+
+export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
+  const [audioFiles, setAudioFiles] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [category, setCategory] = useState('ivr_greeting');
+  const [tenantId, setTenantId] = useState('');
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [aData, tData] = await Promise.allSettled([
+        apiService.getAudioFiles(token),
+        apiService.getTenants(token)
+      ]);
+      if (aData.status === 'fulfilled') setAudioFiles(aData.value);
+      if (tData.status === 'fulfilled') setTenants(tData.value);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [token]);
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      alert('Please select an audio file to upload');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('category', category);
+    if (tenantId) formData.append('tenant_id', tenantId);
+
+    try {
+      await apiService.uploadAudioFile(token, formData);
+      setShowModal(false);
+      setSelectedFile(null);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload audio file');
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Audio Asset Library</div>
+          <h1 className="page-title">Voice Prompts & Greetings</h1>
+          <p className="page-sub">Upload custom WAV/MP3 audio prompts for IVRs, greetings and music-on-hold</p>
+        </div>
+        <div>
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            <Upload size={16} /> Upload Audio Prompt
+          </button>
+        </div>
+      </div>
+
+      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Audio File Name</th>
+                <th>Category</th>
+                <th>File Path</th>
+                <th>Uploaded At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} className="text-center py-4">Loading audio files...</td></tr>
+              ) : audioFiles.length === 0 ? (
+                <tr><td colSpan={5} className="text-center py-4 text-muted">No custom audio prompts uploaded</td></tr>
+              ) : (
+                audioFiles.map(a => (
+                  <tr key={a.id}>
+                    <td><strong style={{ color: '#111827' }}>{a.file_name}</strong></td>
+                    <td><span className="terrix-badge grey">{a.category.toUpperCase()}</span></td>
+                    <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{a.file_path}</code></td>
+                    <td>{a.created_at}</td>
+                    <td>
+                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => alert(`Playing ${a.file_name}`)}>
+                        <Volume2 size={13} style={{ marginRight: '4px' }} /> Test Audio
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="modal-backdrop">
+          <div className="terrix-modal">
+            <div className="modal-head">
+              <div className="modal-icon"><Mic size={20} /></div>
+              <div>
+                <h3>Upload Voice Prompt</h3>
+                <p>Select a WAV or MP3 audio recording file</p>
+              </div>
+              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleUpload}>
+              <div className="modal-body">
+                <div className="form-group mb-3">
+                  <label className="form-label">Target Tenant (Optional)</label>
+                  <select className="form-control" value={tenantId} onChange={e => setTenantId(e.target.value)}>
+                    <option value="">-- Global / Select Tenant --</option>
+                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
+                  </select>
+                </div>
+                <div className="form-group mb-3">
+                  <label className="form-label">Category</label>
+                  <select className="form-control" value={category} onChange={e => setCategory(e.target.value)}>
+                    <option value="ivr_greeting">IVR Welcome Prompt</option>
+                    <option value="voicemail_greeting">Voicemail Greeting</option>
+                    <option value="music_on_hold">Music On Hold</option>
+                  </select>
+                </div>
+                <div className="form-group mb-3">
+                  <label className="form-label">Audio File (.wav / .mp3)</label>
+                  <input required type="file" accept="audio/*" className="form-control" onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)} />
+                </div>
+              </div>
+              <div className="modal-foot">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">Upload Audio</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

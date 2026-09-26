@@ -28,7 +28,6 @@ export const apiService = {
       const hData = await hRes.json();
       const rRes = await fetch(`${API_BASE_URL}/ready`);
       const rData = await rRes.json();
-
       return {
         healthy: hRes.ok && hData.status === 'healthy',
         ready: rRes.ok && rData.status === 'ready',
@@ -36,16 +35,11 @@ export const apiService = {
         redis: rData.components?.redis || 'disconnected',
       };
     } catch {
-      return {
-        healthy: false,
-        ready: false,
-        database: 'disconnected',
-        redis: 'disconnected',
-      };
+      return { healthy: false, ready: false, database: 'disconnected', redis: 'disconnected' };
     }
   },
 
-  // Auth & Seeding
+  // Auth
   async seedSuperAdmin(payload: { username: string; email: string; password: string }) {
     const res = await fetch(`${API_BASE_URL}/api/v1/auth/seed-superadmin`, {
       method: 'POST',
@@ -73,22 +67,15 @@ export const apiService = {
   },
 
   async getMe(token: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, {
-      headers: getHeaders(token),
-    });
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/me`, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Invalid token');
     return res.json() as Promise<User>;
   },
 
   // Tenants
   async getTenants(token: string): Promise<Tenant[]> {
-    const res = await fetch(`${API_BASE_URL}/api/v1/tenants`, {
-      headers: getHeaders(token),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to fetch tenants');
-    }
+    const res = await fetch(`${API_BASE_URL}/api/v1/tenants`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch tenants');
     return res.json();
   },
 
@@ -105,6 +92,16 @@ export const apiService = {
     return res.json() as Promise<Tenant>;
   },
 
+  async toggleTenantStatus(token: string, id: string, enabled: boolean) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/tenants/${id}/status`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ enabled }),
+    });
+    if (!res.ok) throw new Error('Failed to update status');
+    return res.json();
+  },
+
   async deleteTenant(token: string, id: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/tenants/${id}`, {
       method: 'DELETE',
@@ -118,27 +115,12 @@ export const apiService = {
 
   // Extensions
   async getExtensions(token: string): Promise<Extension[]> {
-    const res = await fetch(`${API_BASE_URL}/api/v1/extensions`, {
-      headers: getHeaders(token),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to fetch extensions');
-    }
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch extensions');
     return res.json();
   },
 
-  async createExtension(
-    token: string,
-    payload: {
-      tenant_id?: string;
-      extension_number: string;
-      display_name: string;
-      email?: string;
-      sip_password: string;
-      voicemail_pin?: string;
-    }
-  ) {
+  async createExtension(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/extensions`, {
       method: 'POST',
       headers: getHeaders(token),
@@ -148,144 +130,281 @@ export const apiService = {
       const err = await res.json();
       throw new Error(err.detail || 'Failed to create extension');
     }
-    return res.json() as Promise<Extension>;
+    return res.json();
   },
 
-  async resetPassword(token: string, extensionId: string, payload: { new_sip_password?: string; new_voicemail_pin?: string }) {
+  async resetExtensionPassword(token: string, extensionId: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/reset-password`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to reset extension credentials');
-    }
+    if (!res.ok) throw new Error('Failed to reset password');
     return res.json();
   },
 
-  // FreeSWITCH mod_xml_curl Tester
-  async testXmlCurl(domain: string, user: string): Promise<string> {
-    const body = new URLSearchParams();
-    body.append('section', 'directory');
-    body.append('domain', domain);
-    body.append('user', user);
-
-    const res = await fetch(`${API_BASE_URL}/freeswitch/xml`, {
-      method: 'POST',
-      headers: getHeaders(null, true),
-      body: body.toString(),
-    });
-    return res.text();
-  },
-
-  // Users Management
-  async getUsers(token: string, tenantId?: string): Promise<User[]> {
-    const url = tenantId ? `${API_BASE_URL}/api/v1/users?tenant_id=${tenantId}` : `${API_BASE_URL}/api/v1/users`;
-    const res = await fetch(url, {
+  async updateExtensionSettings(token: string, extensionId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/settings`, {
+      method: 'PUT',
       headers: getHeaders(token),
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to fetch users');
-    }
+    if (!res.ok) throw new Error('Failed to update settings');
     return res.json();
   },
 
-  async createUser(
-    token: string,
-    payload: {
-      tenant_id?: string;
-      username: string;
-      email: string;
-      password: string;
-      first_name?: string;
-      last_name?: string;
-      role: string;
-    }
-  ) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/users`, {
+  // DIDs
+  async getDids(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch DIDs');
+    return res.json();
+  },
+
+  async createDid(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || 'Failed to create user');
+      throw new Error(err.detail || 'Failed to create DID');
     }
-    return res.json() as Promise<User>;
-  },
-
-  async deleteUser(token: string, userId: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
-      method: 'DELETE',
-      headers: getHeaders(token),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to delete user');
-    }
-  },
-
-  // Trunks
-  async getTrunks(token: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, {
-      headers: getHeaders(token),
-    });
-    if (!res.ok) throw new Error('Failed to fetch trunks');
     return res.json();
   },
 
+  async assignDid(token: string, didId: string, tenantId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids/${didId}/assign`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ tenant_id: tenantId }),
+    });
+    if (!res.ok) throw new Error('Failed to assign DID');
+    return res.json();
+  },
+
+  async unassignDid(token: string, didId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids/${didId}/unassign`, {
+      method: 'POST',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to unassign DID');
+    return res.json();
+  },
+
+  // Routing Rules CRUD
+  async getRoutes(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch routes');
+    return res.json();
+  },
+
+  async createRoute(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to create route');
+    }
+    return res.json();
+  },
+
+  async deleteRoute(token: string, routeId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/${routeId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete route');
+  },
+
+  // Queues CRUD
+  async getQueues(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/queues`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch queues');
+    return res.json();
+  },
+
+  async createQueue(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/queues`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to create queue');
+    }
+    return res.json();
+  },
+
+  async updateQueue(token: string, queueId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/queues/${queueId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update queue');
+    return res.json();
+  },
+
+  async deleteQueue(token: string, queueId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/queues/${queueId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete queue');
+  },
+
+  // Reports Endpoints
+  async getCdrReport(token: string, tenantId?: string, startDate?: string, endDate?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/cdr?call_type=all`;
+    if (tenantId) url += `&tenant_id=${tenantId}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch CDR report');
+    return res.json();
+  },
+
+  async getInternalReport(token: string, tenantId?: string, startDate?: string, endDate?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/internal?`;
+    if (tenantId) url += `&tenant_id=${tenantId}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch internal report');
+    return res.json();
+  },
+
+  async getOutboundReport(token: string, tenantId?: string, startDate?: string, endDate?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/outbound?`;
+    if (tenantId) url += `&tenant_id=${tenantId}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch outbound report');
+    return res.json();
+  },
+
+  async getRecordingsReport(token: string, tenantId?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/recordings?`;
+    if (tenantId) url += `&tenant_id=${tenantId}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch recordings');
+    return res.json();
+  },
+
+  // Audio Files Endpoints
+  async getAudioFiles(token: string, tenantId?: string) {
+    let url = `${API_BASE_URL}/api/v1/audio?`;
+    if (tenantId) url += `&tenant_id=${tenantId}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch audio files');
+    return res.json();
+  },
+
+  async uploadAudioFile(token: string, formData: FormData) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/audio/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Failed to upload audio file');
+    return res.json();
+  },
+
+  // Hunt Groups, IVR, Trunks, Gateways, Users
+  async getHuntGroups(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/hunt-groups`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch hunt groups');
+    return res.json();
+  },
+  async createHuntGroup(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/hunt-groups`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create hunt group');
+    return res.json();
+  },
+  async getIvrs(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch IVRs');
+    return res.json();
+  },
+  async createIvr(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/ivr`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create IVR');
+    return res.json();
+  },
+  async getTrunks(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch trunks');
+    return res.json();
+  },
   async createTrunk(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to create trunk');
-    }
+    if (!res.ok) throw new Error('Failed to create trunk');
     return res.json();
   },
-
-  // Gateways
   async getGateways(token: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/gateways`, {
-      headers: getHeaders(token),
-    });
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways`, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Failed to fetch gateways');
     return res.json();
   },
-
   async assignGateway(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/gateways/assign`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to assign gateway');
-    }
+    if (!res.ok) throw new Error('Failed to assign gateway');
     return res.json();
   },
-
-  // Routing
-  async getRoutes(token: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/routing`, {
-      headers: getHeaders(token),
-    });
-    if (!res.ok) throw new Error('Failed to fetch routing rules');
+  async getUsers(token: string, tenantId?: string): Promise<User[]> {
+    const url = tenantId ? `${API_BASE_URL}/api/v1/users?tenant_id=${tenantId}` : `${API_BASE_URL}/api/v1/users`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch users');
     return res.json();
   },
-
-  // Queues
-  async getQueues(token: string) {
-    const res = await fetch(`${API_BASE_URL}/api/v1/queues`, {
+  async createUser(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create user');
+    return res.json();
+  },
+  async deleteUser(token: string, userId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
+      method: 'DELETE',
       headers: getHeaders(token),
     });
-    if (!res.ok) throw new Error('Failed to fetch queues');
-    return res.json();
+    if (!res.ok) throw new Error('Failed to delete user');
+  },
+  async testXmlCurl(domain: string, user: string): Promise<string> {
+    const body = new URLSearchParams();
+    body.append('section', 'directory');
+    body.append('domain', domain);
+    body.append('user', user);
+    const res = await fetch(`${API_BASE_URL}/freeswitch/xml`, {
+      method: 'POST',
+      headers: getHeaders(null, true),
+      body: body.toString(),
+    });
+    return res.text();
   },
 };

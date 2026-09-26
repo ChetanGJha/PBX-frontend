@@ -7,11 +7,15 @@ import { AuthView } from './components/AuthView';
 import { TenantsView } from './components/TenantsView';
 import { ExtensionsView } from './components/ExtensionsView';
 import { UsersView } from './components/UsersView';
-import { XmlCurlConsole } from './components/XmlCurlConsole';
 import { TrunksView } from './components/TrunksView';
 import { GatewaysView } from './components/GatewaysView';
 import { RoutingView } from './components/RoutingView';
 import { QueuesView } from './components/QueuesView';
+import { DidsView } from './components/DidsView';
+import { IvrView } from './components/IvrView';
+import { HuntGroupsView } from './components/HuntGroupsView';
+import { ReportsView } from './components/ReportsView';
+import { AudioView } from './components/AudioView';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
 
@@ -75,7 +79,6 @@ export const App: React.FC = () => {
         collapsed={collapsed}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        user={user}
       />
 
       <main className="main">
@@ -98,25 +101,19 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'auth' && (
-            <AuthView onLoginSuccess={handleLoginSuccess} user={user} />
-          )}
-
+          {activeTab === 'auth' && <AuthView onLoginSuccess={handleLoginSuccess} user={user} />}
           {activeTab === 'tenants' && <TenantsView token={token} />}
-
           {activeTab === 'users' && <UsersView token={token} currentUser={user} />}
-
           {activeTab === 'extensions' && <ExtensionsView token={token} />}
-
+          {activeTab === 'dids' && <DidsView token={token} />}
           {activeTab === 'trunks' && <TrunksView token={token} />}
-
           {activeTab === 'gateways' && <GatewaysView token={token} />}
-
           {activeTab === 'routing' && <RoutingView token={token} />}
-
           {activeTab === 'queues' && <QueuesView token={token} />}
-
-          {activeTab === 'xmlcurl' && <XmlCurlConsole />}
+          {activeTab === 'ivr' && <IvrView token={token} />}
+          {activeTab === 'audio' && <AudioView token={token} />}
+          {activeTab === 'huntgroups' && <HuntGroupsView token={token} />}
+          {activeTab === 'reports' && <ReportsView token={token} />}
         </div>
       </main>
     </div>
