@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
+import { Topbar } from './components/Topbar';
+import { LoginScreen } from './components/LoginScreen';
+import { DashboardView } from './components/DashboardView';
 import { AuthView } from './components/AuthView';
 import { TenantsView } from './components/TenantsView';
 import { ExtensionsView } from './components/ExtensionsView';
-import { XmlCurlTester } from './components/XmlCurlTester';
+import { UsersView } from './components/UsersView';
+import { XmlCurlConsole } from './components/XmlCurlConsole';
 import { apiService } from './services/api';
-import type { SystemStatus, User } from './types';
+import type { SystemStatus, User, Tenant, Extension } from './types';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('auth');
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [status, setStatus] = useState<SystemStatus>({
     healthy: false,
     ready: false,
@@ -22,6 +27,9 @@ export const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [extensions, setExtensions] = useState<Extension[]>([]);
+
   // Health probe polling
   useEffect(() => {
     const check = async () => {
@@ -32,6 +40,14 @@ export const App: React.FC = () => {
     const interval = setInterval(check, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch counts when token changes
+  useEffect(() => {
+    if (token) {
+      apiService.getTenants(token).then(setTenants).catch(() => {});
+      apiService.getExtensions(token).then(setExtensions).catch(() => {});
+    }
+  }, [token]);
 
   const handleLoginSuccess = (newToken: string, newUser: User) => {
     setToken(newToken);
@@ -47,23 +63,51 @@ export const App: React.FC = () => {
     localStorage.removeItem('pbx_user');
   };
 
+  if (!token) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
-    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
-      <Header
-        status={status}
-        user={user}
+    <div id="appScreen" style={{ display: 'block' }}>
+      <Sidebar
+        collapsed={collapsed}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onLogout={handleLogout}
+        user={user}
       />
 
-      <main className="transition-all duration-300">
-        {activeTab === 'auth' && (
-          <AuthView onLoginSuccess={handleLoginSuccess} token={token} />
-        )}
-        {activeTab === 'tenants' && <TenantsView token={token} />}
-        {activeTab === 'extensions' && <ExtensionsView token={token} />}
-        {activeTab === 'xmlcurl' && <XmlCurlTester />}
+      <main className="main">
+        <Topbar
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed(!collapsed)}
+          status={status}
+          user={user}
+          onLogout={handleLogout}
+        />
+
+        <div className="content">
+          {activeTab === 'dashboard' && (
+            <DashboardView
+              status={status}
+              user={user}
+              tenantCount={tenants.length}
+              extensionCount={extensions.length}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'auth' && (
+            <AuthView onLoginSuccess={handleLoginSuccess} user={user} />
+          )}
+
+          {activeTab === 'tenants' && <TenantsView token={token} />}
+
+          {activeTab === 'users' && <UsersView token={token} currentUser={user} />}
+
+          {activeTab === 'extensions' && <ExtensionsView token={token} />}
+
+          {activeTab === 'xmlcurl' && <XmlCurlConsole />}
+        </div>
       </main>
     </div>
   );

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Plus, RefreshCw, KeyRound, Mail, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle } from 'lucide-react';
+
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';
-
-
 
 interface ExtensionsViewProps {
   token: string | null;
@@ -15,7 +14,10 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState('');
+
+  // Modals
   const [showModal, setShowModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedExtId, setSelectedExtId] = useState<string | null>(null);
@@ -100,186 +102,233 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token }) => {
     }
   };
 
-  if (!token) {
-    return (
-      <div className="glass-panel p-8 text-center text-slate-400">
-        <ShieldCheck className="w-12 h-12 mx-auto mb-3 text-amber-400 opacity-80" />
-        <h3 className="text-lg font-bold text-white mb-1">Authentication Required</h3>
-        <p className="text-sm">Please log in using the "Authentication & Seeding" tab first to access Extension Management APIs.</p>
-      </div>
-    );
-  }
+  const filteredExts = extensions.filter((ext: Extension) => {
+    const matchesSearch =
+      ext.extension_number.includes(searchTerm) ||
+      ext.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ext.email && ext.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesTenant = selectedTenantFilter ? ext.tenant_id === selectedTenantFilter : true;
+    return matchesSearch && matchesTenant;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Action Bar */}
-      <div className="flex items-center justify-between">
+      {/* Page Header */}
+      <div className="page-head">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Phone className="w-6 h-6 text-cyan-400" />
-            <span>Extension Provisioning</span>
-          </h2>
-          <p className="text-xs text-slate-400">Manage SIP & WebRTC softphone endpoints (`/api/v1/extensions`)</p>
+          <div className="eyebrow">Endpoint Provisioning</div>
+          <h1 className="page-title">SIP Extensions</h1>
+          <p className="page-sub">Manage SIP digest credentials and WebRTC softphone configurations (`/api/v1/extensions`).</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button onClick={fetchData} className="btn-secondary" title="Refresh">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={fetchData} className="btn-secondary">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
           </button>
           <button onClick={() => setShowModal(true)} className="btn-primary">
             <Plus className="w-4 h-4" />
-            <span>Create Extension</span>
+            <span>Provision Extension</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0" />
+        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Extensions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {extensions.map((ext: Extension) => (
-
-          <div key={ext.id} className="glass-card p-5 border border-slate-800 space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-cyan-500/20 text-cyan-400 rounded-xl font-mono text-lg font-bold">
-                  {ext.extension_number}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">{ext.display_name}</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>{ext.email || 'No email registered'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-xs text-slate-300 bg-slate-900/40 p-3 rounded-lg border border-slate-800">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">WebRTC Enabled:</span>
-                <span className={`badge ${ext.webrtc_enabled ? 'badge-success' : 'badge-warning'}`}>
-                  {ext.webrtc_enabled ? 'Yes (WSS/TLS)' : 'No'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">No-Answer Timeout:</span>
-                <span className="font-mono text-indigo-300">{ext.no_answer_timeout}s</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  setSelectedExtId(ext.id);
-                  setShowResetModal(true);
-                }}
-                className="btn-secondary text-xs py-1.5 px-2.5"
-              >
-                <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Reset SIP Password</span>
-              </button>
-            </div>
+      {/* Toolbar */}
+      <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search extension or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-control pl-9"
+            />
           </div>
-        ))}
 
-        {extensions.length === 0 && !loading && (
-          <div className="col-span-full text-center p-12 glass-panel text-slate-400">
-            No extensions provisioned yet. Click "Create Extension" above to add your first extension.
-          </div>
-        )}
+          {tenants.length > 0 && (
+            <select
+              value={selectedTenantFilter}
+              onChange={(e) => setSelectedTenantFilter(e.target.value)}
+              className="form-control w-48"
+            >
+              <option value="">All Tenants</option>
+              {tenants.map((t: Tenant) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="text-xs text-slate-500 font-semibold">
+          Total Provisioned Endpoints: <span className="text-slate-900">{extensions.length}</span>
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div className="card overflow-hidden">
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Ext #</th>
+                <th>Display Name</th>
+                <th>User Email</th>
+                <th>Caller ID</th>
+                <th>WebRTC Status</th>
+                <th>No-Answer Timeout</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredExts.map((ext: Extension) => (
+                <tr key={ext.id}>
+                  <td className="font-mono font-bold text-[#FF5430]">{ext.extension_number}</td>
+                  <td className="font-bold text-slate-900">{ext.display_name}</td>
+                  <td className="text-slate-600 font-mono">{ext.email || 'N/A'}</td>
+                  <td className="text-slate-600">{ext.caller_id_name || ext.display_name} ({ext.caller_id_number || ext.extension_number})</td>
+                  <td>
+                    <span className={`terrix-badge ${ext.webrtc_enabled ? 'green' : 'grey'}`}>
+                      {ext.webrtc_enabled ? 'WebRTC (WSS)' : 'SIP Only'}
+                    </span>
+                  </td>
+                  <td className="font-mono text-slate-700">{ext.no_answer_timeout}s</td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => {
+                        setSelectedExtId(ext.id);
+                        setShowResetModal(true);
+                      }}
+                      className="btn-secondary !h-8 !px-3 !py-0 text-xs"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
+                      <span>Reset Password</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredExts.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-400 text-xs">
+                    No extensions found. Click "Provision Extension" to add your first extension.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Create Extension Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel p-6 max-w-md w-full border border-cyan-500/40">
-            <h3 className="text-lg font-bold text-white mb-4">Provision New SIP Extension</h3>
+        <div className="modal-backdrop">
+          <div className="terrix-modal">
+            <div className="modal-head">
+              <div className="modal-icon">
+                <Phone className="w-5 h-5" />
+              </div>
+              <div>
+                <h3>Provision New SIP Extension</h3>
+                <p>Create a tenant extension endpoint for desktop phones or WebRTC softphones</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleCreate} className="space-y-4">
-              {tenants.length > 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Tenant Target</label>
-                  <select
-                    value={tenantId}
-                    onChange={(e) => setTenantId(e.target.value)}
-                    className="input-field"
-                  >
-                    {tenants.map((t: Tenant) => (
+            <form onSubmit={handleCreate}>
+              <div className="modal-body space-y-4">
+                {tenants.length > 0 && (
+                  <div>
+                    <label className="form-label">Target Tenant</label>
+                    <select
+                      value={tenantId}
+                      onChange={(e) => setTenantId(e.target.value)}
+                      className="form-control"
+                    >
+                      {tenants.map((t: Tenant) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.sip_domain})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.sip_domain})
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Extension Number</label>
+                    <input
+                      type="text"
+                      placeholder="1001"
+                      value={extNumber}
+                      onChange={(e) => setExtNumber(e.target.value)}
+                      className="form-control font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Display Name</label>
+                    <input
+                      type="text"
+                      placeholder="Alice Smith"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="form-control"
+                      required
+                    />
+                  </div>
                 </div>
-              )}
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Extension Number</label>
-                <input
-                  type="text"
-                  placeholder="1001"
-                  value={extNumber}
-                  onChange={(e) => setExtNumber(e.target.value)}
-                  className="input-field font-mono"
-                  required
-                />
+                <div>
+                  <label className="form-label">User Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="alice@acme.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">SIP Password</label>
+                    <input
+                      type="password"
+                      placeholder="SIPPassword123!"
+                      value={sipPassword}
+                      onChange={(e) => setSipPassword(e.target.value)}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Voicemail PIN</label>
+                    <input
+                      type="text"
+                      placeholder="1234"
+                      value={voicemailPin}
+                      onChange={(e) => setVoicemailPin(e.target.value)}
+                      className="form-control font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Display Name</label>
-                <input
-                  type="text"
-                  placeholder="Alice Smith"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="input-field"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">User Email</label>
-                <input
-                  type="email"
-                  placeholder="alice@acme.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">SIP Password</label>
-                <input
-                  type="password"
-                  placeholder="SIPPassword123!"
-                  value={sipPassword}
-                  onChange={(e) => setSipPassword(e.target.value)}
-                  className="input-field"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Voicemail PIN</label>
-                <input
-                  type="text"
-                  placeholder="1234"
-                  value={voicemailPin}
-                  onChange={(e) => setVoicemailPin(e.target.value)}
-                  className="input-field font-mono"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="modal-foot">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
                   Cancel
                 </button>
@@ -294,39 +343,52 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token }) => {
 
       {/* Reset Password Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel p-6 max-w-md w-full border border-indigo-500/40">
-            <h3 className="text-lg font-bold text-white mb-4">Reset Extension Credentials</h3>
-
-            <form onSubmit={handleResetPassword} className="space-y-4">
+        <div className="modal-backdrop">
+          <div className="terrix-modal max-w-md">
+            <div className="modal-head">
+              <div className="modal-icon">
+                <KeyRound className="w-5 h-5" />
+              </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">New SIP Password</label>
-                <input
-                  type="password"
-                  placeholder="Leave empty to keep unchanged"
-                  value={newSipPwd}
-                  onChange={(e) => setNewSipPwd(e.target.value)}
-                  className="input-field"
-                />
+                <h3>Reset Credentials</h3>
+                <p>Update SIP authentication password or Voicemail PIN</p>
+              </div>
+              <button onClick={() => setShowResetModal(false)} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetPassword}>
+              <div className="modal-body space-y-4">
+                <div className="form-group">
+                  <label className="form-label">New SIP Password</label>
+                  <input
+                    type="password"
+                    placeholder="Leave empty to keep unchanged"
+                    value={newSipPwd}
+                    onChange={(e) => setNewSipPwd(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">New Voicemail PIN</label>
+                  <input
+                    type="text"
+                    placeholder="Leave empty to keep unchanged"
+                    value={newVmPin}
+                    onChange={(e) => setNewVmPin(e.target.value)}
+                    className="form-control font-mono"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">New Voicemail PIN</label>
-                <input
-                  type="text"
-                  placeholder="Leave empty to keep unchanged"
-                  value={newVmPin}
-                  onChange={(e) => setNewVmPin(e.target.value)}
-                  className="input-field font-mono"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="modal-foot">
                 <button type="button" onClick={() => setShowResetModal(false)} className="btn-secondary">
                   Cancel
                 </button>
                 <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Updating...' : 'Save New Credentials'}
+                  {loading ? 'Updating...' : 'Save Credentials'}
                 </button>
               </div>
             </form>

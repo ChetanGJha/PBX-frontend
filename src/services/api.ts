@@ -180,4 +180,52 @@ export const apiService = {
     });
     return res.text();
   },
+
+  // Users Management
+  async getUsers(token: string, tenantId?: string): Promise<User[]> {
+    const url = tenantId ? `${API_BASE_URL}/api/v1/users?tenant_id=${tenantId}` : `${API_BASE_URL}/api/v1/users`;
+    const res = await fetch(url, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to fetch users');
+    }
+    return res.json();
+  },
+
+  async createUser(
+    token: string,
+    payload: {
+      tenant_id?: string;
+      username: string;
+      email: string;
+      password: string;
+      first_name?: string;
+      last_name?: string;
+      role: string;
+    }
+  ) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to create user');
+    }
+    return res.json() as Promise<User>;
+  },
+
+  async deleteUser(token: string, userId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to delete user');
+    }
+  },
 };
