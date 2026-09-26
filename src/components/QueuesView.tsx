@@ -1,3 +1,4 @@
+import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -5,9 +6,10 @@ import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
 
 interface QueuesViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const QueuesView: React.FC<QueuesViewProps> = ({ token }) => {
+export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [queues, setQueues] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -71,7 +73,8 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token }) => {
     e.preventDefault();
     try {
       const payload: any = { ...formData };
-      if (!payload.tenant_id) delete payload.tenant_id;
+      if (user?.tenant_id) payload.tenant_id = user.tenant_id;
+      else if (!payload.tenant_id) delete payload.tenant_id;
 
       if (editingQueue) {
         await apiService.updateQueue(token, editingQueue.id, payload);

@@ -1,12 +1,16 @@
+import type { User } from '../types';
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Link } from 'lucide-react';
 
 interface GatewaysViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const GatewaysView: React.FC<GatewaysViewProps> = ({ token }) => {
+export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [gateways, setGateways] = useState<any[]>([]);
   const [trunks, setTrunks] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -50,10 +54,10 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token }) => {
     try {
       await apiService.assignGateway(token, assignForm);
       setShowAssignModal(false);
-      alert('SIP Trunk / Gateway assigned to tenant successfully!');
+      showSuccessModal('Gateway Assigned', 'SIP Trunk / Gateway has been successfully assigned to tenant.');
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Assignment failed');
+      showErrorModal('Assignment Failed', err.message || 'Gateway assignment failed.');
     }
   };
 
@@ -72,9 +76,11 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token }) => {
           <p className="page-sub">Assign carrier SIP trunks to tenants and specify inbound/outbound priority rules</p>
         </div>
         <div>
-          <button className="btn-primary" onClick={() => setShowAssignModal(true)}>
-            <Link size={16} /> Assign SIP Trunk to Tenant
-          </button>
+          {user?.role === 'SUPER_ADMIN' && (
+            <button className="btn-primary" onClick={() => setShowAssignModal(true)}>
+              <Link size={16} /> Assign SIP Trunk to Tenant
+            </button>
+          )}
         </div>
       </div>
 

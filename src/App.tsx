@@ -185,7 +185,7 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'dids' && isSuper && (
-              <DidsView token={token} />
+              <DidsView token={token} user={user} />
             )}
 
             {activeTab === 'xmlcurl' && isSuper && (
@@ -202,19 +202,19 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'tenant-dids' && canAccess(user, 'tenant-dids') && (
-              <DidsView token={token} />
+              <DidsView token={token} user={user} />
             )}
 
             {activeTab === 'call-routing' && canAccess(user, 'call-routing') && (
-              <RoutingView token={token} />
+              <RoutingView token={token} user={user} />
             )}
 
             {activeTab === 'queues' && canAccess(user, 'queues') && (
-              <QueuesView token={token} />
+              <QueuesView token={token} user={user} />
             )}
 
             {activeTab === 'hunt-groups' && canAccess(user, 'hunt-groups') && (
-              <HuntGroupsView token={token} />
+              <HuntGroupsView token={token} user={user} />
             )}
 
             {activeTab === 'ivr' && canAccess(user, 'ivr') && (
@@ -230,12 +230,12 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'audio-prompts' && canAccess(user, 'audio-prompts') && (
-              <AudioView token={token} />
+              <AudioView token={token} user={user} />
             )}
 
             {/* ── REPORTS & ANALYTICS ─────────────────────────────────── */}
             {activeTab === 'reports' && canAccess(user, 'reports') && (
-              <ReportsView token={token} />
+              <ReportsView token={token} user={user} />
             )}
 
             {/* ── HELP (ALL ROLES) ──────────────────────────────────── */}

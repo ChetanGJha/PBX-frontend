@@ -1,3 +1,4 @@
+import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -5,9 +6,10 @@ import { Route as RouteIcon, Plus, Search, Trash2 } from 'lucide-react';
 
 interface RoutingViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
+export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [routes, setRoutes] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -22,7 +24,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
     destination: '7001',
     priority: 1,
     gateway_id: '',
-    tenant_id: ''
+    tenant_id: user?.tenant_id || ''
   });
 
   const loadData = async () => {
@@ -50,10 +52,11 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
     try {
       const payload: any = { ...formData };
       if (!payload.gateway_id) delete payload.gateway_id;
-      if (!payload.tenant_id) delete payload.tenant_id;
+      if (user?.tenant_id) payload.tenant_id = user.tenant_id;
+    else if (!payload.tenant_id) delete payload.tenant_id;
       await apiService.createRoute(token, payload);
       setShowModal(false);
-      setFormData({ name: '', did_number: '', route_type: 'inbound_did', destination_type: 'queue', destination: '7001', priority: 1, gateway_id: '', tenant_id: '' });
+      setFormData({ name: '', did_number: '', route_type: 'inbound_did', destination_type: 'queue', destination: '7001', priority: 1, gateway_id: '', tenant_id: user?.tenant_id || '' });
       loadData();
     } catch (err: any) {
       showErrorModal('Failed to Create Route', err.message || 'Failed to create route');
@@ -171,13 +174,15 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token }) => {
                     <label className="form-label">Route Name</label>
                     <input required className="form-control" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Sales DID Route" />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Target Tenant (Optional)</label>
-                    <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
-                      <option value="">-- Global / Select Tenant --</option>
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                    </select>
-                  </div>
+                  {user?.role === 'SUPER_ADMIN' && (
+                    <div className="form-group">
+                      <label className="form-label">Target Tenant (Optional)</label>
+                      <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({...formData, tenant_id: e.target.value})}>
+                        <option value="">-- Global / Select Tenant --</option>
+                        {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label className="form-label">Route Type</label>
                     <select className="form-control" value={formData.route_type} onChange={e => setFormData({...formData, route_type: e.target.value})}>

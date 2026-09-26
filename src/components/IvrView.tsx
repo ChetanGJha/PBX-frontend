@@ -8,7 +8,7 @@ interface IvrViewProps {
 }
 
 export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
-  const { showSuccessModal, showErrorModal, toastError } = useToast();
+  const { showSuccessModal, showErrorModal } = useToast();
   const [ivrs, setIvrs] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [extensions, setExtensions] = useState<any[]>([]);
@@ -88,7 +88,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
       loadData();
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to upload greeting audio');
+      showErrorModal('Upload Failed', err.message || 'Failed to upload greeting audio');
     } finally {
       setUploadingTarget(null);
     }
@@ -101,7 +101,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
       loadData();
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to update greeting audio');
+      showErrorModal('Update Failed', err.message || 'Failed to update greeting audio');
     }
   };
 
@@ -121,7 +121,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       const updatedNodes = await apiService.getIvrNodes(token, activeIvr.id);
       setActiveNodes(updatedNodes);
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to upload audio file');
+      showErrorModal('Audio Upload Failed', err.message || 'Failed to upload audio file');
     } finally {
       setUploadingTarget(null);
     }
@@ -136,7 +136,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       const fileName = await uploadAudioFile(file, 'ivr_greeting', formData.tenant_id);
       setFormData(prev => ({ ...prev, greeting_audio: fileName }));
     } catch (err: any) {
-      toastError('Error', err.message || 'Audio upload failed');
+      showErrorModal('Audio Upload Failed', err.message || 'Audio upload failed');
     } finally {
       setUploadingTarget(null);
     }
@@ -160,9 +160,10 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       if (!payload.tenant_id) delete payload.tenant_id;
       await apiService.createIvr(token, payload);
       setShowCreateModal(false);
+      showSuccessModal("IVR Flow Created", `IVR "${payload.name}" has been created successfully.`);
       loadData();
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to create IVR flow');
+      showErrorModal('Failed to Create IVR', err.message || 'Failed to create IVR flow');
     }
   };
 
@@ -187,9 +188,10 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       await apiService.updateIvr(token, activeIvr.id, payload);
       setShowEditModal(false);
       setActiveIvr(null);
+      showSuccessModal("IVR Updated", `IVR settings have been saved successfully.`);
       loadData();
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to update IVR menu');
+      showErrorModal('Failed to Update IVR', err.message || 'Failed to update IVR menu');
     }
   };
 
@@ -202,7 +204,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       setActiveNodes(nodes);
       setShowDesignerModal(true);
     } catch (err: any) {
-      toastError('Error', err.message || 'Failed to fetch nodes');
+      showErrorModal('Failed to Fetch Nodes', err.message || 'Failed to fetch nodes');
     }
   };
 
@@ -230,7 +232,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       const updated = await apiService.getIvrNodes(token, activeIvr.id);
       setActiveNodes(updated);
     } catch (err: any) {
-      toastError('Error', err.message);
+      showErrorModal('Error', err.message || 'Action failed');
     }
   };
 
@@ -245,7 +247,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       const updated = await apiService.getIvrNodes(token, activeIvr.id);
       setActiveNodes(updated);
     } catch (err: any) {
-      toastError('Error', err.message);
+      showErrorModal('Error', err.message || 'Action failed');
     }
   };
 
@@ -261,19 +263,21 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
       const updated = await apiService.getIvrNodes(token, activeIvr.id);
       setActiveNodes(updated);
     } catch (err: any) {
-      toastError('Error', err.message);
+      showErrorModal('Error', err.message || 'Action failed');
     }
   };
 
   const handleDeleteIvr = async () => {
     if (!activeIvr) return;
     try {
+      const ivrName = activeIvr.name;
       await apiService.deleteIvr(token, activeIvr.id);
       setShowDeleteModal(false);
       setActiveIvr(null);
+      showSuccessModal("IVR Deleted", `IVR flow "${ivrName}" has been removed.`);
       loadData();
     } catch (err: any) {
-      toastError('Error', err.message);
+      showErrorModal('Error', err.message || 'Action failed');
     }
   };
 

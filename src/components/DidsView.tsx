@@ -1,3 +1,4 @@
+import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -5,9 +6,10 @@ import { Hash, Plus, Link2, Unlink, Search, CheckCircle2 } from 'lucide-react';
 
 interface DidsViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
+export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [dids, setDids] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -47,8 +49,10 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
     e.preventDefault();
     try {
       await apiService.createDid(token, addForm);
+      const num = addForm.did_number;
       setShowAddModal(false);
       setAddForm({ did_number: '', trunk_id: '', destination_type: 'extension', destination: '' });
+      showSuccessModal('DID Added to Inventory', `DID ${num} has been created and added to inventory.`);
       loadData();
     } catch (err: any) {
       showErrorModal('Failed to Add DID', err.message || 'Failed to add DID');
@@ -60,8 +64,10 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
     if (!didToAssign || !selectedTenantId) return;
     try {
       await apiService.assignDid(token, didToAssign.id, selectedTenantId);
+      const num = didToAssign.did_number;
       setDidToAssign(null);
       setSelectedTenantId('');
+      showSuccessModal('DID Assigned', `DID ${num} has been successfully assigned to tenant.`);
       loadData();
     } catch (err: any) {
       showErrorModal('Failed to Assign DID', err.message || 'Failed to assign DID');
@@ -85,13 +91,15 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
       <div className="page-head">
         <div>
           <div className="eyebrow">Telephony Inventory</div>
-          <h1 className="page-title">DID Number Inventory</h1>
-          <p className="page-sub">Manage global DID phone numbers provider-wise and allocate free numbers to tenants</p>
+          <h1 className="page-title">{user?.role === 'SUPER_ADMIN' ? 'DID Number Inventory' : 'Assigned DIDs'}</h1>
+          <p className="page-sub">{user?.role === 'SUPER_ADMIN' ? 'Manage global DID phone numbers provider-wise and allocate free numbers to tenants' : 'Manage inbound routing and view allocated DID phone numbers for your organization'}</p>
         </div>
         <div>
-          <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-            <Plus size={16} /> Add DID to Inventory
-          </button>
+          {user?.role === 'SUPER_ADMIN' && (
+            <button className="btn-primary" onClick={() => setShowAddModal(true)}>
+              <Plus size={16} /> Add DID to Inventory
+            </button>
+          )}
         </div>
       </div>
 
@@ -141,14 +149,18 @@ export const DidsView: React.FC<DidsViewProps> = ({ token }) => {
                     <td>{d.destination_type}: {d.destination || 'Default Route'}</td>
                     <td><span className="terrix-badge green">ACTIVE</span></td>
                     <td className="text-right">
-                      {d.tenant_id ? (
-                        <button className="btn-secondary text-amber-600" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleUnassignDid(d.id)}>
-                          <Unlink size={13} style={{ marginRight: '4px' }} /> Unassign
-                        </button>
+                      {user?.role === 'SUPER_ADMIN' ? (
+                        d.tenant_id ? (
+                          <button className="btn-secondary text-amber-600" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleUnassignDid(d.id)}>
+                            <Unlink size={13} style={{ marginRight: '4px' }} /> Unassign
+                          </button>
+                        ) : (
+                          <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setDidToAssign(d)}>
+                            <Link2 size={13} style={{ marginRight: '4px' }} /> Assign to Tenant
+                          </button>
+                        )
                       ) : (
-                        <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setDidToAssign(d)}>
-                          <Link2 size={13} style={{ marginRight: '4px' }} /> Assign to Tenant
-                        </button>
+                        <span className="terrix-badge green">Provisioned</span>
                       )}
                     </td>
                   </tr>

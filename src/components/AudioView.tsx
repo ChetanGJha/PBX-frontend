@@ -1,3 +1,4 @@
+import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -5,9 +6,10 @@ import { Mic, Upload, Volume2 } from 'lucide-react';
 
 interface AudioViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
+export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -15,7 +17,7 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [category, setCategory] = useState('ivr_greeting');
-  const [tenantId, setTenantId] = useState('');
+  const [tenantId, setTenantId] = useState(user?.tenant_id || '');
 
   const loadData = async () => {
     try {
@@ -46,7 +48,8 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('category', category);
-    if (tenantId) formData.append('tenant_id', tenantId);
+    const tid = (user?.role !== 'SUPER_ADMIN' && user?.tenant_id) ? user.tenant_id : tenantId;
+      if (tid) formData.append('tenant_id', tid);
 
     try {
       await apiService.uploadAudioFile(token, formData);
@@ -99,7 +102,7 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
                     <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{a.file_path}</code></td>
                     <td>{a.created_at}</td>
                     <td>
-                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => alert(`Playing ${a.file_name}`)}>
+                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => showSuccessModal("Audio Playback Test", `Playback buffer loaded for: ${a.file_name} (${a.category})`)}>
                         <Volume2 size={13} style={{ marginRight: '4px' }} /> Test Audio
                       </button>
                     </td>
@@ -124,13 +127,15 @@ export const AudioView: React.FC<AudioViewProps> = ({ token }) => {
             </div>
             <form onSubmit={handleUpload}>
               <div className="modal-body">
-                <div className="form-group mb-3">
-                  <label className="form-label">Target Tenant (Optional)</label>
-                  <select className="form-control" value={tenantId} onChange={e => setTenantId(e.target.value)}>
-                    <option value="">-- Global / Select Tenant --</option>
-                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                  </select>
-                </div>
+                {user?.role === 'SUPER_ADMIN' && (
+                  <div className="form-group mb-3">
+                    <label className="form-label">Target Tenant (Optional)</label>
+                    <select className="form-control" value={tenantId} onChange={e => setTenantId(e.target.value)}>
+                      <option value="">-- Global / Select Tenant --</option>
+                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group mb-3">
                   <label className="form-label">Category</label>
                   <select className="form-control" value={category} onChange={e => setCategory(e.target.value)}>

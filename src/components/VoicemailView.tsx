@@ -5,6 +5,7 @@ import { useToast } from './ToastProvider';
 
 interface VoicemailViewProps {
   token: string | null;
+  user?: any;
 }
 
 interface VoicemailBoxItem {

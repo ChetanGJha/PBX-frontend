@@ -1,3 +1,4 @@
+import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -5,9 +6,10 @@ import { PhoneForwarded, Plus } from 'lucide-react';
 
 interface HuntGroupsViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token }) => {
+export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [huntGroups, setHuntGroups] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -46,7 +48,8 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token }) => {
     e.preventDefault();
     try {
       const payload: any = { ...formData };
-      if (!payload.tenant_id) delete payload.tenant_id;
+      if (user?.tenant_id) payload.tenant_id = user.tenant_id;
+      else if (!payload.tenant_id) delete payload.tenant_id;
       await apiService.createHuntGroup(token, payload);
       setShowModal(false);
       showSuccessModal('Hunt Group Created', `Hunt group "${formData.name}" (ext/${formData.extension_number}) configured.`);

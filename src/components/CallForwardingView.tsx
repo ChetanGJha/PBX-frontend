@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { PhoneForwarded, Clock, RefreshCw, Edit2, CheckCircle, AlertCircle, X, Smartphone, ArrowRight } from 'lucide-react';
+import { PhoneForwarded, Clock, RefreshCw, Edit2, AlertCircle, X, Smartphone, ArrowRight } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 
@@ -126,12 +126,7 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
         </div>
       )}
 
-      {successMsg && (
-        <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
+      
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

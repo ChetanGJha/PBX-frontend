@@ -1,15 +1,19 @@
+import type { User } from '../types';
+import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { FileText, Calendar, Filter, PhoneOutgoing, PhoneCall, Disc, Volume2 } from 'lucide-react';
 
 interface ReportsViewProps {
   token: string;
+  user?: User | null;
 }
 
-export const ReportsView: React.FC<ReportsViewProps> = ({ token }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
+  const { showSuccessModal, showErrorModal } = useToast();
   const [activeTab, setActiveTab] = useState<'cdr' | 'internal' | 'outbound' | 'recordings'>('cdr');
   const [tenants, setTenants] = useState<any[]>([]);
-  const [selectedTenant, setSelectedTenant] = useState('');
+  const [selectedTenant, setSelectedTenant] = useState(user?.tenant_id || '');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,6 +59,36 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token }) => {
     loadReport();
   }, [token, activeTab, selectedTenant, startDate, endDate]);
 
+  const exportToCsv = () => {
+    if (!reportData || reportData.length === 0) {
+      showErrorModal('Export Notice', 'No data available to export for the current filters.');
+      return;
+    }
+    try {
+      const headers = Object.keys(reportData[0]);
+      const csvRows = [
+        headers.join(','),
+        ...reportData.map(row =>
+          headers.map(h => {
+            const val = row[h] === null || row[h] === undefined ? '' : String(row[h]);
+            return `"${val.replace(/"/g, '""')}"`;
+          }).join(',')
+        )
+      ];
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${activeTab}_report_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showSuccessModal('Report Exported', `Successfully exported ${reportData.length} records to CSV.`);
+    } catch (err: any) {
+      showErrorModal('Export Failed', err.message || 'Failed to export report.');
+    }
+  };
+
   return (
     <div>
       <div className="page-head">
@@ -84,8 +118,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token }) => {
           <input type="date" className="form-control" style={{ height: '36px', fontSize: '12px' }} value={endDate} onChange={e => setEndDate(e.target.value)} />
         </div>
 
-        <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={() => { setSelectedTenant(''); setStartDate(''); setEndDate(''); }}>
+        <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '11px' }} onClick={() => { setSelectedTenant(user?.tenant_id || ''); setStartDate(''); setEndDate(''); }}>
           Reset Filters
+        </button>
+        <button className="btn-primary" style={{ padding: '6px 14px', fontSize: '11px' }} onClick={exportToCsv}>
+          Export CSV
         </button>
       </div>
 
@@ -231,7 +268,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token }) => {
                       <td>{(r.file_size / 1024).toFixed(1)} KB</td>
                       <td><span className="terrix-badge orange">{r.tenant_name || 'Global'}</span></td>
                       <td>
-                        <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => alert(`Playing ${r.file_name}`)}>
+                        <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => showSuccessModal("Playback Recording", `Recording loaded: ${r.file_name} (${(r.file_size / 1024).toFixed(1)} KB)`)}>
                           <Volume2 size={13} style={{ marginRight: '4px' }} /> Play Recording
                         </button>
                       </td>
