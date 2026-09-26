@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, Building2, User } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User as UserType, Tenant } from '../types';
 

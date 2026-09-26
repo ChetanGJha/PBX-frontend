@@ -8,6 +8,10 @@ import { TenantsView } from './components/TenantsView';
 import { ExtensionsView } from './components/ExtensionsView';
 import { UsersView } from './components/UsersView';
 import { XmlCurlConsole } from './components/XmlCurlConsole';
+import { TrunksView } from './components/TrunksView';
+import { GatewaysView } from './components/GatewaysView';
+import { RoutingView } from './components/RoutingView';
+import { QueuesView } from './components/QueuesView';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
 
@@ -30,7 +34,6 @@ export const App: React.FC = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [extensions, setExtensions] = useState<Extension[]>([]);
 
-  // Health probe polling
   useEffect(() => {
     const check = async () => {
       const s = await apiService.checkHealth();
@@ -41,7 +44,6 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch counts when token changes
   useEffect(() => {
     if (token) {
       apiService.getTenants(token).then(setTenants).catch(() => {});
@@ -105,6 +107,14 @@ export const App: React.FC = () => {
           {activeTab === 'users' && <UsersView token={token} currentUser={user} />}
 
           {activeTab === 'extensions' && <ExtensionsView token={token} />}
+
+          {activeTab === 'trunks' && <TrunksView token={token} />}
+
+          {activeTab === 'gateways' && <GatewaysView token={token} />}
+
+          {activeTab === 'routing' && <RoutingView token={token} />}
+
+          {activeTab === 'queues' && <QueuesView token={token} />}
 
           {activeTab === 'xmlcurl' && <XmlCurlConsole />}
         </div>

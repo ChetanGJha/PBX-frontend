@@ -2,7 +2,6 @@ import type { Tenant, Extension, User, SystemStatus } from '../types';
 
 let API_BASE_URL = 'http://localhost:8000';
 
-
 export const getApiBaseUrl = () => API_BASE_URL;
 export const setApiBaseUrl = (url: string) => {
   API_BASE_URL = url.replace(/\/$/, '');
@@ -138,7 +137,6 @@ export const apiService = {
       email?: string;
       sip_password: string;
       voicemail_pin?: string;
-
     }
   ) {
     const res = await fetch(`${API_BASE_URL}/api/v1/extensions`, {
@@ -227,5 +225,67 @@ export const apiService = {
       const err = await res.json();
       throw new Error(err.detail || 'Failed to delete user');
     }
+  },
+
+  // Trunks
+  async getTrunks(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to fetch trunks');
+    return res.json();
+  },
+
+  async createTrunk(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/trunks`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to create trunk');
+    }
+    return res.json();
+  },
+
+  // Gateways
+  async getGateways(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to fetch gateways');
+    return res.json();
+  },
+
+  async assignGateway(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways/assign`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to assign gateway');
+    }
+    return res.json();
+  },
+
+  // Routing
+  async getRoutes(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to fetch routing rules');
+    return res.json();
+  },
+
+  // Queues
+  async getQueues(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/queues`, {
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to fetch queues');
+    return res.json();
   },
 };

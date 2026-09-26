@@ -1,5 +1,4 @@
 import React from 'react';
-import { LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users, Activity } from 'lucide-react';
 import { TerrixLogo } from './TerrixLogo';
 import type { User } from '../types';
 
@@ -10,81 +9,106 @@ interface SidebarProps {
   user: User | null;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiveTab, user }) => {
-  const role = user?.role || 'SUPER_ADMIN';
-
-  const isSuper = role === 'SUPER_ADMIN';
-  const isTenantAdmin = role === 'TENANT_ADMIN';
-
-  const navGroups = [
-    {
-      label: 'Overview',
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUPERVISOR', 'AGENT'] },
-        { id: 'auth', label: 'Auth & Security', icon: ShieldCheck, roles: ['SUPER_ADMIN'] },
-      ],
-    },
-    {
-      label: 'Tenants & Users',
-      items: [
-        { id: 'tenants', label: 'Tenants Registry', icon: Building2, roles: ['SUPER_ADMIN'] },
-        { id: 'users', label: 'Users & Admins', icon: Users, roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-        { id: 'extensions', label: 'SIP Extensions', icon: Phone, roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUPERVISOR', 'AGENT'] },
-      ],
-    },
-    {
-      label: 'Telephony Engine',
-      items: [
-        { id: 'xmlcurl', label: 'FreeSWITCH Console', icon: Terminal, roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
-      ],
-    },
-  ];
-
+export const Sidebar: React.FC<SidebarProps> = ({
+  collapsed,
+  activeTab,
+  setActiveTab,
+}) => {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      {/* Brand Header */}
       <div className="brand">
-        <TerrixLogo size="small" />
-        <div className="brand-name">
-          Terrix AI
-          <small>{isSuper ? 'PBX Engine' : isTenantAdmin ? 'Tenant Admin' : 'Agent Portal'}</small>
-        </div>
+        <TerrixLogo size={collapsed ? 'small' : 'medium'} />
+        {!collapsed && (
+          <div className="brand-name">
+            Terrix AI
+            <small>Technologies</small>
+          </div>
+        )}
       </div>
 
-      {/* Sidebar Navigation */}
       <div className="sidebar-body">
-        {navGroups.map((group, idx) => {
-          const visibleItems = group.items.filter((item) => item.roles.includes(role));
-          if (visibleItems.length === 0) return null;
+        <div className="nav-label">Overview</div>
+        <button
+          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <i className="bi bi-grid"></i>
+          <span className="nav-text">Dashboard</span>
+        </button>
 
-          return (
-            <div key={idx}>
-              <div className="nav-label">{group.label}</div>
-              {visibleItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`nav-item ${isActive ? 'active' : ''}`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="nav-text">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+        <div className="nav-label">Telephony Engine</div>
+        <button
+          className={`nav-item ${activeTab === 'extensions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('extensions')}
+        >
+          <i className="bi bi-telephone"></i>
+          <span className="nav-text">Extensions</span>
+        </button>
 
-      {/* Sidebar Footer */}
-      <div className="sidebar-footer">
-        <div className="flex items-center gap-2 text-[10px] text-slate-400 px-2 py-1">
-          <Activity className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-          <span className="nav-text">v1.10.0-Production</span>
-        </div>
+        <button
+          className={`nav-item ${activeTab === 'trunks' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trunks')}
+        >
+          <i className="bi bi-diagram-3"></i>
+          <span className="nav-text">SIP Trunks</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'gateways' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gateways')}
+        >
+          <i className="bi bi-hdd-network"></i>
+          <span className="nav-text">Gateways</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'routing' ? 'active' : ''}`}
+          onClick={() => setActiveTab('routing')}
+        >
+          <i className="bi bi-sign-turn-right"></i>
+          <span className="nav-text">Call Routing</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'queues' ? 'active' : ''}`}
+          onClick={() => setActiveTab('queues')}
+        >
+          <i className="bi bi-people"></i>
+          <span className="nav-text">Call Queues</span>
+        </button>
+
+        <div className="nav-label">Administration</div>
+        <button
+          className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
+          onClick={() => setActiveTab('users')}
+        >
+          <i className="bi bi-person-badge"></i>
+          <span className="nav-text">Users & Admins</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'tenants' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tenants')}
+        >
+          <i className="bi bi-building"></i>
+          <span className="nav-text">Tenants</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'auth' ? 'active' : ''}`}
+          onClick={() => setActiveTab('auth')}
+        >
+          <i className="bi bi-shield-check"></i>
+          <span className="nav-text">Auth Controls</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'xmlcurl' ? 'active' : ''}`}
+          onClick={() => setActiveTab('xmlcurl')}
+        >
+          <i className="bi bi-code-slash"></i>
+          <span className="nav-text">mod_xml_curl</span>
+        </button>
       </div>
     </aside>
   );
