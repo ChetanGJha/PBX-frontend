@@ -3,6 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Route as RouteIcon, Plus, Search, Trash2 } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 
 interface RoutingViewProps {
   token: string;
@@ -160,6 +161,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     (r.destination && r.destination.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div>
       <div className="page-head">
@@ -168,20 +171,22 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
           <h1 className="page-title">Call Routing Rules</h1>
           <p className="page-sub">Configure tenant-wise inbound DID routing and outbound pattern matching</p>
         </div>
-        <div>
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            <Plus size={16} /> Add Routing Rule
-          </button>
-        </div>
+        {canManage && (
+          <div>
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <Plus size={16} /> Add Routing Rule
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search routes..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -203,14 +208,14 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                 <th>Target Destination</th>
                 <th>Priority</th>
                 {user?.role === 'SUPER_ADMIN' && <th>Tenant</th>}
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 8 : 7} className="text-center py-4">Loading routing rules...</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 7 : 6) + (canManage ? 1 : 0)} className="text-center py-4">Loading routing rules...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 8 : 7} className="text-center py-4 text-muted">No routing rules configured yet</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 7 : 6) + (canManage ? 1 : 0)} className="text-center py-4 text-muted">No routing rules configured yet</td></tr>
               ) : (
                 filtered.map(r => (
                   <tr key={r.id}>
@@ -243,17 +248,19 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                         <span className="terrix-badge orange">{r.tenant_name || 'Global'}</span>
                       </td>
                     )}
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        className="btn-secondary text-rose-600"
-                        style={{ padding: '4px 8px', fontSize: '11px' }}
-                        onClick={() => handleDelete(r.id)}
-                        title="Delete Route"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          className="btn-secondary text-rose-600"
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          onClick={() => handleDelete(r.id)}
+                          title="Delete Route"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -289,14 +296,14 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
                   <div className="form-group">
                     <label className="form-label">Route Type</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: 'inbound_did', label: 'Inbound DID Route' },
+                        { value: 'outbound', label: 'Outbound Dialplan Rule' }
+                      ]}
                       value={formData.route_type}
-                      onChange={e => setFormData({ ...formData, route_type: e.target.value })}
-                    >
-                      <option value="inbound_did">Inbound DID Route</option>
-                      <option value="outbound">Outbound Dialplan Rule</option>
-                    </select>
+                      onChange={val => setFormData({ ...formData, route_type: val })}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -304,22 +311,17 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                       {formData.route_type === 'inbound_did' ? 'Assigned DID Number' : 'Regex / Match Pattern'}
                     </label>
                     {formData.route_type === 'inbound_did' ? (
-                      <select
-                        required
-                        className="form-control"
+                      <CustomSelect
+                        options={[
+                          { value: '', label: '-- Select Assigned DID --' },
+                          ...assignedDids.map((d: any) => ({
+                            value: d.did_number,
+                            label: `${d.did_number} ${d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}`
+                          }))
+                        ]}
                         value={formData.did_number}
-                        onChange={e => setFormData({ ...formData, did_number: e.target.value })}
-                      >
-                        <option value="">-- Select Assigned DID --</option>
-                        {assignedDids.map((d: any) => (
-                          <option key={d.id} value={d.did_number}>
-                            {d.did_number} {d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}
-                          </option>
-                        ))}
-                        {assignedDids.length === 0 && (
-                          <option disabled value="">No DIDs assigned to this tenant</option>
-                        )}
-                      </select>
+                        onChange={val => setFormData({ ...formData, did_number: val })}
+                      />
                     ) : (
                       <input
                         required
@@ -333,16 +335,16 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
                   <div className="form-group">
                     <label className="form-label">Destination Type</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: 'queue', label: 'Call Queue' },
+                        { value: 'extension', label: 'Extension' },
+                        { value: 'ivr', label: 'IVR Menu Flow' },
+                        { value: 'voicemail', label: 'Voicemail Box' }
+                      ]}
                       value={formData.destination_type}
-                      onChange={e => handleDestTypeChange(e.target.value)}
-                    >
-                      <option value="queue">Call Queue</option>
-                      <option value="extension">Extension</option>
-                      <option value="ivr">IVR Menu Flow</option>
-                      <option value="voicemail">Voicemail Box</option>
-                    </select>
+                      onChange={handleDestTypeChange}
+                    />
                   </div>
 
                   <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -353,21 +355,14 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                       </small>
                     </label>
                     {destinationOptions.length > 0 ? (
-                      <select
-                        required
-                        className="form-control"
+                      <CustomSelect
+                        options={[
+                          { value: '', label: `-- Select ${formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --` },
+                          ...destinationOptions
+                        ]}
                         value={formData.destination}
-                        onChange={e => setFormData({ ...formData, destination: e.target.value })}
-                      >
-                        <option value="">
-                          -- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --
-                        </option>
-                        {destinationOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={val => setFormData({ ...formData, destination: val })}
+                      />
                     ) : (
                       <input
                         required
@@ -382,16 +377,14 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                   {user?.role === 'SUPER_ADMIN' && (
                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Target Tenant (Optional)</label>
-                      <select
-                        className="form-control"
+                      <CustomSelect
+                        options={[
+                          { value: '', label: '-- Global / Select Tenant --' },
+                          ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                        ]}
                         value={formData.tenant_id}
-                        onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
-                      >
-                        <option value="">-- Global / Select Tenant --</option>
-                        {tenants.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-                        ))}
-                      </select>
+                        onChange={val => setFormData({ ...formData, tenant_id: val })}
+                      />
                     </div>
                   )}
                 </div>

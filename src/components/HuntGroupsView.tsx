@@ -1,6 +1,7 @@
 import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
+import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import { PhoneForwarded, Plus, Edit2, Trash2, Search, X } from 'lucide-react';
 
@@ -172,6 +173,8 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
     (ext.display_name && ext.display_name.toLowerCase().includes(memberSearch.toLowerCase()))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div>
       <div className="page-head">
@@ -180,20 +183,22 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
           <h1 className="page-title">Hunt Groups</h1>
           <p className="page-sub">Configure sequential, simultaneous, and circular ring hunting groups</p>
         </div>
-        <div>
-          <button className="btn-primary" onClick={handleOpenCreate}>
-            <Plus size={16} /> Create Hunt Group
-          </button>
-        </div>
+        {canManage && (
+          <div>
+            <button className="btn-primary" onClick={handleOpenCreate}>
+              <Plus size={16} /> Create Hunt Group
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search hunt groups..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -214,14 +219,14 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
                 <th>Timeout</th>
                 <th>Member Extensions</th>
                 {user?.role === 'SUPER_ADMIN' && <th>Tenant</th>}
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 7 : 6} className="text-center py-4">Loading hunt groups...</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 6 : 5) + (canManage ? 1 : 0)} className="text-center py-4">Loading hunt groups...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 7 : 6} className="text-center py-4 text-muted">No hunt groups configured yet</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 6 : 5) + (canManage ? 1 : 0)} className="text-center py-4 text-muted">No hunt groups configured yet</td></tr>
               ) : (
                 filtered.map(hg => {
                   const memberList = hg.members
@@ -274,28 +279,30 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
                           <span className="terrix-badge green">{hg.tenant_name || 'Global'}</span>
                         </td>
                       )}
-                      <td className="text-right">
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '5px 8px', fontSize: '11px' }}
-                            onClick={() => handleOpenEdit(hg)}
-                            title="Edit Hunt Group"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-secondary text-rose-600"
-                            style={{ padding: '5px 8px', fontSize: '11px' }}
-                            onClick={() => handleDelete(hg)}
-                            title="Delete Hunt Group"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
+                      {canManage && (
+                        <td className="text-right">
+                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
+                              onClick={() => handleOpenEdit(hg)}
+                              title="Edit Hunt Group"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary text-rose-600"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
+                              onClick={() => handleDelete(hg)}
+                              title="Delete Hunt Group"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -344,15 +351,15 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
 
                   <div className="form-group">
                     <label className="form-label required">Hunting Strategy</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: 'sequential', label: 'Sequential (Priority Order)' },
+                        { value: 'simultaneous', label: 'Simultaneous (Ring All)' },
+                        { value: 'circular', label: 'Circular / Round Robin' }
+                      ]}
                       value={formData.strategy}
-                      onChange={e => setFormData({ ...formData, strategy: e.target.value })}
-                    >
-                      <option value="sequential">Sequential (Rings members in priority order)</option>
-                      <option value="simultaneous">Simultaneous (Rings all member phones at once)</option>
-                      <option value="circular">Circular / Round Robin</option>
-                    </select>
+                      onChange={val => setFormData({ ...formData, strategy: val })}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -370,16 +377,14 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
                   {user?.role === 'SUPER_ADMIN' && (
                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Target Tenant (Optional)</label>
-                      <select
-                        className="form-control"
+                      <CustomSelect
+                        options={[
+                          { value: '', label: '-- Global / Select Tenant --' },
+                          ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                        ]}
                         value={formData.tenant_id}
-                        onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
-                      >
-                        <option value="">-- Global / Select Tenant --</option>
-                        {tenants.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-                        ))}
-                      </select>
+                        onChange={val => setFormData({ ...formData, tenant_id: val })}
+                      />
                     </div>
                   )}
 

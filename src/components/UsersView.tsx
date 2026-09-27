@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User as UserType, Tenant } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface UsersViewProps {
   token: string | null;
@@ -36,6 +37,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [tenantFilter, setTenantFilter] = useState('');
 
   // Create Modal State
   const [showModal, setShowModal] = useState(false);
@@ -182,10 +184,16 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     const matchesSearch =
       u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (u.first_name && u.first_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      (u.first_name && u.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (u.last_name && u.last_name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesRole = roleFilter ? u.role === roleFilter : true;
-    return matchesSearch && matchesRole;
+    const matchesTenant = tenantFilter
+      ? (tenantFilter === 'global' ? (!u.tenant_id || u.tenant_id === 'global') : u.tenant_id === tenantFilter)
+      : true;
+    return matchesSearch && matchesRole && matchesTenant;
   });
+
+  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'TENANT_ADMIN';
 
   return (
     <div className="space-y-6">
@@ -206,10 +214,12 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-          <button onClick={() => setShowModal(true)} className="btn-primary">
-            <UserPlus className="w-4 h-4" />
-            <span>{tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin'}</span>
-          </button>
+          {canManage && (
+            <button onClick={() => setShowModal(true)} className="btn-primary">
+              <UserPlus className="w-4 h-4" />
+              <span>{tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -222,34 +232,50 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
 
       {/* Filter and Search Bar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-lg">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-2xl">
+          <div className="search-input-wrap flex-1">
+            <Search className="search-icon" />
             <input
               type="text"
               placeholder="Search username or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control pl-9 text-xs"
+              className="form-control text-xs"
             />
           </div>
 
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="form-control text-xs w-40 shrink-0"
-          >
-            <option value="">All Roles</option>
-            {!tenantScoped && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-            <option value="TENANT_ADMIN">TENANT_ADMIN</option>
-            <option value="SUB_ADMIN">SUB_ADMIN</option>
-            <option value="SUPERVISOR">SUPERVISOR</option>
-            <option value="AGENT">AGENT</option>
-          </select>
+          {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
+            <div className="w-48 shrink-0">
+              <CustomSelect
+                options={[
+                  { value: '', label: 'All Tenants' },
+                  { value: 'global', label: 'Global (Platform)' },
+                  ...tenants.map((t) => ({ value: t.id, label: t.name }))
+                ]}
+                value={tenantFilter}
+                onChange={(val) => setTenantFilter(val)}
+              />
+            </div>
+          )}
+
+          <div className="w-44 shrink-0">
+            <CustomSelect
+              options={[
+                { value: '', label: 'All Roles' },
+                ...(!tenantScoped ? [{ value: 'SUPER_ADMIN', label: 'SUPER_ADMIN' }] : []),
+                { value: 'TENANT_ADMIN', label: 'TENANT_ADMIN' },
+                { value: 'SUB_ADMIN', label: 'SUB_ADMIN' },
+                { value: 'SUPERVISOR', label: 'SUPERVISOR' },
+                { value: 'AGENT', label: 'AGENT' },
+              ]}
+              value={roleFilter}
+              onChange={(val) => setRoleFilter(val)}
+            />
+          </div>
         </div>
 
         <div className="text-xs text-slate-500 font-semibold">
-          Total Users: <span className="text-slate-900">{usersList.length}</span>
+          Total Users: <span className="text-slate-900">{filteredUsers.length}</span>
         </div>
       </div>
 
@@ -265,7 +291,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                 <th>Assigned Tenant</th>
                 <th>Role</th>
                 <th>Module Permissions</th>
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -310,42 +336,46 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                         ) : (
                           <span className="text-xs text-slate-400">None assigned</span>
                         )}
-                        <button
-                          onClick={() => openPermModal(u)}
-                          className="ml-1 p-1 text-slate-400 hover:text-blue-600 rounded"
-                          title="Edit Sub-Admin Module Permissions"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                        </button>
+                        {canManage && (
+                          <button
+                            onClick={() => openPermModal(u)}
+                            className="ml-1 p-1 text-slate-400 hover:text-blue-600 rounded"
+                            title="Edit Sub-Admin Module Permissions"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <span className="text-xs text-slate-400">Standard role access</span>
                     )}
                   </td>
-                  <td className="text-right">
-                    {u.role === 'SUB_ADMIN' && (
+                  {canManage && (
+                    <td className="text-right">
+                      {u.role === 'SUB_ADMIN' && (
+                        <button
+                          onClick={() => openPermModal(u)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer mr-1"
+                          title="Configure Module Access"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => openPermModal(u)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer mr-1"
-                        title="Configure Module Access"
+                        onClick={() => handleDelete(u.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer"
+                        title="Deactivate User"
                       >
-                        <Settings className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(u.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer"
-                      title="Deactivate User"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+                    </td>
+                  )}
                 </tr>
               ))}
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400 text-xs">
-                    No users found. Click "Provision User" to create administrative accounts.
+                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-slate-400 text-xs">
+                    No users found.{canManage ? ' Click "Provision User" to create administrative accounts.' : ''}
                   </td>
                 </tr>
               )}
@@ -417,20 +447,17 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
                       Assign to Tenant Domain <span style={{ color: '#EF4444' }}>*</span>
                     </label>
-                    <select
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Global (Super Admin only) --' },
+                        ...tenants.map((t) => ({
+                          value: t.id,
+                          label: `${t.name} (${t.domain})`
+                        }))
+                      ]}
                       value={tenantId}
-                      onChange={(e) => setTenantId(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px' }}
-                      required
-                    >
-                      <option value="">-- Global (Super Admin only) --</option>
-                      {tenants.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.domain})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setTenantId(val)}
+                    />
                   </div>
                 )}
 
@@ -517,20 +544,17 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
                       User Role <span style={{ color: '#EF4444' }}>*</span>
                     </label>
-                    <select
+                    <CustomSelect
+                      options={[
+                        ...(!tenantScoped && currentUser?.role === 'SUPER_ADMIN' ? [{ value: 'SUPER_ADMIN', label: 'SUPER_ADMIN (Platform Master)' }] : []),
+                        { value: 'TENANT_ADMIN', label: 'TENANT_ADMIN (Tenant Master)' },
+                        { value: 'SUB_ADMIN', label: 'SUB_ADMIN (Granular Modules)' },
+                        { value: 'SUPERVISOR', label: 'SUPERVISOR (Call Center)' },
+                        { value: 'AGENT', label: 'AGENT (Extension User)' }
+                      ]}
                       value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px' }}
-                    >
-                      {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && (
-                        <option value="SUPER_ADMIN">SUPER_ADMIN (Platform Master)</option>
-                      )}
-                      <option value="TENANT_ADMIN">TENANT_ADMIN (Tenant Master)</option>
-                      <option value="SUB_ADMIN">SUB_ADMIN (Granular Modules)</option>
-                      <option value="SUPERVISOR">SUPERVISOR (Call Center)</option>
-                      <option value="AGENT">AGENT (Extension User)</option>
-                    </select>
+                      onChange={(val) => setRole(val)}
+                    />
                   </div>
                 </div>
 

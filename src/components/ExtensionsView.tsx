@@ -4,6 +4,7 @@ import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle } from 'lucide
 
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';
+import { CustomSelect } from './CustomSelect';
 
 interface ExtensionsViewProps {
   token: string | null;
@@ -128,6 +129,8 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
     return matchesSearch && matchesTenant;
   });
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -143,10 +146,12 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-          <button onClick={() => setShowModal(true)} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            <span>Provision Extension</span>
-          </button>
+          {canManage && (
+            <button onClick={() => setShowModal(true)} className="btn-primary">
+              <Plus className="w-4 h-4" />
+              <span>Provision Extension</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -160,30 +165,28 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       {/* Toolbar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="search-input-wrap w-full md:w-72">
+            <Search className="search-icon" />
             <input
               type="text"
               placeholder="Search extension or name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control pl-9"
+              className="form-control"
             />
           </div>
 
-          {tenants.length > 0 && (
-            <select
-              value={selectedTenantFilter}
-              onChange={(e) => setSelectedTenantFilter(e.target.value)}
-              className="form-control w-48"
-            >
-              <option value="">All Tenants</option>
-              {tenants.map((t: Tenant) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+            <div className="w-48 shrink-0">
+              <CustomSelect
+                options={[
+                  { value: '', label: 'All Tenants' },
+                  ...tenants.map((t: Tenant) => ({ value: t.id, label: t.name }))
+                ]}
+                value={selectedTenantFilter}
+                onChange={(val) => setSelectedTenantFilter(val)}
+              />
+            </div>
           )}
         </div>
 
@@ -204,7 +207,7 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
                 <th>Caller ID</th>
                 <th>WebRTC Status</th>
                 <th>No-Answer Timeout</th>
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -220,24 +223,26 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
                     </span>
                   </td>
                   <td className="font-mono text-slate-700">{ext.no_answer_timeout}s</td>
-                  <td className="text-right">
-                    <button
-                      onClick={() => {
-                        setSelectedExtId(ext.id);
-                        setShowResetModal(true);
-                      }}
-                      className="btn-secondary !h-8 !px-3 !py-0 text-xs"
-                    >
-                      <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
-                      <span>Reset Password</span>
-                    </button>
-                  </td>
+                  {canManage && (
+                    <td className="text-right">
+                      <button
+                        onClick={() => {
+                          setSelectedExtId(ext.id);
+                          setShowResetModal(true);
+                        }}
+                        className="btn-secondary !h-8 !px-3 !py-0 text-xs"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
+                        <span>Reset Password</span>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {filteredExts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400 text-xs">
-                    No extensions found. Click "Provision Extension" to add your first extension.
+                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-slate-400 text-xs">
+                    No extensions found.{canManage ? ' Click "Provision Extension" to add your first extension.' : ''}
                   </td>
                 </tr>
               )}
@@ -265,20 +270,17 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
 
             <form onSubmit={handleCreate}>
               <div className="modal-body space-y-4">
-                {tenants.length > 0 && (
+                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
                   <div>
                     <label className="form-label">Target Tenant</label>
-                    <select
+                    <CustomSelect
+                      options={tenants.map((t: Tenant) => ({
+                        value: t.id,
+                        label: `${t.name} (${t.sip_domain})`
+                      }))}
                       value={tenantId}
-                      onChange={(e) => setTenantId(e.target.value)}
-                      className="form-control"
-                    >
-                      {tenants.map((t: Tenant) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.sip_domain})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setTenantId(val)}
+                    />
                   </div>
                 )}
 

@@ -1,6 +1,7 @@
 import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
+import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import { Users, Plus, Edit2, Trash2, Search, X } from 'lucide-react';
 
@@ -174,6 +175,8 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
     (ext.display_name && ext.display_name.toLowerCase().includes(agentSearch.toLowerCase()))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div>
       <div className="page-head">
@@ -182,20 +185,22 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
           <h1 className="page-title">Call Queues</h1>
           <p className="page-sub">Configure call distribution tiers, ring strategies, and multi-select agent extensions</p>
         </div>
-        <div>
-          <button className="btn-primary" onClick={handleOpenCreate}>
-            <Plus size={16} /> Add Call Queue
-          </button>
-        </div>
+        {canManage && (
+          <div>
+            <button className="btn-primary" onClick={handleOpenCreate}>
+              <Plus size={16} /> Add Call Queue
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search queues..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -216,14 +221,14 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
                 <th>Assigned Agent Members</th>
                 <th>Timeouts (Ring/Wait)</th>
                 {user?.role === 'SUPER_ADMIN' && <th>Tenant</th>}
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 7 : 6} className="text-center py-4">Loading call queues...</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 6 : 5) + (canManage ? 1 : 0)} className="text-center py-4">Loading call queues...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={user?.role === 'SUPER_ADMIN' ? 7 : 6} className="text-center py-4 text-muted">No call queues configured</td></tr>
+                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 6 : 5) + (canManage ? 1 : 0)} className="text-center py-4 text-muted">No call queues configured</td></tr>
               ) : (
                 filtered.map(q => {
                   const agentList = q.agents
@@ -278,21 +283,22 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
                           <span className="terrix-badge green">{q.tenant_name || 'Global'}</span>
                         </td>
                       )}
-                      <td className="text-right">
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '5px 8px', fontSize: '11px' }}
-                            onClick={() => handleOpenEdit(q)}
-                            title="Edit Queue"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-secondary text-rose-600"
-                            style={{ padding: '5px 8px', fontSize: '11px' }}
+                      {canManage && (
+                        <td className="text-right">
+                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
+                              onClick={() => handleOpenEdit(q)}
+                              title="Edit Queue"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary text-rose-600"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
                             onClick={() => handleDelete(q)}
                             title="Delete Queue"
                           >
@@ -300,6 +306,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
                           </button>
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })
@@ -348,16 +355,16 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
 
                   <div className="form-group">
                     <label className="form-label required">Ring Strategy</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: 'round_robin', label: 'Round Robin (Sequential)' },
+                        { value: 'ring_all', label: 'Ring All Available' },
+                        { value: 'longest_idle_agent', label: 'Longest Idle Agent' },
+                        { value: 'least_talk_time', label: 'Least Talk Time' }
+                      ]}
                       value={formData.strategy}
-                      onChange={e => setFormData({ ...formData, strategy: e.target.value })}
-                    >
-                      <option value="round_robin">Round Robin (Sequential)</option>
-                      <option value="ring_all">Ring All Available</option>
-                      <option value="longest_idle_agent">Longest Idle Agent</option>
-                      <option value="least_talk_time">Least Talk Time</option>
-                    </select>
+                      onChange={val => setFormData({ ...formData, strategy: val })}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -399,16 +406,14 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
                   {user?.role === 'SUPER_ADMIN' && (
                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="form-label">Target Tenant (Optional)</label>
-                      <select
-                        className="form-control"
+                      <CustomSelect
+                        options={[
+                          { value: '', label: '-- Global / Select Tenant --' },
+                          ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                        ]}
                         value={formData.tenant_id}
-                        onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
-                      >
-                        <option value="">-- Global / Select Tenant --</option>
-                        {tenants.map(t => (
-                          <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-                        ))}
-                      </select>
+                        onChange={val => setFormData({ ...formData, tenant_id: val })}
+                      />
                     </div>
                   )}
 

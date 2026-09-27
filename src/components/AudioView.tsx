@@ -3,6 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService, getApiBaseUrl } from '../services/api';
 import { Upload, Play, Pause, Trash2, Mic, Volume2, VolumeX, Music, Search } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 
 interface AudioViewProps {
   token: string;
@@ -178,6 +179,8 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
     (a.category && a.category.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div style={{ paddingBottom: currentPlaying ? '80px' : '0' }}>
       <div className="page-head">
@@ -186,20 +189,22 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
           <h1 className="page-title">Voice Prompts & Greetings</h1>
           <p className="page-sub">Upload and stream custom WAV/MP3 prompts for IVRs, call greetings, and music-on-hold</p>
         </div>
-        <div>
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            <Upload size={16} /> Upload Audio Prompt
-          </button>
-        </div>
+        {canManage && (
+          <div>
+            <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <Upload size={16} /> Upload Audio Prompt
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search audio prompts..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -289,15 +294,17 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
                               </>
                             )}
                           </button>
-                          <button
-                            type="button"
-                            className="btn-secondary text-rose-600"
-                            style={{ padding: '5px 8px', fontSize: '11px' }}
-                            onClick={() => handleDelete(a)}
-                            title="Delete Audio"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {canManage && (
+                            <button
+                              type="button"
+                              className="btn-secondary text-rose-600"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
+                              onClick={() => handleDelete(a)}
+                              title="Delete Audio"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -411,20 +418,28 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
                 {user?.role === 'SUPER_ADMIN' && (
                   <div className="form-group mb-3">
                     <label className="form-label">Target Tenant (Optional)</label>
-                    <select className="form-control" value={tenantId} onChange={e => setTenantId(e.target.value)}>
-                      <option value="">-- Global / Select Tenant --</option>
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Global / Select Tenant --' },
+                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                      ]}
+                      value={tenantId}
+                      onChange={(val) => setTenantId(val)}
+                    />
                   </div>
                 )}
                 <div className="form-group mb-3">
                   <label className="form-label required">Prompt Category</label>
-                  <select className="form-control" value={category} onChange={e => setCategory(e.target.value)}>
-                    <option value="ivr_greeting">IVR Welcome Prompt</option>
-                    <option value="ivr_prompt">IVR Menu Option Prompt</option>
-                    <option value="voicemail_greeting">Voicemail Greeting</option>
-                    <option value="music_on_hold">Music On Hold (MOH)</option>
-                  </select>
+                  <CustomSelect
+                    options={[
+                      { value: 'ivr_greeting', label: 'IVR Welcome Prompt' },
+                      { value: 'ivr_prompt', label: 'IVR Menu Option Prompt' },
+                      { value: 'voicemail_greeting', label: 'Voicemail Greeting' },
+                      { value: 'music_on_hold', label: 'Music On Hold (MOH)' },
+                    ]}
+                    value={category}
+                    onChange={(val) => setCategory(val)}
+                  />
                 </div>
                 <div className="form-group mb-3">
                   <label className="form-label required">Audio Recording File</label>

@@ -3,6 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { FileText, Calendar, Filter, PhoneOutgoing, PhoneCall, Disc, Volume2 } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 
 interface ReportsViewProps {
   token: string;
@@ -101,14 +102,22 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
 
       {/* FILTER TOOLBAR */}
       <div style={{ background: '#FFFFFF', padding: '18px 20px', borderRadius: '12px', border: '1px solid var(--border)', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Filter size={16} style={{ color: '#9CA3AF' }} />
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Tenant Filter:</span>
-          <select className="form-control" style={{ height: '36px', fontSize: '12px', minWidth: '180px' }} value={selectedTenant} onChange={e => setSelectedTenant(e.target.value)}>
-            <option value="">-- All Tenants --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-          </select>
-        </div>
+        {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={16} style={{ color: '#9CA3AF' }} />
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Tenant Filter:</span>
+            <div style={{ minWidth: '200px' }}>
+              <CustomSelect
+                options={[
+                  { value: '', label: '-- All Tenants --' },
+                  ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                ]}
+                value={selectedTenant}
+                onChange={(val) => setSelectedTenant(val)}
+              />
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Calendar size={16} style={{ color: '#9CA3AF' }} />
