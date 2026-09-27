@@ -327,6 +327,15 @@ export const apiService = {
     return res.json();
   },
 
+  async deleteAudioFile(token: string, fileId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/audio/${fileId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete audio file');
+    return true;
+  },
+
   async uploadAudioFile(token: string, formData: FormData) {
     const res = await fetch(`${API_BASE_URL}/api/v1/audio/upload`, {
       method: 'POST',
@@ -343,6 +352,25 @@ export const apiService = {
     if (!res.ok) throw new Error('Failed to fetch hunt groups');
     return res.json();
   },
+  async updateHuntGroup(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/hunt-groups/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update hunt group');
+    return res.json();
+  },
+
+  async deleteHuntGroup(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/hunt-groups/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete hunt group');
+    return true;
+  },
+
   async createHuntGroup(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/hunt-groups`, {
       method: 'POST',
@@ -437,9 +465,13 @@ export const apiService = {
     return res.json();
   },
   async getUsers(token: string, tenantId?: string): Promise<User[]> {
-    const url = tenantId ? `${API_BASE_URL}/api/v1/users?tenant_id=${tenantId}` : `${API_BASE_URL}/api/v1/users`;
+    const hasValidTenant = tenantId && tenantId !== 'undefined' && tenantId !== 'null' && tenantId.trim().length > 0;
+    const url = hasValidTenant ? `${API_BASE_URL}/api/v1/users?tenant_id=${tenantId}` : `${API_BASE_URL}/api/v1/users`;
     const res = await fetch(url, { headers: getHeaders(token) });
-    if (!res.ok) throw new Error('Failed to fetch users');
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(parseErrorDetail(err, 'Failed to fetch users'));
+    }
     return res.json();
   },
   async createUser(token: string, payload: any) {

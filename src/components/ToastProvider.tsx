@@ -292,13 +292,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   fontSize: '13.5px',
                   color: '#334155',
                   lineHeight: '1.6',
-                  textAlign: 'center',
+                  textAlign: 'left',
                   background: ackModal.type === 'error' ? '#FFF5F5' : '#F8FAFC',
                   border: `1px solid ${ackModal.type === 'error' ? '#FED7D7' : '#E2E8F0'}`,
                   borderRadius: '12px',
                   padding: '14px 18px',
                   wordBreak: 'break-word',
-                  fontFamily: ackModal.type === 'error' ? 'monospace' : 'inherit',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: ackModal.type === 'error' ? 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' : 'inherit',
                 }}
               >
                 {ackModal.message}

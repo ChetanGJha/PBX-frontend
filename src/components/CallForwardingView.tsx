@@ -1,12 +1,12 @@
 import { useToast } from './ToastProvider';
-import React, { useState, useEffect } from 'react';
-import { PhoneForwarded, Clock, RefreshCw, Edit2, AlertCircle, X, Smartphone, ArrowRight, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { PhoneForwarded, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 
 interface CallForwardingViewProps {
   token: string | null;
-  user: User | null;
+  user?: User | null;
 }
 
 interface ForwardingRuleItem {
@@ -23,15 +23,16 @@ interface ForwardingRuleItem {
   updated_at?: string;
 }
 
-export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token }) => {
+export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [rules, setRules] = useState<ForwardingRuleItem[]>([]);
+  const [extensions, setExtensions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
+  const [search, setSearch] = useState('');
 
-  // Edit Modal State
-  const [editingRule, setEditingRule] = useState<ForwardingRuleItem | null>(null);
+  // Modal State
+  const [showModal, setShowModal] = useState(false);
+  const [selectedExtId, setSelectedExtId] = useState('');
   const [alwaysEnabled, setAlwaysEnabled] = useState(false);
   const [alwaysDest, setAlwaysDest] = useState('');
   const [busyEnabled, setBusyEnabled] = useState(false);
@@ -44,12 +45,15 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
   const fetchData = async () => {
     if (!token) return;
     setLoading(true);
-    setError(null);
     try {
-      const data = await apiService.getCallForwardingAll(token);
-      setRules(data);
+      const [fData, extData] = await Promise.allSettled([
+        apiService.getCallForwardingAll(token),
+        apiService.getExtensions(token)
+      ]);
+      if (fData.status === 'fulfilled') setRules(fData.value);
+      if (extData.status === 'fulfilled') setExtensions(extData.value);
     } catch (err: any) {
-      setError(err.message || 'Failed to load call forwarding rules');
+      console.error('Failed to load forwarding data:', err);
     } finally {
       setLoading(false);
     }
@@ -59,17 +63,24 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
     fetchData();
   }, [token]);
 
+  // Tenant-scoped extensions
+  const tenantExtensions = useMemo(() => {
+    if (user?.role === 'SUPER_ADMIN') return extensions;
+    return extensions.filter(e => e.tenant_id === user?.tenant_id || !e.tenant_id);
+  }, [extensions, user]);
+
   const openCreateModal = () => {
-    const firstRule = rules.length > 0 ? rules[0] : null;
-    if (firstRule) {
-      openEditModal(firstRule);
-    } else {
-      showErrorModal('No Extensions Found', 'Please provision a SIP extension first before configuring forwarding.');
+    const firstExt = tenantExtensions.length > 0 ? tenantExtensions[0] : null;
+    if (!firstExt) {
+      showErrorModal('No Extensions Found', 'Please provision an extension before configuring call forwarding.');
+      return;
     }
+    handleExtensionSelect(firstExt.id || '');
+    setShowModal(true);
   };
 
   const openEditModal = (rule: ForwardingRuleItem) => {
-    setEditingRule(rule);
+    setSelectedExtId(rule.extension_id);
     setAlwaysEnabled(rule.forward_always_enabled);
     setAlwaysDest(rule.forward_always_destination || '');
     setBusyEnabled(rule.forward_busy_enabled);
@@ -77,15 +88,43 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
     setNoAnswerEnabled(rule.forward_no_answer_enabled);
     setNoAnswerDest(rule.forward_no_answer_destination || '');
     setNoAnswerTimeout(rule.forward_no_answer_timeout || 20);
+    setShowModal(true);
+  };
+
+  const handleExtensionSelect = (extId: string) => {
+    setSelectedExtId(extId);
+    const existingRule = rules.find(r => r.extension_id === extId);
+    if (existingRule) {
+      setAlwaysEnabled(existingRule.forward_always_enabled);
+      setAlwaysDest(existingRule.forward_always_destination || '');
+      setBusyEnabled(existingRule.forward_busy_enabled);
+      setBusyDest(existingRule.forward_busy_destination || '');
+      setNoAnswerEnabled(existingRule.forward_no_answer_enabled);
+      setNoAnswerDest(existingRule.forward_no_answer_destination || '');
+      setNoAnswerTimeout(existingRule.forward_no_answer_timeout || 20);
+    } else {
+      setAlwaysEnabled(false);
+      setAlwaysDest('');
+      setBusyEnabled(false);
+      setBusyDest('');
+      setNoAnswerEnabled(false);
+      setNoAnswerDest('');
+      setNoAnswerTimeout(20);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !editingRule) return;
+    if (!token || !selectedExtId) {
+      showErrorModal('Extension Required', 'Please select an extension to configure forwarding.');
+      return;
+    }
+
     setSaving(true);
-    setError(null);
     try {
-      await apiService.updateExtensionForwarding(token, editingRule.extension_id, {
+      const ext = tenantExtensions.find(e => e.id === selectedExtId);
+
+      await apiService.updateExtensionForwarding(token, selectedExtId, {
         forward_always_enabled: alwaysEnabled,
         forward_always_destination: alwaysDest || null,
         forward_busy_enabled: busyEnabled,
@@ -95,298 +134,278 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token })
         forward_no_answer_timeout: Number(noAnswerTimeout) || 20,
       });
 
-      showSuccessModal('Forwarding Settings Updated', `Call forwarding rules for ext/${editingRule.extension_number} have been updated.`);
-      setEditingRule(null);
+      showSuccessModal(
+        'Forwarding Settings Saved',
+        `Call forwarding policies for ext/${ext?.extension_number || 'selected'} have been updated.`
+      );
+      setShowModal(false);
       fetchData();
     } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
-      setError(msg);
-      showErrorModal('Update Failed', msg);
+      showErrorModal('Update Failed', err.message || 'Failed to update forwarding settings');
     } finally {
       setSaving(false);
     }
   };
 
+  const filtered = rules.filter(r =>
+    r.extension_number.includes(search) ||
+    (r.display_name && r.display_name.toLowerCase().includes(search.toLowerCase())) ||
+    (r.forward_always_destination && r.forward_always_destination.includes(search))
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div>
       <div className="page-head">
         <div>
           <div className="eyebrow">Call Routing Rules</div>
           <h1 className="page-title">Call Forwarding & Follow-Me</h1>
-          <p className="page-sub">
-            Configure unconditional forwarding (always), busy forward, no-answer timeout routing, and follow-me find-me mobile ring lists.
-          </p>
+          <p className="page-sub">Configure unconditional forward, busy forward, and no-answer reroute policies</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          <button onClick={openCreateModal} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Plus size={16} />
-            <span>Configure Forwarding Rule</span>
+          <button onClick={openCreateModal} className="btn-primary">
+            <Plus size={16} /> Configure Forwarding Rule
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <PhoneForwarded className="w-5 h-5" />
+      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: '280px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+            <input
+              className="form-control"
+              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              placeholder="Search extensions..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">
-              {rules.filter(r => r.forward_always_enabled).length}
-            </div>
-            <div className="text-xs text-slate-500 font-medium">Forward Always Active</div>
+          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
+            Total <strong>{filtered.length}</strong> extension{filtered.length !== 1 ? 's' : ''}
           </div>
         </div>
 
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">
-              {rules.filter(r => r.forward_no_answer_enabled).length}
-            </div>
-            <div className="text-xs text-slate-500 font-medium">No-Answer Forward Active</div>
-          </div>
-        </div>
-
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Smartphone className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">
-              {rules.filter(r => r.forward_busy_enabled).length}
-            </div>
-            <div className="text-xs text-slate-500 font-medium">Busy Forward Active</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Rules Table */}
-      <div className="card overflow-hidden">
         <div className="data-table-wrap">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Extension</th>
-                <th>Display Name</th>
                 <th>Forward Always</th>
                 <th>Forward on Busy</th>
-                <th>Forward on No-Answer</th>
-                <th>No-Answer Delay</th>
+                <th>No-Answer Forward</th>
+                <th>Timeout</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rules.map((rule) => (
-                <tr key={rule.extension_id}>
-                  <td className="font-bold text-slate-900">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 font-mono text-xs text-slate-800">
-                      ext/{rule.extension_number}
-                    </span>
-                  </td>
-                  <td className="font-medium text-slate-800">{rule.display_name}</td>
-                  <td>
-                    {rule.forward_always_enabled ? (
-                      <span className="inline-flex items-center gap-1 font-mono text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                        <ArrowRight className="w-3 h-3" />
-                        {rule.forward_always_destination || 'Active'}
+              {loading ? (
+                <tr><td colSpan={6} className="text-center py-4">Loading forwarding rules...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-4 text-muted">No forwarding rules configured yet</td></tr>
+              ) : (
+                filtered.map(r => (
+                  <tr key={r.extension_id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#FFF0EC', color: '#FF5430', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <PhoneForwarded size={14} />
+                        </div>
+                        <div>
+                          <strong style={{ color: '#111827', fontSize: '13px' }}>ext/{r.extension_number}</strong>
+                          {r.display_name && <div style={{ fontSize: '11px', color: '#6B7280' }}>{r.display_name}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {r.forward_always_enabled && r.forward_always_destination ? (
+                        <span className="terrix-badge green" style={{ fontFamily: 'monospace' }}>
+                          → {r.forward_always_destination}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.forward_busy_enabled && r.forward_busy_destination ? (
+                        <span className="terrix-badge orange" style={{ fontFamily: 'monospace' }}>
+                          → {r.forward_busy_destination}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                      )}
+                    </td>
+                    <td>
+                      {r.forward_no_answer_enabled && r.forward_no_answer_destination ? (
+                        <span className="terrix-badge grey" style={{ fontFamily: 'monospace' }}>
+                          → {r.forward_no_answer_destination}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                      )}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '12px', color: '#4B5563' }}>
+                        {r.forward_no_answer_timeout || 20}s
                       </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Disabled</span>
-                    )}
-                  </td>
-                  <td>
-                    {rule.forward_busy_enabled ? (
-                      <span className="inline-flex items-center gap-1 font-mono text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        <ArrowRight className="w-3 h-3" />
-                        {rule.forward_busy_destination || 'Active'}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Disabled</span>
-                    )}
-                  </td>
-                  <td>
-                    {rule.forward_no_answer_enabled ? (
-                      <span className="inline-flex items-center gap-1 font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                        <ArrowRight className="w-3 h-3" />
-                        {rule.forward_no_answer_destination || 'Active'}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Disabled</span>
-                    )}
-                  </td>
-                  <td className="font-mono text-xs text-slate-600">
-                    {rule.forward_no_answer_enabled ? `${rule.forward_no_answer_timeout}s` : '—'}
-                  </td>
-                  <td className="text-right">
-                    <button
-                      onClick={() => openEditModal(rule)}
-                      className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1 inline-flex"
-                      title="Edit Forwarding & Follow-Me"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Edit Rules</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {rules.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-400 text-xs">
-                    No extensions found for this tenant. Create extensions first to configure call forwarding.
-                  </td>
-                </tr>
+                    </td>
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '5px 10px', fontSize: '11px' }}
+                        onClick={() => openEditModal(r)}
+                      >
+                        <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {editingRule && (
+      {/* Modal */}
+      {showModal && (
         <div className="modal-backdrop">
-          <div className="terrix-modal max-w-lg">
+          <div className="terrix-modal" style={{ maxWidth: '580px' }}>
             <div className="modal-head">
-              <div className="modal-icon">
-                <PhoneForwarded className="w-5 h-5" />
-              </div>
+              <div className="modal-icon"><PhoneForwarded size={20} /></div>
               <div>
-                <h3>Call Forwarding: ext/{editingRule.extension_number}</h3>
-                <p>{editingRule.display_name} — Inbound call reroute policies</p>
+                <h3>Configure Call Forwarding</h3>
+                <p>Set up unconditional, busy, and no-answer forwarding rules</p>
               </div>
-              <button onClick={() => setEditingRule(null)} className="modal-close">
-                <X className="w-5 h-5" />
-              </button>
+              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
-
             <form onSubmit={handleSave}>
-              <div className="modal-body space-y-4">
-                {/* 1. Forward Always */}
-                <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-xs text-slate-900">Forward Always (Unconditional)</div>
-                      <div className="text-[11px] text-slate-500">Instantly reroute all inbound calls without ringing deskphone</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={alwaysEnabled}
-                      onChange={(e) => setAlwaysEnabled(e.target.checked)}
-                      className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4"
-                    />
+              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label className="form-label required">Select Extension</label>
+                    <select
+                      className="form-control"
+                      value={selectedExtId}
+                      onChange={e => handleExtensionSelect(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Choose Extension --</option>
+                      {tenantExtensions.map(e => (
+                        <option key={e.id} value={e.id}>
+                          ext/{e.extension_number} — {e.display_name || 'Extension'}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  {alwaysEnabled && (
-                    <div>
-                      <label className="form-label text-[11px]">Forward Destination (Extension or PSTN Phone Number)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 1002 or +15551234567"
-                        value={alwaysDest}
-                        onChange={(e) => setAlwaysDest(e.target.value)}
-                        className="form-control font-mono text-xs"
-                        required={alwaysEnabled}
-                      />
-                    </div>
-                  )}
-                </div>
 
-                {/* 2. Forward on Busy */}
-                <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-xs text-slate-900">Forward on Busy (Call Waiting / DND)</div>
-                      <div className="text-[11px] text-slate-500">Reroute call when extension is on another call</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={busyEnabled}
-                      onChange={(e) => setBusyEnabled(e.target.checked)}
-                      className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                    />
-                  </div>
-                  {busyEnabled && (
-                    <div>
-                      <label className="form-label text-[11px]">Busy Destination Number</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 1003 or colleague extension"
-                        value={busyDest}
-                        onChange={(e) => setBusyDest(e.target.value)}
-                        className="form-control font-mono text-xs"
-                        required={busyEnabled}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Forward on No Answer / Follow-Me */}
-                <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-xs text-slate-900">Forward on No-Answer / Follow-Me</div>
-                      <div className="text-[11px] text-slate-500">Ring mobile phone or backup line after timeout</div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={noAnswerEnabled}
-                      onChange={(e) => setNoAnswerEnabled(e.target.checked)}
-                      className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                  </div>
-                  {noAnswerEnabled && (
-                    <div className="grid grid-cols-2 gap-3">
+                  {/* 1. Forward Always */}
+                  <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: alwaysEnabled ? '10px' : '0' }}>
                       <div>
-                        <label className="form-label text-[11px]">Follow-Me Destination</label>
+                        <strong style={{ fontSize: '13px', color: '#111827' }}>Forward Always (Unconditional)</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Instantly reroutes all calls without ringing deskphone</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={alwaysEnabled}
+                        onChange={e => setAlwaysEnabled(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
+                      />
+                    </label>
+                    {alwaysEnabled && (
+                      <div className="form-group" style={{ marginTop: '8px', marginBottom: 0 }}>
+                        <label className="form-label required">Forward Destination Number / Extension</label>
                         <input
-                          type="text"
-                          placeholder="e.g. mobile number"
-                          value={noAnswerDest}
-                          onChange={(e) => setNoAnswerDest(e.target.value)}
-                          className="form-control font-mono text-xs"
-                          required={noAnswerEnabled}
+                          required={alwaysEnabled}
+                          className="form-control"
+                          value={alwaysDest}
+                          onChange={e => setAlwaysDest(e.target.value)}
+                          placeholder="e.g. 1002 or +15551234567"
                         />
                       </div>
+                    )}
+                  </div>
+
+                  {/* 2. Forward on Busy */}
+                  <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: busyEnabled ? '10px' : '0' }}>
                       <div>
-                        <label className="form-label text-[11px]">Ring Timeout (Seconds)</label>
+                        <strong style={{ fontSize: '13px', color: '#111827' }}>Forward on Busy (DND / In-Call)</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Reroute calls when agent line is engaged or DND active</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={busyEnabled}
+                        onChange={e => setBusyEnabled(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
+                      />
+                    </label>
+                    {busyEnabled && (
+                      <div className="form-group" style={{ marginTop: '8px', marginBottom: 0 }}>
+                        <label className="form-label required">Busy Destination Number / Extension</label>
                         <input
-                          type="number"
-                          min={5}
-                          max={60}
-                          value={noAnswerTimeout}
-                          onChange={(e) => setNoAnswerTimeout(Number(e.target.value))}
-                          className="form-control font-mono text-xs"
+                          required={busyEnabled}
+                          className="form-control"
+                          value={busyDest}
+                          onChange={e => setBusyDest(e.target.value)}
+                          placeholder="e.g. 1003 or mobile number"
                         />
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* 3. Forward on No Answer */}
+                  <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: noAnswerEnabled ? '10px' : '0' }}>
+                      <div>
+                        <strong style={{ fontSize: '13px', color: '#111827' }}>Forward on No Answer (Timeout)</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Reroute after ringing deskphone without answer</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={noAnswerEnabled}
+                        onChange={e => setNoAnswerEnabled(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
+                      />
+                    </label>
+                    {noAnswerEnabled && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginTop: '8px' }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label required">No Answer Destination</label>
+                          <input
+                            required={noAnswerEnabled}
+                            className="form-control"
+                            value={noAnswerDest}
+                            onChange={e => setNoAnswerDest(e.target.value)}
+                            placeholder="e.g. 7001 or mobile number"
+                          />
+                        </div>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                          <label className="form-label">Ring Timeout (sec)</label>
+                          <input
+                            type="number"
+                            min={5}
+                            max={120}
+                            className="form-control"
+                            value={noAnswerTimeout}
+                            onChange={e => setNoAnswerTimeout(parseInt(e.target.value) || 20)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
               <div className="modal-foot">
-                <button type="button" onClick={() => setEditingRule(null)} className="btn-secondary">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary">
-                  {saving ? 'Saving...' : 'Save Forwarding Rules'}
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Forwarding Settings'}
                 </button>
               </div>
             </form>

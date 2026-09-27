@@ -1,6 +1,9 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, ShieldAlert, Settings } from 'lucide-react';
+import {
+  Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, ShieldAlert, Settings,
+  Phone, Hash, PhoneCall, PhoneForwarded, GitBranch, Music, Voicemail, ArrowLeftRight, BarChart2
+} from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User as UserType, Tenant } from '../types';
 
@@ -11,16 +14,16 @@ interface UsersViewProps {
 }
 
 const AVAILABLE_MODULES = [
-  { id: 'extensions',      label: 'SIP Extensions',    desc: 'Create, modify, and delete extensions' },
-  { id: 'tenant-dids',     label: 'Assigned DIDs',     desc: 'View tenant inbound phone numbers' },
-  { id: 'call-routing',    label: 'Call Routing',      desc: 'Inbound and outbound route rules' },
-  { id: 'queues',          label: 'Call Queues',       desc: 'Queue management and ACD agents' },
-  { id: 'hunt-groups',     label: 'Hunt Groups',       desc: 'Sequential and simultaneous ring lists' },
-  { id: 'ivr',             label: 'IVR Flows',         desc: 'Visual IVR menu and DTMF designer' },
-  { id: 'audio-prompts',   label: 'Audio Prompts',     desc: 'Upload audio files & sound library' },
-  { id: 'voicemail',       label: 'Voicemail',         desc: 'Voicemail boxes and email routing' },
-  { id: 'call-forwarding', label: 'Call Forwarding',   desc: 'Forward-always, busy, & follow-me' },
-  { id: 'reports',         label: 'CDR & Reports',     desc: 'Call detail records & analytics' },
+  { id: 'extensions',      label: 'SIP Extensions',    desc: 'Create, modify, and delete extensions', icon: Phone },
+  { id: 'tenant-dids',     label: 'Assigned DIDs',     desc: 'View tenant inbound phone numbers',     icon: Hash },
+  { id: 'call-routing',    label: 'Call Routing',      desc: 'Inbound and outbound route rules',       icon: PhoneCall },
+  { id: 'queues',          label: 'Call Queues',       desc: 'Queue management and ACD agents',        icon: Users },
+  { id: 'hunt-groups',     label: 'Hunt Groups',       desc: 'Sequential and simultaneous ring lists', icon: PhoneForwarded },
+  { id: 'ivr',             label: 'IVR Flows',         desc: 'Visual IVR menu and DTMF designer',      icon: GitBranch },
+  { id: 'audio-prompts',   label: 'Audio Prompts',     desc: 'Upload audio files & sound library',     icon: Music },
+  { id: 'voicemail',       label: 'Voicemail',         desc: 'Voicemail boxes and email routing',      icon: Voicemail },
+  { id: 'call-forwarding', label: 'Call Forwarding',   desc: 'Forward-always, busy, & follow-me',      icon: ArrowLeftRight },
+  { id: 'reports',         label: 'CDR & Reports',     desc: 'Call detail records & analytics',        icon: BarChart2 },
 ];
 
 export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenantScoped = false }) => {
@@ -55,17 +58,27 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     setLoading(true);
     setError(null);
     try {
-      const tenantFilter = tenantScoped && currentUser?.tenant_id ? currentUser.tenant_id : undefined;
-      const [uList, tList] = await Promise.all([
+      const tenantFilter = (tenantScoped && currentUser?.tenant_id && currentUser.tenant_id !== 'undefined' && currentUser.tenant_id !== 'null')
+        ? currentUser.tenant_id
+        : undefined;
+      const [uRes, tRes] = await Promise.allSettled([
         apiService.getUsers(token, tenantFilter),
         currentUser?.role === 'SUPER_ADMIN' ? apiService.getTenants(token) : Promise.resolve([]),
       ]);
-      setUsersList(uList);
-      setTenants(tList);
-      if (tenantScoped && currentUser?.tenant_id) {
-        setTenantId(currentUser.tenant_id);
-      } else if (tList.length > 0 && !tenantId) {
-        setTenantId(tList[0].id);
+
+      if (uRes.status === 'fulfilled') {
+        setUsersList(uRes.value);
+      } else {
+        setError(uRes.reason?.message || 'Failed to fetch users');
+      }
+
+      if (tRes.status === 'fulfilled') {
+        setTenants(tRes.value);
+        if (tenantScoped && currentUser?.tenant_id) {
+          setTenantId(currentUser.tenant_id);
+        } else if (tRes.value.length > 0 && !tenantId) {
+          setTenantId(tRes.value[0].id);
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -207,29 +220,29 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         </div>
       )}
 
-      {/* Toolbar & Filter */}
+      {/* Filter and Search Bar */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full md:w-72">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-lg">
+          <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search username or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control pl-9"
+              className="form-control pl-9 text-xs"
             />
           </div>
 
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="form-control w-44"
+            className="form-control text-xs w-40 shrink-0"
           >
             <option value="">All Roles</option>
             {!tenantScoped && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-            <option value="TENANT_ADMIN">TENANT_ADMIN (Master)</option>
-            <option value="SUB_ADMIN">SUB_ADMIN (Modular)</option>
+            <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+            <option value="SUB_ADMIN">SUB_ADMIN</option>
             <option value="SUPERVISOR">SUPERVISOR</option>
             <option value="AGENT">AGENT</option>
           </select>
@@ -341,32 +354,74 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         </div>
       </div>
 
-      {/* Create User Modal */}
+      {/* ── Provision User Modal (Clean, Modern, Intuitive) ───────────────────── */}
       {showModal && (
         <div className="modal-backdrop">
-          <div className="terrix-modal max-w-xl">
-            <div className="modal-head">
-              <div className="modal-icon">
-                <Users className="w-5 h-5" />
+          <div className="terrix-modal" style={{ maxWidth: '640px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
+            {/* Modal Header */}
+            <div style={{
+              height: '68px',
+              padding: '0 24px',
+              borderBottom: '1px solid #F1F5F9',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              background: '#FFFFFF'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: '#FFF0EC',
+                color: '#FF5430',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <UserPlus size={20} />
               </div>
-              <div>
-                <h3>Provision Administrative Account</h3>
-                <p>Create a Tenant Administrator, Sub-Administrator, or Staff account</p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                  Provision Administrative Account
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
+                  Create an administrator or sub-admin with role-based permissions
+                </p>
               </div>
-              <button onClick={() => setShowModal(false)} className="modal-close">
-                <X className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#F8FAFC',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease'
+                }}
+              >
+                <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleCreate}>
-              <div className="modal-body space-y-4">
+              <div style={{ padding: '20px 24px', maxHeight: 'calc(85vh - 132px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {currentUser?.role === 'SUPER_ADMIN' && tenants.length > 0 && !tenantScoped && (
                   <div>
-                    <label className="form-label">Assign to Tenant Domain</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Assign to Tenant Domain <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
                     <select
                       value={tenantId}
                       onChange={(e) => setTenantId(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px' }}
                       required
                     >
                       <option value="">-- Global (Super Admin only) --</option>
@@ -379,73 +434,94 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Row 1: Username & Email */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label className="form-label">Username</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Username <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. jdoe_admin"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
                       required
                     />
                   </div>
                   <div>
-                    <label className="form-label">Email Address</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Email Address <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
                     <input
                       type="email"
                       placeholder="jdoe@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
                       required
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Row 2: First Name & Last Name */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label className="form-label">First Name</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      First Name
+                    </label>
                     <input
                       type="text"
                       placeholder="John"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
                     />
                   </div>
                   <div>
-                    <label className="form-label">Last Name</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Last Name
+                    </label>
                     <input
                       type="text"
                       placeholder="Doe"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* Row 3: Password & Role */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label className="form-label">Password</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      Password <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
                     <input
                       type="password"
                       placeholder="Minimum 8 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
                       required
                       minLength={8}
                     />
                   </div>
                   <div>
-                    <label className="form-label">User Role</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                      User Role <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className="form-control"
+                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px' }}
                     >
                       {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && (
                         <option value="SUPER_ADMIN">SUPER_ADMIN (Platform Master)</option>
@@ -458,40 +534,149 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                   </div>
                 </div>
 
-                {/* Sub-Admin Module Selector */}
+                {/* ── Sub-Admin Module Selector (Modern Tiles & Clear Hierarchy) ── */}
                 {role === 'SUB_ADMIN' && (
-                  <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-200 space-y-3">
-                    <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
-                      <ShieldCheck className="w-4 h-4 text-blue-600" />
-                      <span>Assign Allowed Modules for this Sub-Admin</span>
+                  <div style={{
+                    marginTop: '4px',
+                    background: '#FAFAFA',
+                    borderRadius: '12px',
+                    border: '1px solid #E2E8F0',
+                    padding: '16px'
+                  }}>
+                    {/* Section Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '7px',
+                          background: '#FFF0EC',
+                          color: '#FF5430',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <ShieldCheck size={15} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                            Module Access Permissions
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            background: selectedModules.length > 0 ? '#FFF0EC' : '#F1F5F9',
+                            color: selectedModules.length > 0 ? '#FF5430' : '#64748B',
+                            padding: '2px 8px',
+                            borderRadius: '12px'
+                          }}>
+                            {selectedModules.length} of {AVAILABLE_MODULES.length} Selected
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick Select All / Clear All */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedModules(AVAILABLE_MODULES.map(m => m.id))}
+                          style={{ background: 'none', border: 'none', color: '#FF5430', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: '#CBD5E1' }}>•</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedModules([])}
+                          style={{ background: 'none', border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        >
+                          Clear
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-600">
-                      Select which PBX management sections this sub-administrator is permitted to view and manage:
+
+                    <p style={{ fontSize: '11.5px', color: '#64748B', margin: '0 0 12px 0' }}>
+                      Check which PBX management sections this sub-administrator is permitted to view and manage.
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    {/* Module Cards Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
                       {AVAILABLE_MODULES.map((mod) => {
                         const checked = selectedModules.includes(mod.id);
+                        const IconComponent = mod.icon;
                         return (
                           <div
                             key={mod.id}
                             onClick={() => toggleModule(mod.id)}
-                            className={`p-2.5 rounded-lg border cursor-pointer text-xs transition-colors flex items-start gap-2 ${
-                              checked
-                                ? 'bg-blue-100/70 border-blue-400 text-blue-950 font-medium'
-                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '9px 12px',
+                              borderRadius: '9px',
+                              cursor: 'pointer',
+                              background: checked ? '#FFF9F7' : '#FFFFFF',
+                              border: `1px solid ${checked ? '#FF8A65' : '#E2E8F0'}`,
+                              boxShadow: checked ? '0 1px 3px rgba(255, 84, 48, 0.08)' : '0 1px 2px rgba(0,0,0,0.02)',
+                              transition: 'all 0.15s ease',
+                              userSelect: 'none'
+                            }}
                           >
+                            {/* Module Icon Badge */}
+                            <div style={{
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '7px',
+                              background: checked ? '#FF5430' : '#F1F5F9',
+                              color: checked ? '#FFFFFF' : '#64748B',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease'
+                            }}>
+                              <IconComponent size={15} />
+                            </div>
+
+                            {/* Label & Description */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: checked ? '#0F172A' : '#334155',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {mod.label}
+                              </div>
+                              <div style={{
+                                fontSize: '10.5px',
+                                color: '#64748B',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                marginTop: '1px'
+                              }}>
+                                {mod.desc}
+                              </div>
+                            </div>
+
+                            {/* Checkbox indicator */}
                             <input
                               type="checkbox"
                               checked={checked}
                               onChange={() => {}}
-                              className="mt-0.5 rounded text-blue-600 pointer-events-none"
+                              style={{
+                                accentColor: '#FF5430',
+                                width: '15px',
+                                height: '15px',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                pointerEvents: 'none'
+                              }}
                             />
-                            <div>
-                              <div className="font-semibold">{mod.label}</div>
-                              <div className="text-[10px] text-slate-500">{mod.desc}</div>
-                            </div>
                           </div>
                         );
                       })}
@@ -500,11 +685,38 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                 )}
               </div>
 
-              <div className="modal-foot">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
+              {/* Modal Footer */}
+              <div style={{
+                height: '64px',
+                padding: '0 24px',
+                borderTop: '1px solid #F1F5F9',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+                background: '#FFFFFF'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '8px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="btn-primary">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{
+                    background: '#FF5430',
+                    padding: '9px 22px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 6px rgba(255, 84, 48, 0.25)'
+                  }}
+                >
                   {loading ? 'Creating Account...' : 'Create Account'}
                 </button>
               </div>
@@ -513,63 +725,220 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         </div>
       )}
 
-      {/* Edit Permissions Modal for Sub-Admin */}
+      {/* ── Edit Permissions Modal for Sub-Admin ────────────────────────────── */}
       {permModalUser && (
         <div className="modal-backdrop">
-          <div className="terrix-modal max-w-lg">
-            <div className="modal-head">
-              <div className="modal-icon">
-                <ShieldAlert className="w-5 h-5 text-blue-600" />
+          <div className="terrix-modal" style={{ maxWidth: '640px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{
+              height: '68px',
+              padding: '0 24px',
+              borderBottom: '1px solid #F1F5F9',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              background: '#FFFFFF'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: '#FFF0EC',
+                color: '#FF5430',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <ShieldAlert size={20} />
               </div>
-              <div>
-                <h3>Edit Sub-Admin Permissions</h3>
-                <p>User: <b>{permModalUser.username}</b> ({permModalUser.email})</p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                  Edit Sub-Admin Permissions
+                </h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
+                  User: <strong>{permModalUser.username}</strong> ({permModalUser.email})
+                </p>
               </div>
-              <button onClick={() => setPermModalUser(null)} className="modal-close">
-                <X className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={() => setPermModalUser(null)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#F8FAFC',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSavePermissions}>
-              <div className="modal-body space-y-3">
-                <p className="text-xs text-slate-600">
-                  Configure module access for this sub-admin. They will only see the selected tabs in their navigation:
-                </p>
+              <div style={{ padding: '20px 24px', maxHeight: 'calc(85vh - 132px)', overflowY: 'auto' }}>
+                <div style={{
+                  background: '#FAFAFA',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  padding: '16px'
+                }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                        Module Access Permissions
+                      </span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: editModules.length > 0 ? '#FFF0EC' : '#F1F5F9',
+                        color: editModules.length > 0 ? '#FF5430' : '#64748B',
+                        padding: '2px 8px',
+                        borderRadius: '12px'
+                      }}>
+                        {editModules.length} of {AVAILABLE_MODULES.length} Selected
+                      </span>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {AVAILABLE_MODULES.map((mod) => {
-                    const checked = editModules.includes(mod.id);
-                    return (
-                      <div
-                        key={mod.id}
-                        onClick={() => toggleEditModule(mod.id)}
-                        className={`p-2.5 rounded-lg border cursor-pointer text-xs transition-colors flex items-start gap-2 ${
-                          checked
-                            ? 'bg-blue-100/70 border-blue-400 text-blue-950 font-medium'
-                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setEditModules(AVAILABLE_MODULES.map(m => m.id))}
+                        style={{ background: 'none', border: 'none', color: '#FF5430', fontWeight: 700, cursor: 'pointer', padding: 0 }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {}}
-                          className="mt-0.5 rounded text-blue-600 pointer-events-none"
-                        />
-                        <div>
-                          <div className="font-semibold">{mod.label}</div>
-                          <div className="text-[10px] text-slate-500">{mod.desc}</div>
+                        Select All
+                      </button>
+                      <span style={{ color: '#CBD5E1' }}>•</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditModules([])}
+                        style={{ background: 'none', border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '11.5px', color: '#64748B', margin: '0 0 12px 0' }}>
+                    Configure the management modules visible to this sub-admin. They will only see selected tabs in their navigation.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
+                    {AVAILABLE_MODULES.map((mod) => {
+                      const checked = editModules.includes(mod.id);
+                      const IconComponent = mod.icon;
+                      return (
+                        <div
+                          key={mod.id}
+                          onClick={() => toggleEditModule(mod.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '9px 12px',
+                            borderRadius: '9px',
+                            cursor: 'pointer',
+                            background: checked ? '#FFF9F7' : '#FFFFFF',
+                            border: `1px solid ${checked ? '#FF8A65' : '#E2E8F0'}`,
+                            boxShadow: checked ? '0 1px 3px rgba(255, 84, 48, 0.08)' : '0 1px 2px rgba(0,0,0,0.02)',
+                            transition: 'all 0.15s ease',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <div style={{
+                            width: '30px',
+                            height: '30px',
+                            borderRadius: '7px',
+                            background: checked ? '#FF5430' : '#F1F5F9',
+                            color: checked ? '#FFFFFF' : '#64748B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }}>
+                            <IconComponent size={15} />
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: checked ? '#0F172A' : '#334155',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>
+                              {mod.label}
+                            </div>
+                            <div style={{
+                              fontSize: '10.5px',
+                              color: '#64748B',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginTop: '1px'
+                            }}>
+                              {mod.desc}
+                            </div>
+                          </div>
+
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {}}
+                            style={{
+                              accentColor: '#FF5430',
+                              width: '15px',
+                              height: '15px',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              pointerEvents: 'none'
+                            }}
+                          />
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-foot">
-                <button type="button" onClick={() => setPermModalUser(null)} className="btn-secondary">
+              <div style={{
+                height: '64px',
+                padding: '0 24px',
+                borderTop: '1px solid #F1F5F9',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+                background: '#FFFFFF'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setPermModalUser(null)}
+                  className="btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '8px' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={savingPerms} className="btn-primary">
+                <button
+                  type="submit"
+                  disabled={savingPerms}
+                  className="btn-primary"
+                  style={{
+                    background: '#FF5430',
+                    padding: '9px 22px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 6px rgba(255, 84, 48, 0.25)'
+                  }}
+                >
                   {savingPerms ? 'Saving Permissions...' : 'Update Permissions'}
                 </button>
               </div>

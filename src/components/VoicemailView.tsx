@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Voicemail, Mail, Key, RefreshCw, Edit2, AlertCircle, X, Music, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Voicemail, Mail, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
+import type { User } from '../types';
 
 interface VoicemailViewProps {
   token: string | null;
-  user?: any;
+  user?: User | null;
 }
 
 interface VoicemailBoxItem {
@@ -22,16 +23,18 @@ interface VoicemailBoxItem {
   greeting_path?: string;
 }
 
-export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
+export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [boxes, setBoxes] = useState<VoicemailBoxItem[]>([]);
+  const [extensions, setExtensions] = useState<any[]>([]);
   const [audioFiles, setAudioFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  // Edit Modal State
-  const [editingBox, setEditingBox] = useState<VoicemailBoxItem | null>(null);
-  const [mailboxPin, setMailboxPin] = useState('');
+  // Modal State
+  const [showModal, setShowModal] = useState(false);
+  const [selectedExtId, setSelectedExtId] = useState('');
+  const [mailboxPin, setMailboxPin] = useState('1234');
   const [emailNotification, setEmailNotification] = useState(true);
   const [emailAttachFile, setEmailAttachFile] = useState(true);
   const [emailAddress, setEmailAddress] = useState('');
@@ -42,24 +45,18 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
   const fetchData = async () => {
     if (!token) return;
     setLoading(true);
-    setError(null);
     try {
-      const [vmData, audios] = await Promise.allSettled([
+      const [vmData, extData, audios] = await Promise.allSettled([
         apiService.getVoicemailBoxesAll(token),
+        apiService.getExtensions(token),
         apiService.getAudioFiles(token),
       ]);
 
-      if (vmData.status === 'fulfilled') {
-        setBoxes(vmData.value);
-      } else {
-        setError('Failed to load voicemail boxes');
-      }
-
-      if (audios.status === 'fulfilled') {
-        setAudioFiles(audios.value);
-      }
+      if (vmData.status === 'fulfilled') setBoxes(vmData.value);
+      if (extData.status === 'fulfilled') setExtensions(extData.value);
+      if (audios.status === 'fulfilled') setAudioFiles(audios.value);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Failed to load voicemail data:', err);
     } finally {
       setLoading(false);
     }
@@ -69,33 +66,64 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
     fetchData();
   }, [token]);
 
+  // Tenant-scoped extensions
+  const tenantExtensions = useMemo(() => {
+    if (user?.role === 'SUPER_ADMIN') return extensions;
+    return extensions.filter(e => e.tenant_id === user?.tenant_id || !e.tenant_id);
+  }, [extensions, user]);
+
   const openCreateModal = () => {
-    const firstBox = boxes.length > 0 ? boxes[0] : null;
-    if (firstBox) {
-      openEditModal(firstBox);
-    } else {
-      showErrorModal('No Extensions Found', 'Please provision a SIP extension first before configuring voicemail.');
-    }
+    const firstExt = tenantExtensions.length > 0 ? tenantExtensions[0] : null;
+    setSelectedExtId(firstExt ? (firstExt.id || '') : '');
+    setMailboxPin('1234');
+    setEmailNotification(true);
+    setEmailAttachFile(true);
+    setEmailAddress(firstExt?.email || '');
+    setDeleteAfterEmail(false);
+    setGreetingPath('');
+    setShowModal(true);
   };
 
   const openEditModal = (box: VoicemailBoxItem) => {
-    setEditingBox(box);
+    setSelectedExtId(box.extension_id);
     setMailboxPin('1234');
     setEmailNotification(box.email_notification ?? true);
     setEmailAttachFile(box.email_attach_file ?? true);
     setEmailAddress(box.email_address || box.extension_email || '');
     setDeleteAfterEmail(box.delete_after_email ?? false);
     setGreetingPath(box.greeting_path || '');
+    setShowModal(true);
+  };
+
+  const handleExtensionChange = (extId: string) => {
+    setSelectedExtId(extId);
+    const ext = tenantExtensions.find(e => e.id === extId);
+    const existingBox = boxes.find(b => b.extension_id === extId);
+    if (existingBox) {
+      setEmailNotification(existingBox.email_notification ?? true);
+      setEmailAttachFile(existingBox.email_attach_file ?? true);
+      setEmailAddress(existingBox.email_address || existingBox.extension_email || ext?.email || '');
+      setDeleteAfterEmail(existingBox.delete_after_email ?? false);
+      setGreetingPath(existingBox.greeting_path || '');
+    } else if (ext) {
+      setEmailAddress(ext.email || '');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !editingBox) return;
+    if (!token || !selectedExtId) {
+      showErrorModal('Extension Required', 'Please select an extension to configure voicemail.');
+      return;
+    }
+
     setSaving(true);
-    setError(null);
     try {
-      await apiService.updateExtensionVoicemail(token, editingBox.extension_id, {
-        mailbox: editingBox.mailbox || editingBox.extension_number,
+      const ext = tenantExtensions.find(e => e.id === selectedExtId);
+      const mailboxNum = ext ? ext.extension_number : undefined;
+
+      await apiService.updateExtensionVoicemail(token, selectedExtId, {
+        mailbox: mailboxNum,
         password: mailboxPin || undefined,
         email_notification: emailNotification,
         email_attach_file: emailAttachFile,
@@ -106,262 +134,262 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token }) => {
 
       showSuccessModal(
         'Voicemail Configured Successfully',
-        `Voicemail box settings for ext/${editingBox.extension_number} have been updated.`
+        `Voicemail box settings for ext/${ext?.extension_number || 'selected'} have been updated.`
       );
-      setEditingBox(null);
+      setShowModal(false);
       fetchData();
     } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
-      setError(msg);
-      showErrorModal('Voicemail Configuration Failed', msg);
+      showErrorModal('Configuration Failed', err.message || 'Failed to save voicemail configuration');
     } finally {
       setSaving(false);
     }
   };
 
+  const filtered = boxes.filter(b =>
+    b.extension_number.includes(search) ||
+    (b.display_name && b.display_name.toLowerCase().includes(search.toLowerCase())) ||
+    (b.email_address && b.email_address.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
+    <div>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Voice Messaging Engine</div>
+          <div className="eyebrow">Unified Messaging</div>
           <h1 className="page-title">Voicemail Management</h1>
-          <p className="page-sub">
-            Configure voicemail boxes, voicemail-to-email routing with MP3 audio delivery, PIN protection, and custom audio greetings.
-          </p>
+          <p className="page-sub">Configure extension voicemail boxes, PIN codes, audio greetings, and email notifications</p>
         </div>
-
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          <button onClick={openCreateModal} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Plus size={16} />
-            <span>Configure Voicemail Box</span>
+          <button onClick={openCreateModal} className="btn-primary">
+            <Plus size={16} /> Setup Voicemail Box
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Voicemail className="w-5 h-5" />
+      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: '280px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+            <input
+              className="form-control"
+              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              placeholder="Search voicemail boxes..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">{boxes.length}</div>
-            <div className="text-xs text-slate-500 font-medium">Configured Voicemail Boxes</div>
+          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
+            Total <strong>{filtered.length}</strong> mailbox{filtered.length !== 1 ? 'es' : ''}
           </div>
         </div>
 
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">
-              {boxes.filter(b => b.email_notification).length}
-            </div>
-            <div className="text-xs text-slate-500 font-medium">Email Forwarding Enabled</div>
-          </div>
-        </div>
-
-        <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <Music className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">
-              {audioFiles.length}
-            </div>
-            <div className="text-xs text-slate-500 font-medium">Available Audio Greetings</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Boxes Table */}
-      <div className="card overflow-hidden">
         <div className="data-table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Extension</th>
-                <th>Display Name</th>
-                <th>Mailbox Number</th>
-                <th>Voicemail-to-Email</th>
-                <th>Email Address</th>
-                <th>Attach MP3</th>
-                <th>Auto-Purge after Send</th>
+                <th>Extension / Mailbox</th>
+                <th>Status</th>
+                <th>Email Delivery</th>
+                <th>Attachment</th>
+                <th>Auto-Purge</th>
+                <th>Greeting Audio</th>
                 <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {boxes.map((box) => (
-                <tr key={box.extension_id}>
-                  <td className="font-bold text-slate-900">
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 font-mono text-xs text-slate-800">
-                      ext/{box.extension_number}
-                    </span>
-                  </td>
-                  <td className="font-medium text-slate-800">{box.display_name}</td>
-                  <td className="font-mono text-xs text-slate-600">{box.mailbox || box.extension_number}</td>
-                  <td>
-                    <span className={`terrix-badge ${box.email_notification ? 'green' : 'grey'}`}>
-                      {box.email_notification ? 'Active' : 'Disabled'}
-                    </span>
-                  </td>
-                  <td className="font-mono text-xs text-slate-600">
-                    {box.email_address || box.extension_email || '—'}
-                  </td>
-                  <td>
-                    <span className={`terrix-badge ${box.email_attach_file ? 'blue' : 'grey'}`}>
-                      {box.email_attach_file ? 'Yes (.wav/.mp3)' : 'No (Alert only)'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`terrix-badge ${box.delete_after_email ? 'orange' : 'grey'}`}>
-                      {box.delete_after_email ? 'Purge on Email' : 'Keep on PBX'}
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    <button
-                      onClick={() => openEditModal(box)}
-                      className="btn-secondary text-xs py-1 px-2.5 flex items-center gap-1 inline-flex"
-                      title="Configure Voicemail Box"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Configure</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {boxes.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-400 text-xs">
-                    No extensions found for this tenant. Create extensions first to manage voicemail boxes.
-                  </td>
-                </tr>
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-4">Loading voicemail boxes...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-4 text-muted">No voicemail boxes configured yet</td></tr>
+              ) : (
+                filtered.map(b => (
+                  <tr key={b.extension_id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#FFF0EC', color: '#FF5430', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Voicemail size={14} />
+                        </div>
+                        <div>
+                          <strong style={{ color: '#111827', fontSize: '13px' }}>ext/{b.extension_number}</strong>
+                          {b.display_name && <div style={{ fontSize: '11px', color: '#6B7280' }}>{b.display_name}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`terrix-badge ${b.voicemail_box_id ? 'green' : 'grey'}`}>
+                        {b.voicemail_box_id ? 'ACTIVE' : 'DEFAULT'}
+                      </span>
+                    </td>
+                    <td>
+                      {b.email_notification && (b.email_address || b.extension_email) ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#16A34A' }}>
+                          <Mail size={13} />
+                          <span>{b.email_address || b.extension_email}</span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Disabled</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`terrix-badge ${b.email_attach_file ? 'orange' : 'grey'}`}>
+                        {b.email_attach_file ? 'WAV ATTACHED' : 'NOTIFICATION ONLY'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '12px', color: b.delete_after_email ? '#DC2626' : '#6B7280' }}>
+                        {b.delete_after_email ? 'Delete on send' : 'Retain in box'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '12px', color: '#4B5563', fontFamily: 'monospace' }}>
+                        {b.greeting_path ? b.greeting_path.split('/').pop() : 'Standard Greeting'}
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '5px 10px', fontSize: '11px' }}
+                        onClick={() => openEditModal(b)}
+                      >
+                        <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {editingBox && (
+      {/* Setup / Configure Modal */}
+      {showModal && (
         <div className="modal-backdrop">
-          <div className="terrix-modal max-w-lg">
+          <div className="terrix-modal" style={{ maxWidth: '580px' }}>
             <div className="modal-head">
-              <div className="modal-icon">
-                <Voicemail className="w-5 h-5" />
-              </div>
+              <div className="modal-icon"><Voicemail size={20} /></div>
               <div>
-                <h3>Configure Voicemail: ext/{editingBox.extension_number}</h3>
-                <p>{editingBox.display_name} — Mailbox #{editingBox.mailbox || editingBox.extension_number}</p>
+                <h3>Configure Voicemail Box</h3>
+                <p>Manage mailbox PIN, email attachments, and custom audio greetings</p>
               </div>
-              <button onClick={() => setEditingBox(null)} className="modal-close">
-                <X className="w-5 h-5" />
-              </button>
+              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
-
             <form onSubmit={handleSave}>
-              <div className="modal-body space-y-4">
-                <div>
-                  <label className="form-label">Voicemail Access PIN (4-10 digits)</label>
-                  <div className="relative">
-                    <Key className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label required">Select Extension</label>
+                    <select
+                      className="form-control"
+                      value={selectedExtId}
+                      onChange={e => handleExtensionChange(e.target.value)}
+                      required
+                    >
+                      <option value="">-- Choose Extension --</option>
+                      {tenantExtensions.map(e => (
+                        <option key={e.id} value={e.id}>
+                          ext/{e.extension_number} — {e.display_name || 'Extension'} {e.email ? `(${e.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label required">Mailbox PIN (4-10 Digits)</label>
                     <input
                       type="password"
+                      required
+                      minLength={4}
                       maxLength={10}
-                      placeholder="e.g. 1234"
+                      className="form-control"
                       value={mailboxPin}
-                      onChange={(e) => setMailboxPin(e.target.value)}
-                      className="form-control pl-9 font-mono"
+                      onChange={e => setMailboxPin(e.target.value)}
+                      placeholder="e.g. 1234"
+                    />
+                    <small style={{ color: '#6B7280', fontSize: '10.5px', marginTop: '3px' }}>
+                      Default subscriber pin: 1234
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Custom Greeting Prompt</label>
+                    <select
+                      className="form-control"
+                      value={greetingPath}
+                      onChange={e => setGreetingPath(e.target.value)}
+                    >
+                      <option value="">-- System Default Greeting --</option>
+                      {audioFiles.map(a => (
+                        <option key={a.id} value={a.file_path || a.file_name}>
+                          {a.name || a.file_name} ({a.category})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">Notification Email Address</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={emailAddress}
+                      onChange={e => setEmailAddress(e.target.value)}
+                      placeholder="agent@company.com"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Dial *97 or dial voicemail extension to listen using this PIN.</p>
-                </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="flex items-center gap-2 cursor-pointer font-medium text-xs text-slate-800">
-                    <input
-                      type="checkbox"
-                      checked={emailNotification}
-                      onChange={(e) => setEmailNotification(e.target.checked)}
-                      className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
-                    />
-                    <span>Enable Voicemail-to-Email Delivery</span>
-                  </label>
-                </div>
-
-                {emailNotification && (
-                  <div className="space-y-3 pl-6 border-l-2 border-blue-200">
-                    <div>
-                      <label className="form-label">Notification Email Address</label>
+                  {/* Toggles */}
+                  <div className="form-group" style={{ gridColumn: '1 / -1', background: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '8px' }}>
                       <input
-                        type="email"
-                        placeholder="user@example.com"
-                        value={emailAddress}
-                        onChange={(e) => setEmailAddress(e.target.value)}
-                        className="form-control"
+                        type="checkbox"
+                        checked={emailNotification}
+                        onChange={e => setEmailNotification(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
                       />
-                    </div>
+                      <div>
+                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Send Email Notification on New Voicemail</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Dispatches SMTP alert when caller leaves a message</div>
+                      </div>
+                    </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '8px' }}>
                       <input
                         type="checkbox"
                         checked={emailAttachFile}
-                        onChange={(e) => setEmailAttachFile(e.target.checked)}
-                        className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                        onChange={e => setEmailAttachFile(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
                       />
-                      <span>Attach Audio Recording File (.wav/.mp3) to Email</span>
+                      <div>
+                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Attach Audio Recording (.wav) to Email</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Enables listening to voicemail directly from mobile email</div>
+                      </div>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={deleteAfterEmail}
-                        onChange={(e) => setDeleteAfterEmail(e.target.checked)}
-                        className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                        onChange={e => setDeleteAfterEmail(e.target.checked)}
+                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
                       />
-                      <span>Delete voicemail from PBX storage after email delivery</span>
+                      <div>
+                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Delete from Server After Successful Email</strong>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Prevents mailbox disk quota exhaustion</div>
+                      </div>
                     </label>
                   </div>
-                )}
-
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="form-label">Custom Greeting Audio Prompt</label>
-                  <select
-                    value={greetingPath}
-                    onChange={(e) => setGreetingPath(e.target.value)}
-                    className="form-control"
-                  >
-                    <option value="">-- Default System Greeting --</option>
-                    {audioFiles.map((af: any) => (
-                      <option key={af.id} value={af.file_path}>
-                        {af.name || af.filename} ({af.category || 'audio'})
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Upload audio prompts under <b>Audio Prompts</b> tab to use here.
-                  </p>
                 </div>
               </div>
-
               <div className="modal-foot">
-                <button type="button" onClick={() => setEditingBox(null)} className="btn-secondary">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary">
+                <button type="submit" className="btn-primary" disabled={saving}>
                   {saving ? 'Saving...' : 'Save Voicemail Settings'}
                 </button>
               </div>
