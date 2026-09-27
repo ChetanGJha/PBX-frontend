@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
+import { CustomSelect } from './CustomSelect';
 import { GitBranch, Plus, Volume2, Edit, Trash2, ArrowRight, PhoneCall, Layers, Move, Users, PhoneForwarded, Voicemail, PhoneOff, X, UploadCloud, Info } from 'lucide-react';
 
 interface IvrViewProps {
   token: string;
+  user?: any;
 }
 
-export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
+export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [ivrs, setIvrs] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -281,6 +283,8 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
     }
   };
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   const getTenantName = (tId: string) => {
     const tenant = tenants.find(t => t.id === tId);
     return tenant ? tenant.name : 'Global Platform';
@@ -298,9 +302,11 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
             Configure inbound auto-attendants, voice greetings, and interactive keypress actions.
           </p>
         </div>
-        <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722', border: 'none' }}>
-          <Plus size={18} /> Create IVR Flow
-        </button>
+        {canManage && (
+          <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722', border: 'none' }}>
+            <Plus size={18} /> Create IVR Flow
+          </button>
+        )}
       </div>
 
       {/* Quick Help Card */}
@@ -326,9 +332,11 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
           <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '20px' }}>
             Create your first auto-attendant flow to start routing incoming customer calls automatically.
           </p>
-          <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722' }}>
-            <Plus size={16} /> Create First IVR
-          </button>
+          {canManage && (
+            <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722' }}>
+              <Plus size={16} /> Create First IVR
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -371,12 +379,16 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
                       <button className="btn-secondary sm" onClick={() => openDesignerModal(ivr)} style={{ background: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100', fontWeight: 700 }}>
                         🎨 Open Designer
                       </button>
-                      <button className="btn-secondary sm" onClick={() => openEditModal(ivr)}>
-                        <Edit size={14} />
-                      </button>
-                      <button className="btn-danger sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }}>
-                        <Trash2 size={14} />
-                      </button>
+                      {canManage && (
+                        <>
+                          <button className="btn-secondary sm" onClick={() => openEditModal(ivr)}>
+                            <Edit size={14} />
+                          </button>
+                          <button className="btn-danger sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -404,13 +416,19 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
                   <label className="form-label required">IVR Menu Name</label>
                   <input className="form-control" required placeholder="e.g. Main Company Directory" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                 </div>
-                <div>
-                  <label className="form-label">Assign to Tenant</label>
-                  <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}>
-                    <option value="">-- Global / System Default --</option>
-                    {tenants.map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
-                  </select>
-                </div>
+                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                  <div>
+                    <label className="form-label">Assign to Tenant</label>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Global / System Default --' },
+                        ...tenants.map(t => ({ value: t.id, label: t.name }))
+                      ]}
+                      value={formData.tenant_id}
+                      onChange={val => setFormData({ ...formData, tenant_id: val })}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="form-label">Audio Greeting File</label>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -464,13 +482,19 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
                   <label className="form-label required">IVR Menu Name</label>
                   <input className="form-control" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                 </div>
-                <div>
-                  <label className="form-label">Tenant Assignment</label>
-                  <select className="form-control" value={formData.tenant_id} onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}>
-                    <option value="">-- Global / System Default --</option>
-                    {tenants.map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
-                  </select>
-                </div>
+                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                  <div>
+                    <label className="form-label">Tenant Assignment</label>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Global / System Default --' },
+                        ...tenants.map(t => ({ value: t.id, label: t.name }))
+                      ]}
+                      value={formData.tenant_id}
+                      onChange={val => setFormData({ ...formData, tenant_id: val })}
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="form-label">Audio Greeting File</label>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -544,22 +568,23 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
                     <Volume2 size={18} style={{ color: '#38BDF8' }} />
                     <div>
                       <div style={{ fontSize: '10px', color: '#38BDF8', fontWeight: 700 }}>STEP 2: AUDIO GREETING</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                        <select
-                          value={activeIvr.greeting_audio || ''}
-                          onChange={e => handleCanvasGreetingChange(e.target.value)}
-                          style={{ background: '#0F172A', color: '#FFF', border: '1px solid #475569', borderRadius: '4px', fontSize: '11px', padding: '2px 6px' }}
-                        >
-                          {audioFiles.map(a => (<option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>))}
-                          {audioFiles.length === 0 && <option value="welcome_prompt.wav">welcome_prompt.wav</option>}
-                        </select>
+                        <div style={{ minWidth: '220px' }}>
+                          <CustomSelect
+                            options={
+                              audioFiles.length > 0
+                                ? audioFiles.map(a => ({ value: a.file_name, label: `${a.name} (${a.file_name})` }))
+                                : [{ value: 'welcome_prompt.wav', label: 'welcome_prompt.wav' }]
+                            }
+                            value={activeIvr.greeting_audio || ''}
+                            onChange={val => handleCanvasGreetingChange(val)}
+                          />
+                        </div>
                         <label style={{ background: '#38BDF8', color: '#0F172A', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <UploadCloud size={12} /> {uploadingTarget === 'canvas_greeting' ? 'Uploading...' : 'Upload Audio'}
                           <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleCanvasGreetingUpload} />
                         </label>
                       </div>
                     </div>
-                  </div>
 
                   <ArrowRight size={16} style={{ color: '#64748B' }} />
 
@@ -671,67 +696,62 @@ export const IvrView: React.FC<IvrViewProps> = ({ token }) => {
                           </div>
 
                           <div style={{ marginBottom: '8px' }}>
-                            <select
-                              style={{ width: '100%', fontSize: '12px', fontWeight: 600, padding: '4px 6px', borderRadius: '6px', border: '1px solid #CBD5E1' }}
+                            <CustomSelect
+                              options={[
+                                { value: '', label: '-- Select Action or Drop Block --' },
+                                { value: 'extension', label: '➔ Transfer Extension' },
+                                { value: 'queue', label: '➔ Transfer Call Queue' },
+                                { value: 'play_audio', label: '➔ Play Audio Prompt' },
+                                { value: 'voicemail', label: '➔ Send to Voicemail' },
+                                { value: 'hangup', label: '➔ Hangup Call' }
+                              ]}
                               value={node ? node.action_type : ''}
-                              onChange={e => handleCardActionChange(key, e.target.value)}
-                            >
-                              <option value="">-- Select Action or Drop Block --</option>
-                              <option value="extension">➔ Transfer Extension</option>
-                              <option value="queue">➔ Transfer Call Queue</option>
-                              <option value="play_audio">➔ Play Audio Prompt</option>
-                              <option value="voicemail">➔ Send to Voicemail</option>
-                              <option value="hangup">➔ Hangup Call</option>
-                            </select>
+                              onChange={val => handleCardActionChange(key, val)}
+                            />
                           </div>
 
                           {node && (
                             <div>
                               {node.action_type === 'extension' && (
-                                <select
-                                  style={{ width: '100%', fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}
+                                <CustomSelect
+                                  options={
+                                    extensions.length === 0
+                                      ? [{ value: '1001', label: 'Ext 1001' }]
+                                      : extensions.map(ext => ({
+                                          value: ext.extension_number,
+                                          label: `Ext ${ext.extension_number} (${ext.first_name || 'User'})`
+                                        }))
+                                  }
                                   value={node.action_target}
-                                  onChange={e => handleCardTargetChange(key, 'extension', e.target.value)}
-                                >
-                                  {extensions.length === 0 ? (
-                                    <option value="1001">Ext 1001</option>
-                                  ) : (
-                                    extensions.map(ext => (
-                                      <option key={ext.id} value={ext.extension_number}>
-                                        Ext {ext.extension_number} ({ext.first_name || 'User'})
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
+                                  onChange={val => handleCardTargetChange(key, 'extension', val)}
+                                />
                               )}
 
                               {node.action_type === 'queue' && (
-                                <select
-                                  style={{ width: '100%', fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}
+                                <CustomSelect
+                                  options={
+                                    queues.length === 0
+                                      ? [{ value: 'Support', label: 'Support Queue' }]
+                                      : queues.map(q => ({
+                                          value: q.name,
+                                          label: `Queue: ${q.name}`
+                                        }))
+                                  }
                                   value={node.action_target}
-                                  onChange={e => handleCardTargetChange(key, 'queue', e.target.value)}
-                                >
-                                  {queues.length === 0 ? (
-                                    <option value="Support">Support Queue</option>
-                                  ) : (
-                                    queues.map(q => (
-                                      <option key={q.id} value={q.name}>Queue: {q.name}</option>
-                                    ))
-                                  )}
-                                </select>
+                                  onChange={val => handleCardTargetChange(key, 'queue', val)}
+                                />
                               )}
 
                               {node.action_type === 'play_audio' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <select
-                                    style={{ width: '100%', fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}
+                                  <CustomSelect
+                                    options={audioFiles.map(a => ({
+                                      value: a.file_name,
+                                      label: `${a.name} (${a.file_name})`
+                                    }))}
                                     value={node.action_target}
-                                    onChange={e => handleCardTargetChange(key, 'play_audio', e.target.value)}
-                                  >
-                                    {audioFiles.map(a => (
-                                      <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
-                                    ))}
-                                  </select>
+                                    onChange={val => handleCardTargetChange(key, 'play_audio', val)}
+                                  />
                                   <label style={{ fontSize: '10px', color: '#FF5722', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: '#FFF3E0', padding: '4px 6px', borderRadius: '5px', border: '1px dashed #FFB74D' }}>
                                     <UploadCloud size={12} /> {isUploading ? 'Uploading...' : 'Upload New Audio'}
                                     <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleCardAudioUpload(key, e)} />

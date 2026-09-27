@@ -3,6 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Link } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 
 interface GatewaysViewProps {
   token: string;
@@ -147,30 +148,40 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label className="form-label">Target Tenant</label>
-                    <select required className="form-control" value={assignForm.tenant_id} onChange={e => setAssignForm({...assignForm, tenant_id: e.target.value})}>
-                      <option value="">-- Select Tenant --</option>
-                      {tenants.map(t => <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>)}
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Select Tenant --' },
+                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
+                      ]}
+                      value={assignForm.tenant_id}
+                      onChange={(val) => setAssignForm({ ...assignForm, tenant_id: val })}
+                    />
                   </div>
 
                   {/* Requirement 3: Shows SIP Trunk Name from SIP Trunks Section */}
                   <div className="form-group">
                     <label className="form-label">SIP Trunk Provider / Gateway</label>
-                    <select required className="form-control" value={assignForm.gateway_id} onChange={e => setAssignForm({...assignForm, gateway_id: e.target.value})}>
-                      <option value="">-- Select SIP Trunk Provider --</option>
-                      {availableTrunksAndGateways.map(item => (
-                        <option key={item.id} value={item.id}>{item.name}</option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Select SIP Trunk Provider --' },
+                        ...availableTrunksAndGateways.map(item => ({ value: item.id, label: item.name }))
+                      ]}
+                      value={assignForm.gateway_id}
+                      onChange={(val) => setAssignForm({ ...assignForm, gateway_id: val })}
+                    />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Call Direction</label>
-                    <select className="form-control" value={assignForm.direction} onChange={e => setAssignForm({...assignForm, direction: e.target.value})}>
-                      <option value="inbound_outbound">Inbound & Outbound</option>
-                      <option value="inbound_only">Inbound Only</option>
-                      <option value="outbound_only">Outbound Only</option>
-                    </select>
+                    <CustomSelect
+                      options={[
+                        { value: 'inbound_outbound', label: 'Inbound & Outbound' },
+                        { value: 'inbound_only', label: 'Inbound Only' },
+                        { value: 'outbound_only', label: 'Outbound Only' },
+                      ]}
+                      value={assignForm.direction}
+                      onChange={(val) => setAssignForm({ ...assignForm, direction: val })}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Priority Level (1 = Highest)</label>

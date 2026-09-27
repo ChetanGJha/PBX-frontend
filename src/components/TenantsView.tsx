@@ -119,14 +119,14 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
 
       {/* Toolbar & Filter */}
       <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="search-input-wrap w-full md:w-80">
+          <Search className="search-icon" />
           <input
             type="text"
             placeholder="Search tenant name or domain..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-control pl-9"
+            className="form-control"
           />
         </div>
         <div className="text-xs text-slate-500 font-semibold">

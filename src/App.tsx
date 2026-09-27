@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LogOut } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { LoginScreen } from './components/LoginScreen';
@@ -26,7 +27,7 @@ import type { SystemStatus, User, Tenant, Extension } from './types';
 // ─── Role Permissions Matrix ──────────────────────────────────────────────────
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   'SUPER_ADMIN':  ['*'],
-  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'reports', 'help'],
+  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'reports', 'help'],
   'SUPERVISOR':   ['dashboard', 'extensions', 'tenant-dids', 'queues', 'voicemail', 'reports', 'help'],
   'AGENT':        ['dashboard', 'voicemail', 'call-forwarding', 'help'],
 };
@@ -50,7 +51,7 @@ const canAccess = (user: User | null, tab: string) => {
   // Tenant master admin has full access to tenant suite
   if (role === 'TENANT_ADMIN') {
     return [
-      'tenant-users', 'extensions', 'tenant-dids', 'call-routing',
+      'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
       'audio-prompts', 'reports', 'help'
     ].includes(tab);
@@ -58,6 +59,19 @@ const canAccess = (user: User | null, tab: string) => {
 
   const perms = ROLE_PERMISSIONS[role] || [];
   return perms.includes('*') || perms.includes(tab);
+};
+
+const isTokenExpired = (tokenString: string | null): boolean => {
+  if (!tokenString) return false;
+  try {
+    const parts = tokenString.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (payload && typeof payload.exp === 'number') {
+      return Date.now() >= payload.exp * 1000;
+    }
+  } catch (e) {}
+  return false;
 };
 
 // ─── App Component ────────────────────────────────────────────────────────────
@@ -78,6 +92,23 @@ export const App: React.FC = () => {
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [dids, setDids] = useState<any[]>([]);
   const [gateways, setGateways] = useState<any[]>([]);
+  const [trunks, setTrunks] = useState<any[]>([]);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+
+  // Session expiry listener
+  useEffect(() => {
+    const handleExpired = () => {
+      setShowSessionExpiredModal(true);
+    };
+    window.addEventListener('pbx:session-expired', handleExpired);
+    return () => window.removeEventListener('pbx:session-expired', handleExpired);
+  }, []);
+
+  useEffect(() => {
+    if (token && isTokenExpired(token)) {
+      setShowSessionExpiredModal(true);
+    }
+  }, [token]);
 
   // Health probe polling
   useEffect(() => {
@@ -87,17 +118,18 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch counts when token changes
+  // Fetch counts when token or activeTab changes
   useEffect(() => {
     if (token) {
       if (user?.role === 'SUPER_ADMIN') {
         apiService.getTenants(token).then(setTenants).catch(() => {});
       }
+      apiService.getTrunks(token).then(setTrunks).catch(() => {});
       apiService.getExtensions(token).then(setExtensions).catch(() => {});
       apiService.getDids(token).then(setDids).catch(() => {});
       apiService.getGateways(token).then(setGateways).catch(() => {});
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, activeTab]);
 
   const handleLoginSuccess = (newToken: string, newUser: User) => {
     setToken(newToken);
@@ -162,7 +194,8 @@ export const App: React.FC = () => {
                 tenantCount={tenants.length}
                 extensionCount={extensions.length}
                 didCount={dids.length}
-                gatewayCount={gateways.length}
+                gatewayCount={gateways.length + trunks.length}
+                trunkCount={trunks.length + gateways.length}
                 setActiveTab={handleSetTab}
               />
             )}
@@ -181,7 +214,7 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'trunks' && isSuper && (
-              <TrunksView token={token} />
+              <TrunksView token={token} user={user} />
             )}
 
             {activeTab === 'dids' && isSuper && (
@@ -205,6 +238,10 @@ export const App: React.FC = () => {
               <DidsView token={token} user={user} />
             )}
 
+            {activeTab === 'tenant-trunks' && canAccess(user, 'tenant-trunks') && (
+              <TrunksView token={token} user={user} readOnly={!isSuper} />
+            )}
+
             {activeTab === 'call-routing' && canAccess(user, 'call-routing') && (
               <RoutingView token={token} user={user} />
             )}
@@ -218,7 +255,7 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'ivr' && canAccess(user, 'ivr') && (
-              <IvrView token={token} />
+              <IvrView token={token} user={user} />
             )}
 
             {activeTab === 'voicemail' && canAccess(user, 'voicemail') && (
@@ -246,6 +283,92 @@ export const App: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* ── SESSION EXPIRED MODAL OVERLAY ──────────────────────────── */}
+      {showSessionExpiredModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '440px',
+              width: '100%',
+              padding: '32px 28px 24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              textAlign: 'center',
+              border: '1px solid #E2E8F0'
+            }}
+          >
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: '#FEF2F2',
+                border: '1px solid #FEE2E2',
+                color: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+              }}
+            >
+              <LogOut size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+              Session Expired
+            </h3>
+
+            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>
+              Your authentication session has expired or become invalid. Please log out and re-authenticate to continue using the PBX administration portal.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSessionExpiredModal(false);
+                  handleLogout();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  backgroundColor: '#FF5430',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(255, 84, 48, 0.3)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <LogOut size={16} />
+                <span>Log Out & Sign In Again</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </ToastProvider>
   );
 };

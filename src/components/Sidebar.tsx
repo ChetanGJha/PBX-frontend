@@ -1,17 +1,17 @@
 import React from 'react';
 import {
-  LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users, Activity,
+  LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users,
   GitBranch, PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
   HelpCircle, ArrowLeftRight, UserCog, Layers, List
 } from 'lucide-react';
 import { TerrixLogo } from './TerrixLogo';
-import type { User } from '../types';
+import type { User as UserType } from '../types';
 
 interface SidebarProps {
   collapsed: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  user: User | null;
+  user: UserType | null;
 }
 
 interface NavItem {
@@ -35,7 +35,6 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    // Super Admin only — platform-level management
     label: 'Platform Administration',
     items: [
       { id: 'tenants',     label: 'Tenants Registry',  icon: Building2,       roles: ['SUPER_ADMIN'] },
@@ -45,12 +44,12 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    // Tenant Management functions (Tenant Admin & granted Sub-Admins)
     label: 'Tenant Management',
     items: [
       { id: 'tenant-users',     label: 'Admins & Users',   icon: UserCog,         roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
       { id: 'extensions',       label: 'SIP Extensions',   icon: Phone,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'tenant-dids',      label: 'Assigned DIDs',    icon: Hash,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
+      { id: 'tenant-trunks',    label: 'Assigned Gateways',icon: ArrowLeftRight,  roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
       { id: 'call-routing',     label: 'Call Routing',     icon: PhoneForwarded,  roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
       { id: 'queues',           label: 'Call Queues',      icon: List,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'hunt-groups',      label: 'Hunt Groups',      icon: Layers,          roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
@@ -75,86 +74,60 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-function isItemVisible(item: NavItem, user: User | null): boolean {
+function isItemVisible(item: NavItem, user: UserType | null): boolean {
   if (!user) return false;
   const role = user.role || 'AGENT';
 
-  // Platform admin sees all
   if (role === 'SUPER_ADMIN') return true;
-
-  // Overview and Help are accessible to all authenticated users
   if (item.id === 'dashboard' || item.id === 'help') return true;
 
-  // Platform Administration is strictly SUPER_ADMIN only
   if (['tenants', 'users', 'trunks', 'dids', 'xmlcurl', 'auth'].includes(item.id)) {
     return false;
   }
 
-  // If sub-admin or user has specific allowed_modules assigned
   if (role === 'SUB_ADMIN' || (user.allowed_modules && user.allowed_modules.length > 0)) {
     return (user.allowed_modules || []).includes(item.id);
   }
 
-  // Tenant Admin has access to all tenant management functions
   if (role === 'TENANT_ADMIN') {
     return [
-      'tenant-users', 'extensions', 'tenant-dids', 'call-routing',
+      'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
       'audio-prompts', 'reports', 'help'
     ].includes(item.id);
   }
 
-  // Fallback to roles definition
   return item.roles.includes(role);
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiveTab, user }) => {
   const role = user?.role || 'AGENT';
-  const isSuper = role === 'SUPER_ADMIN';
-  const isTenantAdmin = role === 'TENANT_ADMIN';
-  const isSubAdmin = role === 'SUB_ADMIN';
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       {/* Brand Header */}
-      <div className="brand">
+      <div className="brand flex items-center gap-3">
         <TerrixLogo size="small" />
         <div className="brand-name">
           Terrix AI
-          <small>
-            {isSuper
-              ? 'Platform Admin'
-              : isTenantAdmin
-              ? 'Tenant Master'
-              : isSubAdmin
-              ? 'Sub-Admin'
-              : role === 'SUPERVISOR'
-              ? 'Supervisor'
-              : 'Agent Portal'}
-          </small>
+          <small>PBX System</small>
         </div>
       </div>
 
-      {/* User Context Badge */}
+      {/* Compact User Profile Badge */}
       {!collapsed && user && (
-        <div style={{ margin: '4px 12px 8px', background: 'rgba(255,255,255,0.07)', borderRadius: '8px', padding: '8px 10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isSuper
-              ? '🔑 Platform Super Admin'
-              : isTenantAdmin
-              ? '🏢 Tenant Master Admin'
-              : isSubAdmin
-              ? '🛡️ Tenant Sub-Admin'
-              : '👤 ' + role}
+        <div className="mx-3 my-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF5430] to-[#ED6140] text-white flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs">
+            {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
           </div>
-          <div style={{ fontSize: '12px', color: '#E2E8F0', marginTop: '2px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username}
-          </div>
-          {user.tenant_domain && (
-            <div style={{ fontSize: '10px', color: '#64748B', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.tenant_domain}
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold text-slate-800 truncate leading-tight">
+              {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username}
             </div>
-          )}
+            <div className="text-[10px] font-bold text-[#FF5430] uppercase tracking-wide truncate mt-0.5">
+              {role.replace('_', ' ')}
+            </div>
+          </div>
         </div>
       )}
 
@@ -165,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={idx}>
+            <div key={idx} className="mb-3">
               <div className="nav-label">{group.label}</div>
               {visibleItems.map(item => {
                 const Icon = item.icon;
@@ -177,8 +150,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
                     className={`nav-item ${isActive ? 'active' : ''}`}
                     title={collapsed ? item.label : undefined}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="nav-text">{item.label}</span>
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#FF5430]' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    <span className="nav-text truncate">{item.label}</span>
                   </button>
                 );
               })}
@@ -189,11 +162,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
 
       {/* Sidebar Footer */}
       <div className="sidebar-footer">
-        <div className="flex items-center gap-2 text-[10px] text-slate-400 px-2 py-1">
-          <Activity className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-          <span className="nav-text">v2.0.0-Production</span>
+        <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 px-2 py-1">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span className="nav-text text-slate-600">v2.0.0 • Engine Ready</span>
         </div>
       </div>
     </aside>
   );
 };
+
+

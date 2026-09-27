@@ -1,6 +1,7 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { PhoneForwarded, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 
@@ -153,6 +154,8 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
     (r.forward_always_destination && r.forward_always_destination.includes(search))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div>
       <div className="page-head">
@@ -166,19 +169,21 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          <button onClick={openCreateModal} className="btn-primary">
-            <Plus size={16} /> Configure Forwarding Rule
-          </button>
+          {canManage && (
+            <button onClick={openCreateModal} className="btn-primary">
+              <Plus size={16} /> Configure Forwarding Rule
+            </button>
+          )}
         </div>
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search extensions..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -198,14 +203,14 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
                 <th>Forward on Busy</th>
                 <th>No-Answer Forward</th>
                 <th>Timeout</th>
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading forwarding rules...</td></tr>
+                <tr><td colSpan={canManage ? 6 : 5} className="text-center py-4">Loading forwarding rules...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">No forwarding rules configured yet</td></tr>
+                <tr><td colSpan={canManage ? 6 : 5} className="text-center py-4 text-muted">No forwarding rules configured yet</td></tr>
               ) : (
                 filtered.map(r => (
                   <tr key={r.extension_id}>
@@ -252,16 +257,18 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
                         {r.forward_no_answer_timeout || 20}s
                       </span>
                     </td>
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{ padding: '5px 10px', fontSize: '11px' }}
-                        onClick={() => openEditModal(r)}
-                      >
-                        <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '5px 10px', fontSize: '11px' }}
+                          onClick={() => openEditModal(r)}
+                        >
+                          <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -287,19 +294,17 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label className="form-label required">Select Extension</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Choose Extension --' },
+                        ...tenantExtensions.map(e => ({
+                          value: e.id,
+                          label: `ext/${e.extension_number} — ${e.display_name || 'Extension'}`
+                        }))
+                      ]}
                       value={selectedExtId}
-                      onChange={e => handleExtensionSelect(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Choose Extension --</option>
-                      {tenantExtensions.map(e => (
-                        <option key={e.id} value={e.id}>
-                          ext/{e.extension_number} — {e.display_name || 'Extension'}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleExtensionSelect(val)}
+                    />
                   </div>
 
                   {/* 1. Forward Always */}

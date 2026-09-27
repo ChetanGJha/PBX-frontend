@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Voicemail, Mail, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
+import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import type { User } from '../types';
@@ -151,6 +152,8 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
     (b.email_address && b.email_address.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
+
   return (
     <div>
       <div className="page-head">
@@ -163,19 +166,21 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
           <button onClick={fetchData} className="btn-secondary" title="Refresh">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          <button onClick={openCreateModal} className="btn-primary">
-            <Plus size={16} /> Setup Voicemail Box
-          </button>
+          {canManage && (
+            <button onClick={openCreateModal} className="btn-primary">
+              <Plus size={16} /> Setup Voicemail Box
+            </button>
+          )}
         </div>
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <div className="search-input-wrap" style={{ width: '280px' }}>
+            <Search size={16} className="search-icon" />
             <input
               className="form-control"
-              style={{ paddingLeft: '36px', height: '38px', fontSize: '12px' }}
+              style={{ height: '38px', fontSize: '12px' }}
               placeholder="Search voicemail boxes..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -196,14 +201,14 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
                 <th>Attachment</th>
                 <th>Auto-Purge</th>
                 <th>Greeting Audio</th>
-                <th className="text-right">Actions</th>
+                {canManage && <th className="text-right">Actions</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-4">Loading voicemail boxes...</td></tr>
+                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">Loading voicemail boxes...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-4 text-muted">No voicemail boxes configured yet</td></tr>
+                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4 text-muted">No voicemail boxes configured yet</td></tr>
               ) : (
                 filtered.map(b => (
                   <tr key={b.extension_id}>
@@ -248,16 +253,18 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
                         {b.greeting_path ? b.greeting_path.split('/').pop() : 'Standard Greeting'}
                       </span>
                     </td>
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        style={{ padding: '5px 10px', fontSize: '11px' }}
-                        onClick={() => openEditModal(b)}
-                      >
-                        <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '5px 10px', fontSize: '11px' }}
+                          onClick={() => openEditModal(b)}
+                        >
+                          <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -283,19 +290,17 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label required">Select Extension</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- Choose Extension --' },
+                        ...tenantExtensions.map(e => ({
+                          value: e.id,
+                          label: `ext/${e.extension_number} — ${e.display_name || 'Extension'} ${e.email ? `(${e.email})` : ''}`
+                        }))
+                      ]}
                       value={selectedExtId}
-                      onChange={e => handleExtensionChange(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Choose Extension --</option>
-                      {tenantExtensions.map(e => (
-                        <option key={e.id} value={e.id}>
-                          ext/{e.extension_number} — {e.display_name || 'Extension'} {e.email ? `(${e.email})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleExtensionChange}
+                    />
                   </div>
 
                   <div className="form-group">
@@ -317,18 +322,17 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
 
                   <div className="form-group">
                     <label className="form-label">Custom Greeting Prompt</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
+                      options={[
+                        { value: '', label: '-- System Default Greeting --' },
+                        ...audioFiles.map(a => ({
+                          value: a.file_path || a.file_name,
+                          label: `${a.name || a.file_name} (${a.category})`
+                        }))
+                      ]}
                       value={greetingPath}
-                      onChange={e => setGreetingPath(e.target.value)}
-                    >
-                      <option value="">-- System Default Greeting --</option>
-                      {audioFiles.map(a => (
-                        <option key={a.id} value={a.file_path || a.file_name}>
-                          {a.name || a.file_name} ({a.category})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setGreetingPath}
+                    />
                   </div>
 
                   <div className="form-group" style={{ gridColumn: '1 / -1' }}>

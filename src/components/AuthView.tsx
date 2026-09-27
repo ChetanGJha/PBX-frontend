@@ -57,31 +57,31 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="page-head flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="page-head flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <div className="eyebrow">Platform Security & Auth</div>
-          <h1 className="page-title">Auth & System Security</h1>
-          <p className="page-sub">Active administrator session details, security posture, and platform seeding controls.</p>
+          <div className="eyebrow text-[#FF5430] font-extrabold tracking-wider">PLATFORM SECURITY & AUTH</div>
+          <h1 className="page-title text-2xl font-extrabold text-slate-900 tracking-tight">Auth & System Security</h1>
+          <p className="page-sub text-slate-500 text-xs font-medium">Active administrator session details, security posture, and platform seeding controls.</p>
         </div>
         <div className="self-start sm:self-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold shadow-2xs">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>Platform Hardened & Monitored</span>
           </div>
         </div>
       </div>
 
-      {/* Message / Status Alert Banner */}
+      {/* Status Alert Notification */}
       {message && (
         <div
-          className={`p-4 rounded-xl border flex items-center justify-between gap-3 text-xs font-semibold shadow-xs transition-all ${
+          className={`p-4 rounded-xl border flex items-center justify-between gap-3 text-xs font-bold shadow-2xs transition-all ${
             message.type === 'success'
-              ? 'bg-emerald-50/90 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50/90 border-rose-200 text-rose-800'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -93,7 +93,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
           <button
             type="button"
             onClick={() => setMessage(null)}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+            className="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
             title="Dismiss notification"
           >
             <X className="w-4 h-4" />
@@ -101,55 +101,55 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
         </div>
       )}
 
-      {/* Grid of Security & Profile Cards */}
+      {/* Grid: Active Admin Profile & Platform Access Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Super Admin Profile Card */}
-        <div className="card p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="auth-card flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FFF0EC] text-[#FF5430] flex items-center justify-center border border-[#FF5430]/15 shrink-0">
+            <div className="auth-card-header">
+              <div className="auth-card-header-left">
+                <div className="auth-icon-box">
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900 tracking-tight">Active Administrator Profile</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Currently logged in system Super Admin account</p>
+                  <div className="auth-card-title">Active Administrator Profile</div>
+                  <div className="auth-card-sub">Currently logged in system Super Admin account</div>
                 </div>
               </div>
-              <span className="terrix-badge green hidden sm:inline-block">Active Session</span>
+              <span className="terrix-badge green hidden sm:inline-flex">Active Session</span>
             </div>
 
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+            <div>
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <User className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs text-slate-600 font-semibold">Username</span>
+                  <span>Username</span>
                 </div>
-                <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2.5 py-0.5 rounded border border-slate-200 shadow-2xs">
+                <span className="info-mono-badge">
                   {user?.username || 'superadmin'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Mail className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs text-slate-600 font-semibold">Email Address</span>
+                  <span>Email Address</span>
                 </div>
-                <span className="text-xs font-bold text-slate-900">{user?.email || 'admin@pbx.com'}</span>
+                <span className="info-value-badge">{user?.email || 'admin@pbx.com'}</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Shield className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs text-slate-600 font-semibold">Administrative Role</span>
+                  <span>Administrative Role</span>
                 </div>
-                <span className="terrix-badge orange font-bold">{user?.role || 'SUPER_ADMIN'}</span>
+                <span className="terrix-badge orange font-extrabold">{user?.role || 'SUPER_ADMIN'}</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Activity className="w-4 h-4 text-slate-400" />
-                  <span className="text-xs text-slate-600 font-semibold">Session Status</span>
+                  <span>Session Status</span>
                 </div>
                 <span className="terrix-badge green flex items-center gap-1.5 font-bold">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Active & Authenticated
@@ -159,55 +159,55 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Platform Access Controls & Security Card */}
-        <div className="card p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+        {/* Platform Access Controls Card */}
+        <div className="auth-card flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FFF0EC] text-[#FF5430] flex items-center justify-center border border-[#FF5430]/15 shrink-0">
+            <div className="auth-card-header">
+              <div className="auth-card-header-left">
+                <div className="auth-icon-box">
                   <Lock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900 tracking-tight">Platform Access Controls</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">System capabilities granted to your administrator role</p>
+                  <div className="auth-card-title">Platform Access Controls</div>
+                  <div className="auth-card-sub">System capabilities granted to your administrator role</div>
                 </div>
               </div>
-              <span className="terrix-badge grey hidden sm:inline-block">RBAC Enforced</span>
+              <span className="terrix-badge grey hidden sm:inline-flex">RBAC Enforced</span>
             </div>
 
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+            <div>
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Server className="w-4 h-4 text-[#FF5430]" />
-                  <span className="text-xs text-slate-700 font-semibold">Multi-Tenant Isolation</span>
+                  <span>Multi-Tenant Isolation</span>
                 </div>
-                <span className="terrix-badge green font-bold">100% Enforced</span>
+                <span className="terrix-badge green font-extrabold">100% Enforced</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Cpu className="w-4 h-4 text-[#FF5430]" />
-                  <span className="text-xs text-slate-700 font-semibold">FreeSWITCH Media Engine</span>
+                  <span>FreeSWITCH Media Engine</span>
                 </div>
-                <span className="terrix-badge orange font-bold">Full Control</span>
+                <span className="terrix-badge orange font-extrabold">Full Control</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <Database className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs text-slate-700 font-semibold">PostgreSQL & Redis DB</span>
+                  <span>PostgreSQL & Redis DB</span>
                 </div>
                 <span className="terrix-badge green font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Connected
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50/80 border border-slate-200/80 hover:bg-white hover:border-slate-300 transition-colors">
-                <div className="flex items-center gap-2.5">
+              <div className="info-row-item">
+                <div className="info-label-wrap">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs text-slate-700 font-semibold">API Rate Limiting & Auth</span>
+                  <span>API Rate Limiting & Auth</span>
                 </div>
-                <span className="terrix-badge green font-bold">Active</span>
+                <span className="terrix-badge green font-extrabold">Active</span>
               </div>
             </div>
           </div>
@@ -215,29 +215,29 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
       </div>
 
       {/* Bootstrap Additional Admin Account Card */}
-      <div className="card p-6 hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-slate-100">
-          <div className="w-10 h-10 rounded-xl bg-[#FFF0EC] text-[#FF5430] flex items-center justify-center border border-[#FF5430]/15 shrink-0">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 tracking-tight">Bootstrap Additional Platform Admin</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Seed a new platform Super Admin account (`POST /api/v1/auth/seed-superadmin`)</p>
+      <div className="auth-card">
+        <div className="auth-card-header">
+          <div className="auth-card-header-left">
+            <div className="auth-icon-box">
+              <UserPlus className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="auth-card-title">Bootstrap Additional Platform Admin</div>
+              <div className="auth-card-sub">Seed a new platform Super Admin account (`POST /api/v1/auth/seed-superadmin`)</div>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSeed} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <form onSubmit={handleSeed} className="space-y-6">
+          <div className="form-grid-3">
             <div className="form-group mb-0">
-              <label className="form-label">Username</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <label className="form-label">USERNAME</label>
+              <div className="input-icon-wrap">
+                <User className="input-left-icon" />
                 <input
                   type="text"
                   value={seedUser}
                   onChange={(e) => setSeedUser(e.target.value)}
-                  className="form-control"
-                  style={{ paddingLeft: '38px' }}
                   placeholder="superadmin2"
                   required
                 />
@@ -245,15 +245,13 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </div>
 
             <div className="form-group mb-0">
-              <label className="form-label">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <label className="form-label">EMAIL ADDRESS</label>
+              <div className="input-icon-wrap">
+                <Mail className="input-left-icon" />
                 <input
                   type="email"
                   value={seedEmail}
                   onChange={(e) => setSeedEmail(e.target.value)}
-                  className="form-control"
-                  style={{ paddingLeft: '38px' }}
                   placeholder="admin2@pbx.com"
                   required
                 />
@@ -261,22 +259,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </div>
 
             <div className="form-group mb-0">
-              <label className="form-label">Password</label>
-              <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <label className="form-label">PASSWORD</label>
+              <div className="input-icon-wrap">
+                <KeyRound className="input-left-icon" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={seedPassword}
                   onChange={(e) => setSeedPassword(e.target.value)}
-                  className="form-control"
-                  style={{ paddingLeft: '38px', paddingRight: '40px' }}
+                  style={{ paddingRight: '40px' }}
                   placeholder="SuperSecurePassword123!"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded transition-colors"
+                  className="input-eye-btn"
                   tabIndex={-1}
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
@@ -286,9 +283,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <KeyRound className="w-3.5 h-3.5 text-[#FF5430] shrink-0" />
+          <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+              <KeyRound className="w-4 h-4 text-[#FF5430] shrink-0" />
               <span>Seeds a root platform administrator with global configuration permissions.</span>
             </div>
             <button
@@ -305,3 +302,5 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
     </div>
   );
 };
+
+

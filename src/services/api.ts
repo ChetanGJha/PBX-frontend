@@ -38,6 +38,19 @@ const getHeaders = (token?: string | null, isForm = false) => {
   return headers;
 };
 
+const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const response = await globalThis.fetch(input, init);
+  if (response.status === 401) {
+    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (!urlStr.includes('/auth/login') && !urlStr.includes('/auth/seed-superadmin') && !urlStr.includes('/health')) {
+      window.dispatchEvent(new CustomEvent('pbx:session-expired'));
+    }
+  }
+  return response;
+};
+
+const fetch = customFetch;
+
 export const apiService = {
   // System Health
   async checkHealth(): Promise<SystemStatus> {
@@ -211,6 +224,27 @@ export const apiService = {
     });
     if (!res.ok) throw new Error('Failed to unassign DID');
     return res.json();
+  },
+
+  async updateDid(token: string, didId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids/${didId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update DID' }));
+      throw new Error(parseErrorDetail(err, 'Failed to update DID'));
+    }
+    return res.json();
+  },
+
+  async deleteDid(token: string, didId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/dids/${didId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete DID');
   },
 
   // Routing Rules CRUD
@@ -450,10 +484,51 @@ export const apiService = {
     if (!res.ok) throw new Error('Failed to create trunk');
     return res.json();
   },
+  async updateTrunk(token: string, trunkId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/trunks/${trunkId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update trunk');
+    return res.json();
+  },
+  async deleteTrunk(token: string, trunkId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/trunks/${trunkId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete trunk');
+  },
   async getGateways(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/gateways`, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Failed to fetch gateways');
     return res.json();
+  },
+  async createGateway(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create gateway');
+    return res.json();
+  },
+  async updateGateway(token: string, gatewayId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways/${gatewayId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update gateway');
+    return res.json();
+  },
+  async deleteGateway(token: string, gatewayId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/gateways/${gatewayId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete gateway');
   },
   async assignGateway(token: string, payload: any) {
     const res = await fetch(`${API_BASE_URL}/api/v1/gateways/assign`, {
