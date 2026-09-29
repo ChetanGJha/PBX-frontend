@@ -49,3 +49,61 @@ export interface SystemStatus {
   database: 'connected' | 'disconnected' | 'unknown';
   redis: 'connected' | 'disconnected' | 'unknown';
 }
+
+
+export interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+export interface WeeklySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+  [key: string]: DaySchedule;
+}
+
+export interface Holiday {
+  id: string;
+  business_hours_id: string;
+  name: string;
+  holiday_date: string;
+  created_at?: string;
+}
+
+export interface BusinessHoursLiveStatus {
+  status: 'OPEN' | 'CLOSED' | 'HOLIDAY';
+  holiday_name?: string;
+  current_time: string;
+  current_date: string;
+  timezone: string;
+  active_destination: {
+    type: string;
+    target: string;
+  };
+}
+
+export interface BusinessHours {
+  id: string;
+  tenant_id: string;
+  name: string;
+  timezone: string;
+  schedule: WeeklySchedule;
+  open_destination_type: string;
+  open_destination_target: string;
+  closed_destination_type: string;
+  closed_destination_target: string;
+  holiday_destination_type?: string;
+  holiday_destination_target?: string;
+  created_at: string;
+  updated_at: string;
+  tenant_name?: string;
+  holiday_count?: number;
+  holidays?: Holiday[];
+  live_status?: BusinessHoursLiveStatus;
+}

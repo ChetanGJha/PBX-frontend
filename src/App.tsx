@@ -20,6 +20,10 @@ import { VoicemailView } from './components/VoicemailView';
 import { CallForwardingView } from './components/CallForwardingView';
 import { ReportsView } from './components/ReportsView';
 import { HelpView } from './components/HelpView';
+import { ConferencesView } from './components/ConferencesView';
+import { CallBlockView } from './components/CallBlockView';
+import { ContactsView } from './components/ContactsView';
+import { BusinessHoursView } from './components/BusinessHoursView';
 import { ToastProvider } from './components/ToastProvider';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
@@ -27,9 +31,9 @@ import type { SystemStatus, User, Tenant, Extension } from './types';
 // ─── Role Permissions Matrix ──────────────────────────────────────────────────
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   'SUPER_ADMIN':  ['*'],
-  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'reports', 'help'],
-  'SUPERVISOR':   ['dashboard', 'extensions', 'tenant-dids', 'queues', 'voicemail', 'reports', 'help'],
-  'AGENT':        ['dashboard', 'voicemail', 'call-forwarding', 'help'],
+  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'],
+  'SUPERVISOR':   ['dashboard', 'extensions', 'tenant-dids', 'queues', 'voicemail', 'conferences', 'contacts', 'business-hours', 'reports', 'help'],
+  'AGENT':        ['dashboard', 'voicemail', 'call-forwarding', 'contacts', 'help'],
 };
 
 const canAccess = (user: User | null, tab: string) => {
@@ -53,7 +57,7 @@ const canAccess = (user: User | null, tab: string) => {
     return [
       'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
-      'audio-prompts', 'reports', 'help'
+      'audio-prompts', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'
     ].includes(tab);
   }
 
@@ -268,6 +272,22 @@ export const App: React.FC = () => {
 
             {activeTab === 'audio-prompts' && canAccess(user, 'audio-prompts') && (
               <AudioView token={token} user={user} />
+            )}
+
+            {activeTab === 'conferences' && canAccess(user, 'conferences') && (
+              <ConferencesView token={token} user={user} />
+            )}
+
+            {activeTab === 'call-block' && canAccess(user, 'call-block') && (
+              <CallBlockView token={token} user={user} />
+            )}
+
+            {activeTab === 'contacts' && canAccess(user, 'contacts') && (
+              <ContactsView token={token} user={user} />
+            )}
+
+            {activeTab === 'business-hours' && canAccess(user, 'business-hours') && (
+              <BusinessHoursView token={token} user={user} />
             )}
 
             {/* ── REPORTS & ANALYTICS ─────────────────────────────────── */}

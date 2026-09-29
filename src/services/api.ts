@@ -392,7 +392,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update hunt group');
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to update hunt group'); }
     return res.json();
   },
 
@@ -411,7 +411,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to create hunt group');
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to create hunt group'); }
     return res.json();
   },
   async getIvrs(token: string) {
@@ -601,7 +601,7 @@ export const apiService = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update extension forwarding');
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to update extension forwarding'); }
     return res.json();
   },
 
@@ -628,7 +628,7 @@ export const apiService = {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update extension voicemail');
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to update extension voicemail'); }
     return res.json();
   },
 
@@ -646,4 +646,223 @@ export const apiService = {
     return res.json();
   },
 
+  // ─── Conferences ─────────────────────────────────────────────────────────────
+  async getConferences(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch conferences');
+    return res.json();
+  },
+
+  async createConference(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create conference');
+    }
+    return res.json();
+  },
+
+  async updateConference(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update conference');
+    }
+    return res.json();
+  },
+
+  async deleteConference(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete conference');
+    return true;
+  },
+
+  // ─── Call Block (Blacklist) ──────────────────────────────────────────────────
+  async getCallBlocks(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/call-block`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch call block entries');
+    return res.json();
+  },
+
+  async createCallBlock(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/call-block`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to add call block entry');
+    }
+    return res.json();
+  },
+
+  async updateCallBlock(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/call-block/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update call block entry');
+    }
+    return res.json();
+  },
+
+  async deleteCallBlock(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/call-block/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete call block entry');
+    return true;
+  },
+
+  // ─── Contacts Directory ─────────────────────────────────────────────────────
+  async getContacts(token: string, search?: string) {
+    const url = search 
+      ? `${API_BASE_URL}/api/v1/contacts?search=${encodeURIComponent(search)}`
+      : `${API_BASE_URL}/api/v1/contacts`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch contacts');
+    return res.json();
+  },
+
+  async createContact(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create contact');
+    }
+    return res.json();
+  },
+
+  async updateContact(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/contacts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update contact');
+    }
+    return res.json();
+  },
+
+  async deleteContact(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/contacts/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete contact');
+    return true;
+  },
+
+  // Business Hours & Time Conditions API
+  async getBusinessHours(token: string, tenantId?: string) {
+    const url = tenantId
+      ? `${API_BASE_URL}/api/v1/business-hours?tenant_id=${tenantId}`
+      : `${API_BASE_URL}/api/v1/business-hours`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch business hours');
+    return res.json();
+  },
+
+  async getBusinessHoursDetails(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch business hours details');
+    return res.json();
+  },
+
+  async createBusinessHours(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to create business hours schedule');
+    }
+    return res.json();
+  },
+
+  async updateBusinessHours(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update business hours schedule');
+    }
+    return res.json();
+  },
+
+  async deleteBusinessHours(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete business hours schedule');
+    return true;
+  },
+
+  async getBusinessHoursStatus(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch live business hours status');
+    return res.json();
+  },
+
+  async addHoliday(token: string, id: string, payload: { name: string; holiday_date: string }) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}/holidays`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to add holiday date');
+    }
+    return res.json();
+  },
+
+  async deleteHoliday(token: string, id: string, holidayId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/business-hours/${id}/holidays/${holidayId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok && res.status !== 204) throw new Error('Failed to delete holiday date');
+    return true;
+  },
 };

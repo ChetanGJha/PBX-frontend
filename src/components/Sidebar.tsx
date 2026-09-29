@@ -2,7 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users,
   GitBranch, PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
-  HelpCircle, ArrowLeftRight, UserCog, Layers, List
+  HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock
 } from 'lucide-react';
 import { TerrixLogo } from './TerrixLogo';
 import type { User as UserType } from '../types';
@@ -57,6 +57,10 @@ const navGroups: NavGroup[] = [
       { id: 'voicemail',        label: 'Voicemail',        icon: Voicemail,       roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR', 'AGENT'] },
       { id: 'call-forwarding',  label: 'Call Forwarding',  icon: PhoneCall,       roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'AGENT'] },
       { id: 'audio-prompts',    label: 'Audio Prompts',    icon: Music,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
+      { id: 'conferences',      label: 'Conferences',      icon: Users2,          roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
+      { id: 'call-block',       label: 'Call Block',       icon: Ban,             roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
+      { id: 'business-hours',   label: 'Business Hours',   icon: Clock,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
+      { id: 'contacts',         label: 'Contacts',         icon: Contact,         roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR', 'AGENT'] },
     ],
   },
   {
@@ -93,7 +97,7 @@ function isItemVisible(item: NavItem, user: UserType | null): boolean {
     return [
       'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
-      'audio-prompts', 'reports', 'help'
+      'audio-prompts', 'conferences', 'call-block', 'contacts', 'reports', 'help'
     ].includes(item.id);
   }
 
