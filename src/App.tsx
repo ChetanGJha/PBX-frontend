@@ -24,6 +24,7 @@ import { ConferencesView } from './components/ConferencesView';
 import { CallBlockView } from './components/CallBlockView';
 import { ContactsView } from './components/ContactsView';
 import { BusinessHoursView } from './components/BusinessHoursView';
+import { EmailSettingsView } from './components/EmailSettingsView';
 import { ToastProvider } from './components/ToastProvider';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
@@ -31,7 +32,7 @@ import type { SystemStatus, User, Tenant, Extension } from './types';
 // ─── Role Permissions Matrix ──────────────────────────────────────────────────
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   'SUPER_ADMIN':  ['*'],
-  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'],
+  'TENANT_ADMIN': ['dashboard', 'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing', 'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding', 'audio-prompts', 'email-settings', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'],
   'SUPERVISOR':   ['dashboard', 'extensions', 'tenant-dids', 'queues', 'voicemail', 'conferences', 'contacts', 'business-hours', 'reports', 'help'],
   'AGENT':        ['dashboard', 'voicemail', 'call-forwarding', 'contacts', 'help'],
 };
@@ -57,7 +58,7 @@ const canAccess = (user: User | null, tab: string) => {
     return [
       'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
-      'audio-prompts', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'
+      'audio-prompts', 'email-settings', 'conferences', 'call-block', 'contacts', 'business-hours', 'reports', 'help'
     ].includes(tab);
   }
 
@@ -272,6 +273,10 @@ export const App: React.FC = () => {
 
             {activeTab === 'audio-prompts' && canAccess(user, 'audio-prompts') && (
               <AudioView token={token} user={user} />
+            )}
+
+            {activeTab === 'email-settings' && canAccess(user, 'email-settings') && (
+              <EmailSettingsView token={token} user={user} />
             )}
 
             {activeTab === 'conferences' && canAccess(user, 'conferences') && (

@@ -874,4 +874,55 @@ export const apiService = {
     if (!res.ok && res.status !== 204) throw new Error('Failed to delete holiday date');
     return true;
   },
+
+  // ─── SMTP Email Settings ──────────────────────────────────────────────────
+  async getSmtpSettings(token: string, tenantId?: string) {
+    let url = `${API_BASE_URL}/api/v1/settings/smtp`;
+    if (tenantId) url += `?tenant_id=${tenantId}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to fetch SMTP settings');
+    }
+    return res.json();
+  },
+
+  async updateSmtpSettings(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/settings/smtp`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to update SMTP settings');
+    }
+    return res.json();
+  },
+
+  async deleteSmtpSettings(token: string, tenantId?: string) {
+    let url = `${API_BASE_URL}/api/v1/settings/smtp`;
+    if (tenantId) url += `?tenant_id=${tenantId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to reset SMTP settings');
+    }
+    return res.json();
+  },
+
+  async testSmtpConnection(token: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/settings/smtp/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
 };
+

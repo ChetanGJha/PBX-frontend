@@ -107,3 +107,31 @@ export interface BusinessHours {
   holidays?: Holiday[];
   live_status?: BusinessHoursLiveStatus;
 }
+
+
+export interface SmtpSettings {
+  id?: string;
+  tenant_id?: string | null;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_username?: string;
+  smtp_password?: string;
+  from_email?: string;
+  from_name?: string;
+  use_tls?: boolean;
+  configured: boolean;
+  is_using_global_fallback: boolean;
+  updated_at?: string;
+}
+
+export interface SmtpTestPayload {
+  to_email: string;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_username?: string;
+  smtp_password?: string;
+  from_email?: string;
+  from_name?: string;
+  use_tls?: boolean;
+  tenant_id?: string;
+}

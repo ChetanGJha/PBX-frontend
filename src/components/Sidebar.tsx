@@ -2,7 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users,
   GitBranch, PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
-  HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock
+  HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock, Mail
 } from 'lucide-react';
 import { TerrixLogo } from './TerrixLogo';
 import type { User as UserType } from '../types';
@@ -41,12 +41,14 @@ const navGroups: NavGroup[] = [
       { id: 'users',       label: 'Global Users',      icon: Users,           roles: ['SUPER_ADMIN'] },
       { id: 'trunks',      label: 'SIP Trunks',        icon: ArrowLeftRight,  roles: ['SUPER_ADMIN'] },
       { id: 'dids',        label: 'DID Inventory',     icon: Hash,            roles: ['SUPER_ADMIN'] },
+      { id: 'email-settings', label: 'SMTP & Email',     icon: Mail,            roles: ['SUPER_ADMIN'] },
     ],
   },
   {
     label: 'Tenant Management',
     items: [
       { id: 'tenant-users',     label: 'Admins & Users',   icon: UserCog,         roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'email-settings',   label: 'SMTP & Email',     icon: Mail,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
       { id: 'extensions',       label: 'SIP Extensions',   icon: Phone,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'tenant-dids',      label: 'Assigned DIDs',    icon: Hash,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'tenant-trunks',    label: 'Assigned Gateways',icon: ArrowLeftRight,  roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
@@ -78,12 +80,16 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-function isItemVisible(item: NavItem, user: UserType | null): boolean {
+function isItemVisible(item: NavItem, user: UserType | null, groupLabel?: string): boolean {
   if (!user) return false;
   const role = user.role || 'AGENT';
 
   if (role === 'SUPER_ADMIN') return true;
   if (item.id === 'dashboard' || item.id === 'help') return true;
+
+  if (groupLabel === 'Platform Administration') {
+    return false;
+  }
 
   if (['tenants', 'users', 'trunks', 'dids', 'xmlcurl', 'auth'].includes(item.id)) {
     return false;
@@ -97,7 +103,8 @@ function isItemVisible(item: NavItem, user: UserType | null): boolean {
     return [
       'tenant-users', 'extensions', 'tenant-dids', 'tenant-trunks', 'call-routing',
       'queues', 'hunt-groups', 'ivr', 'voicemail', 'call-forwarding',
-      'audio-prompts', 'conferences', 'call-block', 'contacts', 'reports', 'help'
+      'audio-prompts', 'conferences', 'call-block', 'business-hours', 'contacts',
+      'email-settings', 'reports', 'help'
     ].includes(item.id);
   }
 
@@ -138,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
       {/* Sidebar Navigation */}
       <div className="sidebar-body">
         {navGroups.map((group, idx) => {
-          const visibleItems = group.items.filter(item => isItemVisible(item, user));
+          const visibleItems = group.items.filter(item => isItemVisible(item, user, group.label));
           if (visibleItems.length === 0) return null;
 
           return (

@@ -2,7 +2,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import {
   Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, ShieldAlert, Settings,
-  Phone, Hash, PhoneCall, PhoneForwarded, GitBranch, Music, Voicemail, ArrowLeftRight, BarChart2
+  Phone, Hash, PhoneCall, PhoneForwarded, GitBranch, Music, Voicemail, ArrowLeftRight, BarChart2, Mail
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User as UserType, Tenant } from '../types';
@@ -24,6 +24,7 @@ const AVAILABLE_MODULES = [
   { id: 'audio-prompts',   label: 'Audio Prompts',     desc: 'Upload audio files & sound library',     icon: Music },
   { id: 'voicemail',       label: 'Voicemail',         desc: 'Voicemail boxes and email routing',      icon: Voicemail },
   { id: 'call-forwarding', label: 'Call Forwarding',   desc: 'Forward-always, busy, & follow-me',      icon: ArrowLeftRight },
+  { id: 'email-settings',   label: 'SMTP & Email',     desc: 'Outbound mail server & voicemail alerts',icon: Mail },
   { id: 'reports',         label: 'CDR & Reports',     desc: 'Call detail records & analytics',        icon: BarChart2 },
 ];
 
