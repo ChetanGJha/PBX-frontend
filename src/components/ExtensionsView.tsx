@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle } from 'lucide-react';
+import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle, Edit2, Trash2 } from 'lucide-react';
 
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';
@@ -24,7 +24,21 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
   // Modals
   const [showModal, setShowModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedExtId, setSelectedExtId] = useState<string | null>(null);
+  const [editingExtId, setEditingExtId] = useState<string | null>(null);
+
+  // Edit Form
+  const [editFormData, setEditFormData] = useState({
+    extension_number: '',
+    display_name: '',
+    email: '',
+    caller_id_name: '',
+    caller_id_number: '',
+    webrtc_enabled: true,
+    no_answer_timeout: 20,
+    enabled: true
+  });
 
   // Create Form
   const [tenantId, setTenantId] = useState('');
@@ -115,6 +129,68 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
       setError(msg);
       showErrorModal('Password Reset Failed', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenEdit = (ext: Extension) => {
+    setEditingExtId(ext.id);
+    setEditFormData({
+      extension_number: ext.extension_number,
+      display_name: ext.display_name || '',
+      email: ext.email || '',
+      caller_id_name: ext.caller_id_name || ext.display_name || '',
+      caller_id_number: ext.caller_id_number || ext.extension_number || '',
+      webrtc_enabled: ext.webrtc_enabled !== false,
+      no_answer_timeout: ext.no_answer_timeout || 20,
+      enabled: ext.enabled !== false
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !editingExtId) return;
+    setLoading(true);
+    try {
+      await apiService.updateExtension(token, editingExtId, {
+        display_name: editFormData.display_name,
+        email: editFormData.email && editFormData.email.trim() ? editFormData.email.trim() : null,
+        caller_id_name: editFormData.caller_id_name,
+        caller_id_number: editFormData.caller_id_number,
+        webrtc_enabled: editFormData.webrtc_enabled,
+        no_answer_timeout: Number(editFormData.no_answer_timeout) || 20,
+        enabled: editFormData.enabled
+      });
+      setShowEditModal(false);
+      setEditingExtId(null);
+      showSuccessModal(
+        'Extension Updated',
+        `Extension ext/${editFormData.extension_number} configuration has been saved.`
+      );
+      fetchData();
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Update Failed', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (extId: string, extNum: string) => {
+    if (!window.confirm(`Are you sure you want to delete extension ${extNum}?`)) return;
+    if (!token) return;
+    setLoading(true);
+    try {
+      await apiService.deleteExtension(token, extId);
+      showSuccessModal('Extension Deleted', `Extension ext/${extNum} was successfully deleted.`);
+      fetchData();
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      setError(msg);
+      showErrorModal('Delete Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -225,16 +301,34 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
                   <td className="font-mono text-slate-700">{ext.no_answer_timeout}s</td>
                   {canManage && (
                     <td className="text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedExtId(ext.id);
-                          setShowResetModal(true);
-                        }}
-                        className="btn-secondary !h-8 !px-3 !py-0 text-xs"
-                      >
-                        <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
-                        <span>Reset Password</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEdit(ext)}
+                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs"
+                          title="Edit Extension"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-slate-700" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedExtId(ext.id);
+                            setShowResetModal(true);
+                          }}
+                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs"
+                          title="Reset Password"
+                        >
+                          <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
+                          <span>Reset</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(ext.id, ext.extension_number)}
+                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs text-rose-600 hover:bg-rose-50"
+                          title="Delete Extension"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -408,6 +502,118 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
                 </button>
                 <button type="submit" disabled={loading} className="btn-primary">
                   {loading ? 'Updating...' : 'Save Credentials'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Extension Modal */}
+      {showEditModal && (
+        <div className="modal-backdrop">
+          <div className="terrix-modal max-w-lg">
+            <div className="modal-head">
+              <div className="modal-icon">
+                <Edit2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3>Edit Extension</h3>
+                <p>Modify display profile, caller ID, and timeout for ext/{editFormData.extension_number}</p>
+              </div>
+              <button onClick={() => { setShowEditModal(false); setEditingExtId(null); }} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate}>
+              <div className="modal-body space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-group">
+                    <label className="form-label required">Display Name</label>
+                    <input
+                      required
+                      type="text"
+                      value={editFormData.display_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, display_name: e.target.value })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">User Email</label>
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Caller ID Name</label>
+                    <input
+                      type="text"
+                      value={editFormData.caller_id_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, caller_id_name: e.target.value })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Caller ID Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.caller_id_number}
+                      onChange={(e) => setEditFormData({ ...editFormData, caller_id_number: e.target.value })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">No-Answer Timeout (sec)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={120}
+                      value={editFormData.no_answer_timeout}
+                      onChange={(e) => setEditFormData({ ...editFormData, no_answer_timeout: parseInt(e.target.value) || 20 })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">WebRTC Softphone</label>
+                    <CustomSelect
+                      options={[
+                        { value: 'true', label: 'Enabled (WSS / WebRTC)' },
+                        { value: 'false', label: 'Disabled (SIP Only)' }
+                      ]}
+                      value={editFormData.webrtc_enabled ? 'true' : 'false'}
+                      onChange={(val) => setEditFormData({ ...editFormData, webrtc_enabled: val === 'true' })}
+                    />
+                  </div>
+
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Extension Status</label>
+                    <CustomSelect
+                      options={[
+                        { value: 'true', label: 'Active / Registered' },
+                        { value: 'false', label: 'Suspended / Inactive' }
+                      ]}
+                      value={editFormData.enabled ? 'true' : 'false'}
+                      onChange={(val) => setEditFormData({ ...editFormData, enabled: val === 'true' })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-foot">
+                <button type="button" onClick={() => { setShowEditModal(false); setEditingExtId(null); }} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} className="btn-primary">
+                  {loading ? 'Saving...' : 'Save Extension Changes'}
                 </button>
               </div>
             </form>

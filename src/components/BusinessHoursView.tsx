@@ -4,8 +4,7 @@ import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import {
   Clock, Plus, Trash2, Calendar, Globe, Sun, Moon, ArrowRight, Save,
-  RefreshCw, CheckCircle2, AlertCircle, Building2, Phone, Voicemail,
-  GitBranch, Users, Sparkles, X, ChevronRight, Shield
+  RefreshCw, Building2, ChevronRight
 } from 'lucide-react';
 
 interface BusinessHoursViewProps {
@@ -183,6 +182,21 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
       await apiService.deleteBusinessHours(token, selectedSchedule.id);
       showSuccessModal('Deleted', 'Schedule has been removed.');
       setSelectedId(null);
+      await loadData();
+    } catch (err: any) {
+      showErrorModal('Delete Failed', err.message || 'Failed to delete schedule');
+    }
+  };
+
+  const handleDirectDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete operating profile "${name}"?`)) return;
+    try {
+      await apiService.deleteBusinessHours(token, id);
+      showSuccessModal('Profile Deleted', `Operating profile "${name}" was successfully removed.`);
+      if (selectedId === id) {
+        setSelectedId(null);
+        setSelectedSchedule(null);
+      }
       await loadData();
     } catch (err: any) {
       showErrorModal('Delete Failed', err.message || 'Failed to delete schedule');
@@ -375,6 +389,17 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                       }`}>
                         {sOpen ? 'Open' : 'Closed'}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDirectDelete(s.id, s.name);
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                        title={`Delete ${s.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <ChevronRight className={`w-4 h-4 ${active ? 'text-[#FF5430]' : 'text-[#D1D5DB]'}`} />
                     </div>
                   </div>

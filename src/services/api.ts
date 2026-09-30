@@ -123,6 +123,19 @@ export const apiService = {
     return res.json() as Promise<Tenant>;
   },
 
+  async updateTenant(token: string, id: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/tenants/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update tenant' }));
+      throw new Error(parseErrorDetail(err, 'Failed to update tenant'));
+    }
+    return res.json();
+  },
+
   async toggleTenantStatus(token: string, id: string, enabled: boolean) {
     const res = await fetch(`${API_BASE_URL}/api/v1/tenants/${id}/status`, {
       method: 'PUT',
@@ -175,6 +188,41 @@ export const apiService = {
       throw new Error(parseErrorDetail(err, 'Failed to reset password'));
     }
     return res.json();
+  },
+
+  async updateExtension(token: string, extensionId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update extension' }));
+      throw new Error(parseErrorDetail(err, 'Failed to update extension'));
+    }
+    return res.json();
+  },
+
+  async deleteExtension(token: string, extensionId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to delete extension' }));
+      throw new Error(parseErrorDetail(err, 'Failed to delete extension'));
+    }
+  },
+
+  async deleteVoicemailBox(token: string, extensionId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/voicemail`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to delete voicemail box' }));
+      throw new Error(parseErrorDetail(err, 'Failed to delete voicemail box'));
+    }
   },
 
   async updateExtensionSettings(token: string, extensionId: string, payload: any) {
@@ -267,6 +315,19 @@ export const apiService = {
     return res.json();
   },
 
+  async updateRoute(token: string, routeId: string, payload: any) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/${routeId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to update route');
+    }
+    return res.json();
+  },
+
   async deleteRoute(token: string, routeId: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/routing/${routeId}`, {
       method: 'DELETE',
@@ -349,6 +410,49 @@ export const apiService = {
     if (tenantId) url += `&tenant_id=${tenantId}`;
     const res = await fetch(url, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Failed to fetch recordings');
+    return res.json();
+  },
+
+  getVoicemailAudioUrl(messageId: string): string {
+    return `${API_BASE_URL}/api/v1/reports/voicemail/${messageId}/audio`;
+  },
+
+  async getVoicemailReport(token: string, extensionNumber?: string, isRead?: boolean, startDate?: string, endDate?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/voicemail?`;
+    if (extensionNumber) url += `&extension_number=${extensionNumber}`;
+    if (isRead !== undefined) url += `&is_read=${isRead}`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch voicemail report');
+    return res.json();
+  },
+
+  async toggleVoicemailRead(token: string, messageId: string, read: boolean) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/reports/voicemail/${messageId}/read?read=${read}`, {
+      method: 'PATCH',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to update voicemail read status');
+    return res.json();
+  },
+
+  async deleteVoicemailMessage(token: string, messageId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/reports/voicemail/${messageId}`, {
+      method: 'DELETE',
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error('Failed to delete voicemail message');
+    return res.json();
+  },
+
+  async updateExtensionTimeout(token: string, extensionId: string, timeout: number) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ no_answer_timeout: timeout }),
+    });
+    if (!res.ok) throw new Error('Failed to update extension timeout');
     return res.json();
   },
 

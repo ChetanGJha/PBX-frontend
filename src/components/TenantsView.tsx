@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, RefreshCw, Trash2, Search, X, AlertCircle } from 'lucide-react';
+import { Building2, Plus, RefreshCw, Trash2, Edit2, Search, X, AlertCircle } from 'lucide-react';
 
 import { apiService } from '../services/api';
 import type { Tenant } from '../types';
@@ -24,6 +24,19 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
   const [domain, setDomain] = useState('');
   const [sipDomain, setSipDomain] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    domain: '',
+    sip_domain: '',
+    timezone: 'UTC',
+    max_extensions: 100,
+    max_concurrent_calls: 20,
+    enabled: true
+  });
 
   const fetchTenants = async () => {
     if (!token) return;
@@ -78,6 +91,49 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
       const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
       setError(msg);
       showErrorModal('Failed to Delete Tenant', msg);
+    }
+  };
+
+  const handleOpenEdit = (t: Tenant) => {
+    setEditingTenantId(t.id);
+    setEditFormData({
+      name: t.name || '',
+      domain: t.domain || '',
+      sip_domain: t.sip_domain || '',
+      timezone: t.timezone || 'UTC',
+      max_extensions: t.max_extensions || 100,
+      max_concurrent_calls: t.max_concurrent_calls || 20,
+      enabled: t.enabled !== false
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !editingTenantId) return;
+    setLoading(true);
+    try {
+      await apiService.updateTenant(token, editingTenantId, {
+        name: editFormData.name,
+        domain: editFormData.domain,
+        sip_domain: editFormData.sip_domain,
+        timezone: editFormData.timezone,
+        max_extensions: Number(editFormData.max_extensions) || 100,
+        max_concurrent_calls: Number(editFormData.max_concurrent_calls) || 20,
+        enabled: editFormData.enabled
+      });
+      setShowEditModal(false);
+      setEditingTenantId(null);
+      showSuccessModal(
+        'Tenant Updated',
+        `Tenant "${editFormData.name}" configuration has been updated successfully.`
+      );
+      fetchTenants();
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+      showErrorModal('Update Failed', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,13 +219,22 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
                     <span className="terrix-badge green">Active</span>
                   </td>
                   <td className="text-right">
-                    <button
-                      onClick={() => handleDelete(t.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      title="Delete Tenant"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(t)}
+                        className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                        title="Edit Tenant"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete Tenant"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -253,6 +318,110 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
                 </button>
                 <button type="submit" disabled={loading} className="btn-primary">
                   {loading ? 'Creating...' : 'Provision Tenant'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Tenant Modal */}
+      {showEditModal && (
+        <div className="modal-backdrop">
+          <div className="terrix-modal max-w-lg">
+            <div className="modal-head">
+              <div className="modal-icon">
+                <Edit2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3>Edit Tenant</h3>
+                <p>Modify settings and resource quotas for {editFormData.name}</p>
+              </div>
+              <button onClick={() => { setShowEditModal(false); setEditingTenantId(null); }} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit}>
+              <div className="modal-body space-y-4">
+                <div>
+                  <label className="form-label required">Tenant Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="form-control"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label required">Web Domain</label>
+                    <input
+                      type="text"
+                      value={editFormData.domain}
+                      onChange={(e) => setEditFormData({ ...editFormData, domain: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label required">SIP Domain</label>
+                    <input
+                      type="text"
+                      value={editFormData.sip_domain}
+                      onChange={(e) => setEditFormData({ ...editFormData, sip_domain: e.target.value })}
+                      className="form-control"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="form-label">Timezone</label>
+                    <input
+                      type="text"
+                      value={editFormData.timezone}
+                      onChange={(e) => setEditFormData({ ...editFormData, timezone: e.target.value })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Max Extensions</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      value={editFormData.max_extensions}
+                      onChange={(e) => setEditFormData({ ...editFormData, max_extensions: parseInt(e.target.value) || 100 })}
+                      className="form-control"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label">Max Concurrent Calls</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={editFormData.max_concurrent_calls}
+                      onChange={(e) => setEditFormData({ ...editFormData, max_concurrent_calls: parseInt(e.target.value) || 20 })}
+                      className="form-control"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-foot">
+                <button type="button" onClick={() => { setShowEditModal(false); setEditingTenantId(null); }} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" disabled={loading} className="btn-primary">
+                  {loading ? 'Saving...' : 'Save Tenant Changes'}
                 </button>
               </div>
             </form>

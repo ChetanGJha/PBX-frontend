@@ -300,7 +300,9 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                           {t.tenant_name} ({t.tenant_domain})
                         </span>
                       ) : (
-                        <span className="terrix-badge grey">Global (Platform)</span>
+                        <span className="terrix-badge blue" style={{ background: '#E0F2FE', color: '#0369A1', borderColor: '#BAE6FD', fontWeight: 700 }}>
+                          Shared (All Tenants)
+                        </span>
                       )}
                     </td>
                     <td>{t.username || <span style={{ color: '#9CA3AF' }}>IP Auth</span>}</td>
@@ -393,7 +395,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                   <span className="text-[11px] font-semibold text-slate-400 block mb-1">Allocated Tenant</span>
                   <div className="flex items-center gap-1.5 font-bold text-slate-800">
                     <Building2 size={14} className="text-[#FF5430]" />
-                    <span>{viewInfoItem.tenant_name ? `${viewInfoItem.tenant_name} (${viewInfoItem.tenant_domain})` : 'Global Platform Route'}</span>
+                    <span>{viewInfoItem.tenant_name ? `${viewInfoItem.tenant_name} (${viewInfoItem.tenant_domain})` : 'Shared (Available to All Tenants)'}</span>
                   </div>
                 </div>
               </div>
@@ -450,7 +452,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                     <label className="form-label">Assign to Tenant (Optional)</label>
                     <CustomSelect
                       options={[
-                        { value: '', label: '-- Global / Unassigned (Super Admin) --' },
+                        { value: '', label: '-- Shared (Global / All Tenants) --' },
                         ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
                       ]}
                       value={formData.tenant_id}
@@ -524,7 +526,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                     <label className="form-label">Assign to Tenant (Optional)</label>
                     <CustomSelect
                       options={[
-                        { value: '', label: '-- Global / Unassigned (Super Admin) --' },
+                        { value: '', label: '-- Shared (Global / All Tenants) --' },
                         ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
                       ]}
                       value={editFormData.tenant_id}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Voicemail, Mail, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
+import { Voicemail, Mail, RefreshCw, Edit2, Plus, Search, Trash2 } from 'lucide-react';
 import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
@@ -146,6 +146,21 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
     }
   };
 
+  const handleDeleteBox = async (extId: string, extNum: string) => {
+    if (!window.confirm(`Are you sure you want to delete the voicemail box for ext/${extNum}? This will remove its mailbox and reset voicemail credentials.`)) return;
+    if (!token) return;
+    setLoading(true);
+    try {
+      await apiService.deleteVoicemailBox(token, extId);
+      showSuccessModal('Voicemail Box Deleted', `Voicemail box for ext/${extNum} was successfully deleted.`);
+      fetchData();
+    } catch (err: any) {
+      showErrorModal('Delete Error', err.message || 'Could not delete voicemail box');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filtered = boxes.filter(b =>
     b.extension_number.includes(search) ||
     (b.display_name && b.display_name.toLowerCase().includes(search.toLowerCase())) ||
@@ -255,14 +270,27 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
                     </td>
                     {canManage && (
                       <td className="text-right">
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '11px' }}
-                          onClick={() => openEditModal(b)}
-                        >
-                          <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '5px 10px', fontSize: '11px' }}
+                            onClick={() => openEditModal(b)}
+                          >
+                            <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                          </button>
+                          {b.voicemail_box_id && (
+                            <button
+                              type="button"
+                              className="btn-secondary text-rose-600 hover:bg-rose-50"
+                              style={{ padding: '5px 8px', fontSize: '11px' }}
+                              onClick={() => handleDeleteBox(b.extension_id, b.extension_number)}
+                              title="Delete Voicemail Box"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
