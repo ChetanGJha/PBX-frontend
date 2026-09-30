@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
-import { PhoneForwarded, RefreshCw, Edit2, Plus, Search } from 'lucide-react';
+import { PhoneForwarded, RefreshCw, Edit2, Plus, Search, Trash2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { CustomSelect } from './CustomSelect';
 import { apiService } from '../services/api';
 import type { User } from '../types';
@@ -14,6 +14,7 @@ interface ForwardingRuleItem {
   extension_id: string;
   extension_number: string;
   display_name: string;
+  tenant_name?: string;
   forward_always_enabled: boolean;
   forward_always_destination?: string;
   forward_busy_enabled: boolean;
@@ -42,6 +43,10 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
   const [noAnswerDest, setNoAnswerDest] = useState('');
   const [noAnswerTimeout, setNoAnswerTimeout] = useState(20);
   const [saving, setSaving] = useState(false);
+
+  // Delete Confirmation State
+  const [deleteConfirmRule, setDeleteConfirmRule] = useState<ForwardingRuleItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = async () => {
     if (!token) return;
@@ -82,11 +87,11 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
 
   const openEditModal = (rule: ForwardingRuleItem) => {
     setSelectedExtId(rule.extension_id);
-    setAlwaysEnabled(rule.forward_always_enabled);
+    setAlwaysEnabled(Boolean(rule.forward_always_enabled));
     setAlwaysDest(rule.forward_always_destination || '');
-    setBusyEnabled(rule.forward_busy_enabled);
+    setBusyEnabled(Boolean(rule.forward_busy_enabled));
     setBusyDest(rule.forward_busy_destination || '');
-    setNoAnswerEnabled(rule.forward_no_answer_enabled);
+    setNoAnswerEnabled(Boolean(rule.forward_no_answer_enabled));
     setNoAnswerDest(rule.forward_no_answer_destination || '');
     setNoAnswerTimeout(rule.forward_no_answer_timeout || 20);
     setShowModal(true);
@@ -96,11 +101,11 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
     setSelectedExtId(extId);
     const existingRule = rules.find(r => r.extension_id === extId);
     if (existingRule) {
-      setAlwaysEnabled(existingRule.forward_always_enabled);
+      setAlwaysEnabled(Boolean(existingRule.forward_always_enabled));
       setAlwaysDest(existingRule.forward_always_destination || '');
-      setBusyEnabled(existingRule.forward_busy_enabled);
+      setBusyEnabled(Boolean(existingRule.forward_busy_enabled));
       setBusyDest(existingRule.forward_busy_destination || '');
-      setNoAnswerEnabled(existingRule.forward_no_answer_enabled);
+      setNoAnswerEnabled(Boolean(existingRule.forward_no_answer_enabled));
       setNoAnswerDest(existingRule.forward_no_answer_destination || '');
       setNoAnswerTimeout(existingRule.forward_no_answer_timeout || 20);
     } else {
@@ -127,17 +132,17 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
 
       await apiService.updateExtensionForwarding(token, selectedExtId, {
         forward_always_enabled: alwaysEnabled,
-        forward_always_destination: alwaysDest || null,
+        forward_always_destination: alwaysEnabled ? (alwaysDest.trim() || null) : null,
         forward_busy_enabled: busyEnabled,
-        forward_busy_destination: busyDest || null,
+        forward_busy_destination: busyEnabled ? (busyDest.trim() || null) : null,
         forward_no_answer_enabled: noAnswerEnabled,
-        forward_no_answer_destination: noAnswerDest || null,
+        forward_no_answer_destination: noAnswerEnabled ? (noAnswerDest.trim() || null) : null,
         forward_no_answer_timeout: Number(noAnswerTimeout) || 20,
       });
 
       showSuccessModal(
         'Forwarding Settings Saved',
-        `Call forwarding policies for ext/${ext?.extension_number || 'selected'} have been updated.`
+        `Call forwarding policies for ext/${ext?.extension_number || 'selected'} have been updated successfully.`
       );
       setShowModal(false);
       fetchData();
@@ -145,6 +150,27 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
       showErrorModal('Update Failed', err.message || 'Failed to update forwarding settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!token || !deleteConfirmRule) return;
+    setDeleting(true);
+    try {
+      await apiService.deleteExtensionForwarding(token, deleteConfirmRule.extension_id);
+      showSuccessModal(
+        'Forwarding Cleared',
+        `All call forwarding rules for ext/${deleteConfirmRule.extension_number} have been removed.`
+      );
+      setDeleteConfirmRule(null);
+      if (showModal && selectedExtId === deleteConfirmRule.extension_id) {
+        setShowModal(false);
+      }
+      fetchData();
+    } catch (err: any) {
+      showErrorModal('Delete Failed', err.message || 'Failed to remove call forwarding rules');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -212,65 +238,97 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={canManage ? 6 : 5} className="text-center py-4 text-muted">No forwarding rules configured yet</td></tr>
               ) : (
-                filtered.map(r => (
-                  <tr key={r.extension_id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#FFF0EC', color: '#FF5430', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <PhoneForwarded size={14} />
+                filtered.map(r => {
+                  const hasActiveRule = Boolean(
+                    (r.forward_always_enabled && r.forward_always_destination) ||
+                    (r.forward_busy_enabled && r.forward_busy_destination) ||
+                    (r.forward_no_answer_enabled && r.forward_no_answer_destination)
+                  );
+
+                  return (
+                    <tr key={r.extension_id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: hasActiveRule ? '#FFF0EC' : '#F3F4F6', color: hasActiveRule ? '#FF5430' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <PhoneForwarded size={14} />
+                          </div>
+                          <div>
+                            <strong style={{ color: '#111827', fontSize: '13px' }}>ext/{r.extension_number}</strong>
+                            {r.display_name && <div style={{ fontSize: '11px', color: '#6B7280' }}>{r.display_name}</div>}
+                          </div>
                         </div>
-                        <div>
-                          <strong style={{ color: '#111827', fontSize: '13px' }}>ext/{r.extension_number}</strong>
-                          {r.display_name && <div style={{ fontSize: '11px', color: '#6B7280' }}>{r.display_name}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {r.forward_always_enabled && r.forward_always_destination ? (
-                        <span className="terrix-badge green" style={{ fontFamily: 'monospace' }}>
-                          → {r.forward_always_destination}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
-                      )}
-                    </td>
-                    <td>
-                      {r.forward_busy_enabled && r.forward_busy_destination ? (
-                        <span className="terrix-badge orange" style={{ fontFamily: 'monospace' }}>
-                          → {r.forward_busy_destination}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
-                      )}
-                    </td>
-                    <td>
-                      {r.forward_no_answer_enabled && r.forward_no_answer_destination ? (
-                        <span className="terrix-badge grey" style={{ fontFamily: 'monospace' }}>
-                          → {r.forward_no_answer_destination}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '12px', color: '#4B5563' }}>
-                        {r.forward_no_answer_timeout || 20}s
-                      </span>
-                    </td>
-                    {canManage && (
-                      <td className="text-right">
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '11px' }}
-                          onClick={() => openEditModal(r)}
-                        >
-                          <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
-                        </button>
                       </td>
-                    )}
-                  </tr>
-                ))
+                      <td>
+                        {r.forward_always_enabled && r.forward_always_destination ? (
+                          <span className="terrix-badge green" style={{ fontFamily: 'monospace', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ArrowRight size={12} /> {r.forward_always_destination}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                        )}
+                      </td>
+                      <td>
+                        {r.forward_busy_enabled && r.forward_busy_destination ? (
+                          <span className="terrix-badge orange" style={{ fontFamily: 'monospace', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ArrowRight size={12} /> {r.forward_busy_destination}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                        )}
+                      </td>
+                      <td>
+                        {r.forward_no_answer_enabled && r.forward_no_answer_destination ? (
+                          <span className="terrix-badge grey" style={{ fontFamily: 'monospace', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ArrowRight size={12} /> {r.forward_no_answer_destination}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Off</span>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '12px', color: '#4B5563' }}>
+                          {r.forward_no_answer_timeout || 20}s
+                        </span>
+                      </td>
+                      {canManage && (
+                        <td className="text-right">
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '5px 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center' }}
+                              onClick={() => openEditModal(r)}
+                              title="Configure Forwarding"
+                            >
+                              <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
+                            </button>
+                            {hasActiveRule && (
+                              <button
+                                type="button"
+                                style={{
+                                  padding: '5px 8px',
+                                  fontSize: '11px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  background: '#FEF2F2',
+                                  color: '#DC2626',
+                                  border: '1px solid #FECACA',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                onClick={() => setDeleteConfirmRule(r)}
+                                title="Delete / Clear Forwarding Rules"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -405,15 +463,97 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
                   </div>
                 </div>
               </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Forwarding Settings'}
-                </button>
+              <div className="modal-foot" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  {(alwaysEnabled || busyEnabled || noAnswerEnabled) && (
+                    <button
+                      type="button"
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        background: '#FEF2F2',
+                        color: '#DC2626',
+                        border: '1px solid #FECACA',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        const existingRule = rules.find(r => r.extension_id === selectedExtId);
+                        if (existingRule) {
+                          setDeleteConfirmRule(existingRule);
+                        } else {
+                          setAlwaysEnabled(false);
+                          setAlwaysDest('');
+                          setBusyEnabled(false);
+                          setBusyDest('');
+                          setNoAnswerEnabled(false);
+                          setNoAnswerDest('');
+                        }
+                      }}
+                      disabled={saving}
+                    >
+                      <Trash2 size={13} style={{ marginRight: '6px' }} /> Clear All Rules
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Forwarding Settings'}
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmRule && (
+        <div className="modal-backdrop">
+          <div className="terrix-modal" style={{ maxWidth: '440px' }}>
+            <div className="modal-head">
+              <div className="modal-icon" style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <h3>Clear Call Forwarding</h3>
+                <p>ext/{deleteConfirmRule.extension_number} — {deleteConfirmRule.display_name || 'Extension'}</p>
+              </div>
+              <button className="modal-close" onClick={() => setDeleteConfirmRule(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: '13px', color: '#4B5563', lineHeight: '1.5', margin: 0 }}>
+                Are you sure you want to remove and disable all call forwarding rules for extension <strong>ext/{deleteConfirmRule.extension_number}</strong>?
+                Incoming calls will directly ring this extension's registered device.
+              </p>
+            </div>
+            <div className="modal-foot">
+              <button type="button" className="btn-secondary" onClick={() => setDeleteConfirmRule(null)} disabled={deleting}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Removing...' : 'Yes, Delete Rules'}
+              </button>
+            </div>
           </div>
         </div>
       )}

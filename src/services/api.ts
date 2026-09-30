@@ -605,6 +605,15 @@ export const apiService = {
     return res.json();
   },
 
+  async deleteExtensionForwarding(token: string, extensionId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/extensions/${extensionId}/forwarding`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Failed to delete call forwarding rule'); }
+    return res.json();
+  },
+
   // ─── Voicemail Boxes ────────────────────────────────────────────────────────
   async getVoicemailBoxesAll(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/extensions/voicemail-boxes/all`, {
