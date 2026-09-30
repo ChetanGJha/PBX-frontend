@@ -3,8 +3,9 @@ import type { User, BusinessHours, WeeklySchedule, DaySchedule, Holiday } from '
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import {
-  Clock, Plus, Trash2, Calendar,
-  Globe, Sun, Moon, ArrowRight, Save
+  Clock, Plus, Trash2, Calendar, Globe, Sun, Moon, ArrowRight, Save,
+  RefreshCw, CheckCircle2, AlertCircle, Building2, Phone, Voicemail,
+  GitBranch, Users, Sparkles, X, ChevronRight, Shield
 } from 'lucide-react';
 
 interface BusinessHoursViewProps {
@@ -37,7 +38,17 @@ const COMMON_TIMEZONES = [
   'Australia/Sydney'
 ];
 
-export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) => {
+const DAYS = [
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday', label: 'Sunday' },
+];
+
+export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [schedules, setSchedules] = useState<BusinessHours[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -135,7 +146,7 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
     if (!newScheduleName.trim()) return;
     try {
       setSaving(true);
-      const payload = {
+      const payload: any = {
         name: newScheduleName.trim(),
         timezone: newScheduleTimezone,
         schedule: DEFAULT_SCHEDULE,
@@ -146,6 +157,11 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
         holiday_destination_type: 'voicemail',
         holiday_destination_target: '1001',
       };
+      if (user?.tenant_id) {
+        payload.tenant_id = user.tenant_id;
+      } else if (schedules.length > 0 && schedules[0].tenant_id) {
+        payload.tenant_id = schedules[0].tenant_id;
+      }
       const res = await apiService.createBusinessHours(token, payload);
       showSuccessModal('Schedule Created', `Schedule "${res.name}" has been created!`);
       setShowCreateModal(false);
@@ -202,187 +218,247 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
     }
   };
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
   const live = selectedSchedule?.live_status;
   const isOpen = live?.status === 'OPEN';
   const isHoliday = live?.status === 'HOLIDAY';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Page Header */}
+      <div className="page-head">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Clock className="w-7 h-7 text-indigo-400" />
+          <div className="eyebrow">Call Routing & Time Rules</div>
+          <h1 className="page-title flex items-center gap-2.5">
+            <Clock className="w-7 h-7 text-[#FF5430]" />
             Business Hours & Time Conditions
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Automate day/night call handling, weekly operating schedules, and holiday routing
+          <p className="page-sub">
+            Automate day, after-hours, and holiday call routing based on live weekly schedules and timezone conditions.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add Schedule
-        </button>
+
+        <div className="flex items-center gap-3">
+          <button onClick={loadData} className="btn-secondary" title="Refresh Schedules">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+            <Plus className="w-4 h-4" />
+            <span>Add Schedule</span>
+          </button>
+        </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg">
-            <Clock className="w-6 h-6" />
+      {/* KPI Stats Cards */}
+      <div className="stats-grid">
+        {/* Total Schedules */}
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Schedules</span>
+            <div className="w-9 h-9 rounded-xl bg-[#FFF0EC] text-[#FF5430] flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Schedules</div>
-            <div className="text-xl font-bold text-white">{schedules.length}</div>
-          </div>
+          <div className="stat-value">{schedules.length}</div>
+          <div className="stat-trend" style={{ color: '#6B7280' }}>Configured profiles</div>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className={`p-3 rounded-lg ${
-            isHoliday ? 'bg-amber-500/10 text-amber-400' :
-            isOpen ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-          }`}>
-            {isOpen ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Live Status</div>
-            <div className={`text-base font-bold flex items-center gap-1.5 ${
-              isHoliday ? 'text-amber-400' :
-              isOpen ? 'text-emerald-400' : 'text-rose-400'
+        {/* Live Operational Status */}
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Active Status</span>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              isHoliday ? 'bg-amber-50 text-amber-600' :
+              isOpen ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
             }`}>
-              <span className="w-2 h-2 rounded-full animate-pulse bg-current" />
-              {live?.status || 'UNKNOWN'}
+              {isOpen ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </div>
+          </div>
+          <div className="flex items-center gap-2 mt-1 mb-2">
+            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${
+              isHoliday ? 'bg-amber-500' :
+              isOpen ? 'bg-emerald-500' : 'bg-rose-500'
+            }`} />
+            <span className={`text-xl font-extrabold ${
+              isHoliday ? 'text-amber-600' :
+              isOpen ? 'text-emerald-600' : 'text-rose-600'
+            }`}>
+              {live?.status || (selectedSchedule ? 'CLOSED' : 'NO PROFILE')}
+            </span>
+          </div>
+          <div className="text-[11px] text-[#6B7280]">
+            {selectedSchedule ? `Profile: ${selectedSchedule.name}` : 'Select a profile'}
           </div>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-lg">
-            <Globe className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Timezone Clock</div>
-            <div className="text-sm font-semibold text-white">
-              {live?.current_time ? `${live.current_time} (${selectedSchedule?.timezone || 'UTC'})` : 'Synced'}
+        {/* Timezone Clock */}
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Timezone Clock</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Globe className="w-4 h-4" />
             </div>
+          </div>
+          <div className="text-xl font-extrabold text-[#111827] mt-1 mb-2 truncate">
+            {live?.current_time || 'Synchronized'}
+          </div>
+          <div className="text-[11px] text-[#6B7280] truncate">
+            {selectedSchedule?.timezone || 'System Default Timezone'}
           </div>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-purple-500/10 text-purple-400 rounded-lg">
-            <Calendar className="w-6 h-6" />
+        {/* Holiday Exceptions */}
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Holiday Exceptions</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Calendar className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Holidays Configured</div>
-            <div className="text-xl font-bold text-white">{selectedSchedule?.holidays?.length || 0}</div>
-          </div>
+          <div className="stat-value">{selectedSchedule?.holidays?.length || 0}</div>
+          <div className="stat-trend" style={{ color: '#6B7280' }}>Special closure dates</div>
         </div>
       </div>
 
-      {/* Main Content: Schedule Selector & Editor */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Schedule Selector List */}
-        <div className="lg:col-span-1 space-y-3">
-          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">
-            Profiles ({schedules.length})
-          </div>
-          {schedules.map((s) => {
-            const active = s.id === selectedId;
-            const sOpen = s.live_status?.status === 'OPEN';
-            return (
-              <div
-                key={s.id}
-                onClick={() => handleSelectSchedule(s.id)}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                  active
-                    ? 'bg-indigo-600/15 border-indigo-500/40 text-white shadow-lg'
-                    : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 text-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-medium text-sm truncate">{s.name}</div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    sOpen ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                  }`}>
-                    {sOpen ? 'OPEN' : 'CLOSED'}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                  <Globe className="w-3 h-3" />
-                  {s.timezone}
-                </div>
+      {/* Main Layout: Schedule Selector & Editor */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Schedule Profiles List */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#FF5430]" />
+                <span className="text-xs font-bold text-[#111827] uppercase tracking-wider">
+                  Operating Profiles ({schedules.length})
+                </span>
               </div>
-            );
-          })}
-          {schedules.length === 0 && !loading && (
-            <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center text-sm text-slate-500">
-              No schedules yet. Click "Add Schedule" above.
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="text-xs font-bold text-[#FF5430] hover:text-[#ED6140] flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New</span>
+              </button>
             </div>
-          )}
+
+            <div className="space-y-2">
+              {schedules.map((s) => {
+                const active = s.id === selectedId;
+                const sOpen = s.live_status?.status === 'OPEN';
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => handleSelectSchedule(s.id)}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                      active
+                        ? 'bg-[#FFF0EC] border-[#FF5430] shadow-sm'
+                        : 'bg-[#FFFFFF] border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]'
+                    }`}
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-bold truncate ${active ? 'text-[#111827]' : 'text-[#374151]'}`}>
+                          {s.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-[#6B7280] mt-1">
+                        <Globe className="w-3 h-3 text-[#9CA3AF]" />
+                        <span className="truncate">{s.timezone}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        sOpen
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        {sOpen ? 'Open' : 'Closed'}
+                      </span>
+                      <ChevronRight className={`w-4 h-4 ${active ? 'text-[#FF5430]' : 'text-[#D1D5DB]'}`} />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {schedules.length === 0 && !loading && (
+                <div className="p-8 text-center border-2 border-dashed border-[#E5E7EB] rounded-xl bg-[#FAFAFA]">
+                  <Clock className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2 opacity-50" />
+                  <div className="text-sm font-bold text-[#111827]">No Schedules Yet</div>
+                  <p className="text-xs text-[#6B7280] mt-1 mb-4">
+                    Create your first business hours profile to set automatic open & closed call routing.
+                  </p>
+                  <button onClick={() => setShowCreateModal(true)} className="btn-primary text-xs py-2 px-3">
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create Schedule</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Selected Schedule Editor */}
-        <div className="lg:col-span-3 space-y-6">
+        {/* Right Column: Selected Schedule Configurator */}
+        <div className="lg:col-span-8 space-y-6">
           {selectedSchedule ? (
             <>
-              {/* Profile Config Card */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              {/* Profile Settings Card */}
+              <div className="card space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
                   <div>
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      {selectedSchedule.name}
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                        isHoliday ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                        isOpen ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                        'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-lg font-bold text-[#111827]">{selectedSchedule.name}</h2>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isHoliday ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        isOpen ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}>
                         {live?.status || 'CLOSED'}
                       </span>
-                    </h2>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Currently routing calls to: <strong className="text-indigo-400">{live?.active_destination?.type || 'extension'} ({live?.active_destination?.target || '1001'})</strong>
+                    </div>
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      Active Route: <strong className="text-[#111827] font-semibold">{live?.active_destination?.type || 'extension'}</strong> &rarr; <span className="font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{live?.active_destination?.target || '1001'}</span>
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2.5 self-end sm:self-auto">
                     <button
                       onClick={handleDeleteSchedule}
-                      className="px-3 py-1.5 text-xs text-rose-400 hover:text-white hover:bg-rose-600/30 rounded-lg border border-rose-500/30 transition-all flex items-center gap-1.5"
+                      className="btn-secondary text-rose-600 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 text-xs px-3 h-9"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      Delete
+                      <span>Delete</span>
                     </button>
                     <button
                       onClick={handleSaveSchedule}
                       disabled={saving}
-                      className="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-medium shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all"
+                      className="btn-primary text-xs px-4 h-9 shadow-sm"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      {saving ? 'Saving...' : 'Save Changes'}
+                      <span>{saving ? 'Saving...' : 'Save Changes'}</span>
                     </button>
                   </div>
                 </div>
 
+                {/* Name & Timezone Inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">Schedule Name</label>
+                  <div className="form-group">
+                    <label className="form-label">Profile Name</label>
                     <input
                       type="text"
                       value={selectedSchedule.name}
                       onChange={(e) => setSelectedSchedule({ ...selectedSchedule, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                      className="form-control"
+                      placeholder="e.g. Sales Team, Technical Support"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">Timezone</label>
+
+                  <div className="form-group">
+                    <label className="form-label">Operating Timezone</label>
                     <select
                       value={selectedSchedule.timezone}
                       onChange={(e) => setSelectedSchedule({ ...selectedSchedule, timezone: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
+                      className="form-control"
                     >
                       {COMMON_TIMEZONES.map((tz) => (
                         <option key={tz} value={tz}>{tz}</option>
@@ -392,51 +468,63 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                 </div>
               </div>
 
-              {/* Weekly Schedule Matrix */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-indigo-400" />
-                  Weekly Operating Hours
-                </h3>
+              {/* Weekly Operating Hours Card */}
+              <div className="card space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                  <h3 className="text-sm font-bold text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#FF5430]" />
+                    <span>Weekly Operating Hours</span>
+                  </h3>
+                  <span className="text-xs text-[#6B7280]">Toggle open days and specify shift intervals</span>
+                </div>
 
-                <div className="divide-y divide-slate-800/80">
-                  {days.map((day) => {
-                    const conf = selectedSchedule.schedule?.[day] || { enabled: false, open: '09:00', close: '18:00' };
+                <div className="divide-y divide-[#F3F4F6]">
+                  {DAYS.map(({ key, label }) => {
+                    const conf = selectedSchedule.schedule?.[key] || { enabled: false, open: '09:00', close: '18:00' };
                     return (
-                      <div key={day} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 w-36">
+                      <div key={key} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 w-40">
                           <input
                             type="checkbox"
-                            id={`check-${day}`}
+                            id={`check-${key}`}
                             checked={conf.enabled}
-                            onChange={(e) => handleDayChange(day, 'enabled', e.target.checked)}
-                            className="w-4 h-4 rounded text-indigo-600 bg-slate-800 border-slate-700 focus:ring-indigo-500"
+                            onChange={(e) => handleDayChange(key, 'enabled', e.target.checked)}
+                            className="w-4 h-4 rounded text-[#FF5430] border-gray-300 focus:ring-[#FF5430] cursor-pointer"
                           />
-                          <label htmlFor={`check-${day}`} className={`text-sm font-medium capitalize cursor-pointer ${
-                            conf.enabled ? 'text-white' : 'text-slate-500'
-                          }`}>
-                            {day}
+                          <label
+                            htmlFor={`check-${key}`}
+                            className={`text-sm font-bold cursor-pointer ${conf.enabled ? 'text-[#111827]' : 'text-[#9CA3AF]'}`}
+                          >
+                            {label}
                           </label>
                         </div>
 
                         {conf.enabled ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="time"
-                              value={conf.open}
-                              onChange={(e) => handleDayChange(day, 'open', e.target.value)}
-                              className="px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
-                            <span className="text-slate-500 text-xs">to</span>
-                            <input
-                              type="time"
-                              value={conf.close}
-                              onChange={(e) => handleDayChange(day, 'close', e.target.value)}
-                              className="px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-[#6B7280] uppercase">Open</span>
+                              <input
+                                type="time"
+                                value={conf.open}
+                                onChange={(e) => handleDayChange(key, 'open', e.target.value)}
+                                className="px-2.5 py-1.5 border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] bg-white focus:outline-none focus:border-[#FF5430]"
+                              />
+                            </div>
+                            <span className="text-[#9CA3AF] text-xs font-bold">&ndash;</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-[#6B7280] uppercase">Close</span>
+                              <input
+                                type="time"
+                                value={conf.close}
+                                onChange={(e) => handleDayChange(key, 'close', e.target.value)}
+                                className="px-2.5 py-1.5 border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] bg-white focus:outline-none focus:border-[#FF5430]"
+                              />
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-500 italic">Closed all day</span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-semibold">
+                            Closed All Day
+                          </span>
                         )}
                       </div>
                     );
@@ -444,28 +532,33 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                 </div>
               </div>
 
-              {/* Destination Routing Cards */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <ArrowRight className="w-4 h-4 text-emerald-400" />
-                  Call Routing Destinations
-                </h3>
+              {/* Call Routing Destination Cards */}
+              <div className="card space-y-4">
+                <div className="border-b border-[#E5E7EB] pb-3">
+                  <h3 className="text-sm font-bold text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4 text-emerald-600" />
+                    <span>Call Routing Destinations</span>
+                  </h3>
+                  <p className="text-xs text-[#6B7280] mt-0.5">
+                    Define where callers are directed during open shifts, after-hours closures, and recognized public holidays.
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Open Destination */}
-                  <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-3">
-                    <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
-                      <Sun className="w-4 h-4" />
-                      During Open Hours
+                  {/* Open Shift */}
+                  <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
+                      <Sun className="w-4 h-4 text-emerald-600" />
+                      <span>Open Hours Route</span>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Destination Type</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Destination Type</label>
                       <select
                         value={selectedSchedule.open_destination_type}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, open_destination_type: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-emerald-600"
                       >
-                        <option value="extension">Extension</option>
+                        <option value="extension">SIP Extension</option>
                         <option value="ivr">IVR Auto Attendant</option>
                         <option value="hunt_group">Ring Group / Queue</option>
                         <option value="conference">Conference Room</option>
@@ -473,29 +566,29 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Target Number / ID</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Target Number / ID</label>
                       <input
                         type="text"
                         value={selectedSchedule.open_destination_target}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, open_destination_target: e.target.value })}
                         placeholder="e.g. 1001 or 6001"
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-emerald-600"
                       />
                     </div>
                   </div>
 
-                  {/* Closed Destination */}
-                  <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-3">
-                    <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider">
-                      <Moon className="w-4 h-4" />
-                      After-Hours / Closed
+                  {/* Closed / After-Hours */}
+                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 space-y-3">
+                    <div className="flex items-center gap-2 text-rose-800 font-bold text-xs uppercase tracking-wider">
+                      <Moon className="w-4 h-4 text-rose-600" />
+                      <span>After-Hours Route</span>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Destination Type</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Destination Type</label>
                       <select
                         value={selectedSchedule.closed_destination_type}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, closed_destination_type: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-rose-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-rose-600"
                       >
                         <option value="voicemail">Voicemail Box</option>
                         <option value="ivr">Night IVR Menu</option>
@@ -504,29 +597,29 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Target Number / ID</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Target Number / ID</label>
                       <input
                         type="text"
                         value={selectedSchedule.closed_destination_target}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, closed_destination_target: e.target.value })}
                         placeholder="e.g. 1001"
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-rose-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-rose-600"
                       />
                     </div>
                   </div>
 
-                  {/* Holiday Destination */}
-                  <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 space-y-3">
-                    <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase tracking-wider">
-                      <Calendar className="w-4 h-4" />
-                      Holiday Exception
+                  {/* Holiday Exception */}
+                  <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wider">
+                      <Calendar className="w-4 h-4 text-amber-600" />
+                      <span>Holiday Route</span>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Destination Type</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Destination Type</label>
                       <select
                         value={selectedSchedule.holiday_destination_type || 'voicemail'}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, holiday_destination_type: e.target.value })}
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-amber-600"
                       >
                         <option value="voicemail">Holiday Voicemail</option>
                         <option value="ivr">Holiday Greeting IVR</option>
@@ -534,32 +627,37 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Target Number / ID</label>
+                      <label className="block text-[11px] font-bold text-[#374151] mb-1">Target Number / ID</label>
                       <input
                         type="text"
                         value={selectedSchedule.holiday_destination_target || '1001'}
                         onChange={(e) => setSelectedSchedule({ ...selectedSchedule, holiday_destination_target: e.target.value })}
                         placeholder="e.g. 1001"
-                        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-500"
+                        className="w-full px-2.5 py-2 bg-white border border-[#D1D5DB] rounded-lg text-xs font-semibold text-[#111827] focus:outline-none focus:border-amber-600"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Holidays Exception Calendar */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-purple-400" />
-                    Holiday Exceptions ({selectedSchedule.holidays?.length || 0})
-                  </h3>
+              {/* Holiday Calendar Exceptions */}
+              <div className="card space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#111827] uppercase tracking-wider flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-purple-600" />
+                      <span>Holiday Exceptions ({selectedSchedule.holidays?.length || 0})</span>
+                    </h3>
+                    <p className="text-xs text-[#6B7280] mt-0.5">
+                      Specific dates when the business is closed, overriding regular weekly shift hours.
+                    </p>
+                  </div>
                   <button
                     onClick={() => setShowHolidayModal(true)}
-                    className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-300 text-xs rounded-lg font-medium flex items-center gap-1.5 transition-all"
+                    className="btn-secondary text-xs h-9 px-3 text-purple-700 hover:border-purple-300 hover:bg-purple-50"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    Add Holiday
+                    <span>Add Holiday</span>
                   </button>
                 </div>
 
@@ -568,31 +666,42 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
                     {selectedSchedule.holidays.map((h: Holiday) => (
                       <div
                         key={h.id}
-                        className="p-3 bg-slate-800/60 border border-slate-700/60 rounded-xl flex items-center justify-between"
+                        className="p-3 bg-white border border-[#E5E7EB] rounded-xl flex items-center justify-between hover:border-purple-300 transition-all shadow-sm"
                       >
                         <div>
-                          <div className="text-sm font-medium text-white">{h.name}</div>
-                          <div className="text-xs text-purple-400 font-mono mt-0.5">{h.holiday_date}</div>
+                          <div className="text-xs font-bold text-[#111827]">{h.name}</div>
+                          <div className="text-xs text-purple-700 font-mono mt-0.5 font-semibold">{h.holiday_date}</div>
                         </div>
                         <button
                           onClick={() => handleDeleteHoliday(h.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                          title="Delete Holiday"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                    No holiday exceptions defined yet. On public holidays, calls route to the holiday destination.
+                  <div className="p-8 text-center border-2 border-dashed border-[#E5E7EB] rounded-xl bg-[#FAFAFA]">
+                    <Calendar className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2 opacity-50" />
+                    <div className="text-sm font-bold text-[#111827]">No Holidays Configured</div>
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      Add company holidays, festival days, or planned closures to route incoming calls to the holiday greeting.
+                    </p>
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">
-              Select a schedule from the left panel to configure its operating hours and routing destinations.
+            <div className="card p-16 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#FFF0EC] text-[#FF5430] flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-[#111827]">No Schedule Profile Selected</h3>
+              <p className="text-xs text-[#6B7280] mt-1 max-w-md mx-auto">
+                Select a business hours profile from the left column to edit weekly operating times, after-hours forwarding, and holiday exceptions.
+              </p>
             </div>
           )}
         </div>
@@ -600,45 +709,66 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
 
       {/* Modal: Create Schedule */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">Create Business Hours Profile</h3>
-            <form onSubmit={handleCreateSchedule} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Profile Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Technical Support, Main Office"
-                  value={newScheduleName}
-                  onChange={(e) => setNewScheduleName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
+        <div className="modal-backdrop">
+          <div className="terrix-modal" style={{ maxWidth: '480px', width: '100%', borderRadius: '16px' }}>
+            <div className="modal-head">
+              <div className="modal-icon">
+                <Clock className="w-5 h-5" />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Timezone</label>
-                <select
-                  value={newScheduleTimezone}
-                  onChange={(e) => setNewScheduleTimezone(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
-                >
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <option key={tz} value={tz}>{tz}</option>
-                  ))}
-                </select>
+              <div className="flex-1">
+                <h3>Create Business Hours Profile</h3>
+                <p>Define weekly business hours and time condition rules.</p>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="modal-close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSchedule}>
+              <div className="modal-body" style={{ padding: '24px' }}>
+                <div className="form-group" style={{ marginBottom: '18px' }}>
+                  <label className="form-label" style={{ marginBottom: '7px' }}>Profile Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Main Office, Support Desk, Sales Team"
+                    value={newScheduleName}
+                    onChange={(e) => setNewScheduleName(e.target.value)}
+                    className="form-control"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '8px' }}>
+                  <label className="form-label" style={{ marginBottom: '7px' }}>Operating Timezone</label>
+                  <select
+                    value={newScheduleTimezone}
+                    onChange={(e) => setNewScheduleTimezone(e.target.value)}
+                    className="form-control"
+                  >
+                    {COMMON_TIMEZONES.map((tz) => (
+                      <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-foot">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium shadow-md shadow-indigo-600/30"
+                  className="btn-primary"
                 >
                   {saving ? 'Creating...' : 'Create Profile'}
                 </button>
@@ -650,42 +780,64 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token }) =
 
       {/* Modal: Add Holiday */}
       {showHolidayModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">Add Holiday Exception</h3>
-            <form onSubmit={handleAddHoliday} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Holiday Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. New Year's Day, Independence Day"
-                  value={holidayName}
-                  onChange={(e) => setHolidayName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
+        <div className="modal-backdrop">
+          <div className="terrix-modal" style={{ maxWidth: '480px', width: '100%', borderRadius: '16px' }}>
+            <div className="modal-head">
+              <div className="modal-icon" style={{ background: '#FAF5FF', color: '#9333EA' }}>
+                <Calendar className="w-5 h-5" />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Holiday Date</label>
-                <input
-                  type="date"
-                  required
-                  value={holidayDate}
-                  onChange={(e) => setHolidayDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
+              <div className="flex-1">
+                <h3>Add Holiday Exception</h3>
+                <p>Override normal hours on specific dates.</p>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowHolidayModal(false)}
+                className="modal-close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddHoliday}>
+              <div className="modal-body" style={{ padding: '24px' }}>
+                <div className="form-group" style={{ marginBottom: '18px' }}>
+                  <label className="form-label" style={{ marginBottom: '7px' }}>Holiday Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. New Year's Day, Independence Day"
+                    value={holidayName}
+                    onChange={(e) => setHolidayName(e.target.value)}
+                    className="form-control"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '8px' }}>
+                  <label className="form-label" style={{ marginBottom: '7px' }}>Holiday Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={holidayDate}
+                    onChange={(e) => setHolidayDate(e.target.value)}
+                    className="form-control"
+                  />
+                </div>
+              </div>
+
+              <div className="modal-foot">
                 <button
                   type="button"
                   onClick={() => setShowHolidayModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium shadow-md shadow-purple-600/30"
+                  className="btn-primary"
+                  style={{ background: '#9333EA' }}
                 >
                   Add Holiday
                 </button>
