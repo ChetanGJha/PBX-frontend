@@ -1,14 +1,25 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { Phone, Plus, RefreshCw, KeyRound, Search, X, AlertCircle, Edit2, Trash2 } from 'lucide-react';
+import { Phone, Plus, RefreshCw, KeyRound, Edit2, Trash2 } from 'lucide-react';
 
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';
-import { CustomSelect } from './CustomSelect';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Inline, Grid } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+  Alert,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface ExtensionsViewProps {
   token: string | null;
-  user?: any; // Current logged-in user for tenant scoping
+  user?: any;
 }
 
 export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) => {
@@ -63,7 +74,6 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       ]);
       setExtensions(exts);
       setTenants(tnts);
-      // Auto-select tenant for tenant admin
       if (user?.role !== 'SUPER_ADMIN' && user?.tenant_id) {
         setTenantId(user.tenant_id);
       } else if (tnts.length > 0 && !tenantId) {
@@ -207,419 +217,281 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
 
   const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
 
+  const columns = [
+    {
+      key: 'extension_number',
+      header: 'Ext #',
+      sortable: true,
+      render: (ext: Extension) => <strong>{ext.extension_number}</strong>,
+    },
+    {
+      key: 'display_name',
+      header: 'Display Name',
+      sortable: true,
+      render: (ext: Extension) => ext.display_name,
+    },
+    {
+      key: 'email',
+      header: 'User Email',
+      render: (ext: Extension) => ext.email || 'N/A',
+    },
+    {
+      key: 'caller_id_name',
+      header: 'Caller ID',
+      render: (ext: Extension) => `${ext.caller_id_name || ext.display_name} (${ext.caller_id_number || ext.extension_number})`,
+    },
+    {
+      key: 'webrtc_enabled',
+      header: 'WebRTC Status',
+      render: (ext: Extension) => (
+        <Badge variant={ext.webrtc_enabled ? 'success' : 'neutral'}>
+          {ext.webrtc_enabled ? 'WebRTC (WSS)' : 'SIP Only'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'no_answer_timeout',
+      header: 'Timeout',
+      render: (ext: Extension) => `${ext.no_answer_timeout}s`,
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Endpoint Provisioning</div>
-          <h1 className="page-title">SIP Extensions</h1>
-          <p className="page-sub">Manage SIP digest credentials and WebRTC softphone configurations (`/api/v1/extensions`).</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button onClick={fetchData} className="btn-secondary">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+    <PageContainer
+      title="SIP Extensions"
+      subtitle="Manage SIP digest credentials and WebRTC softphone configurations (/api/v1/extensions)."
+      eyebrow="Endpoint Provisioning"
+      actions={
+        <Inline gap="3">
+          <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
+            Refresh
+          </Button>
           {canManage && (
-            <button onClick={() => setShowModal(true)} className="btn-primary">
-              <Plus className="w-4 h-4" />
-              <span>Provision Extension</span>
-            </button>
+            <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Plus size={16} />}>
+              Provision Extension
+            </Button>
           )}
-        </div>
-      </div>
+        </Inline>
+      }
+    >
+      <Stack gap="6">
+        {error && <Alert variant="danger" title="Error">{error}</Alert>}
 
-      {error && (
-        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Toolbar */}
-      <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="search-input-wrap w-full md:w-72">
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search extension or name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control"
-            />
-          </div>
-
-          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-            <div className="w-48 shrink-0">
-              <CustomSelect
-                options={[
-                  { value: '', label: 'All Tenants' },
-                  ...tenants.map((t: Tenant) => ({ value: t.id, label: t.name }))
-                ]}
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search extension or name..."
+          filters={
+            user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? (
+              <Select
                 value={selectedTenantFilter}
-                onChange={(val) => setSelectedTenantFilter(val)}
-              />
-            </div>
-          )}
-        </div>
+                onChange={(e) => setSelectedTenantFilter(e.target.value)}
+              >
+                <option value="">All Tenants</option>
+                {tenants.map((t: Tenant) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Select>
+            ) : undefined
+          }
+        />
 
-        <div className="text-xs text-slate-500 font-semibold">
-          Total Provisioned Endpoints: <span className="text-slate-900">{extensions.length}</span>
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="card overflow-hidden">
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ext #</th>
-                <th>Display Name</th>
-                <th>User Email</th>
-                <th>Caller ID</th>
-                <th>WebRTC Status</th>
-                <th>No-Answer Timeout</th>
-                {canManage && <th className="text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredExts.map((ext: Extension) => (
-                <tr key={ext.id}>
-                  <td className="font-mono font-bold text-[#FF5430]">{ext.extension_number}</td>
-                  <td className="font-bold text-slate-900">{ext.display_name}</td>
-                  <td className="text-slate-600 font-mono">{ext.email || 'N/A'}</td>
-                  <td className="text-slate-600">{ext.caller_id_name || ext.display_name} ({ext.caller_id_number || ext.extension_number})</td>
-                  <td>
-                    <span className={`terrix-badge ${ext.webrtc_enabled ? 'green' : 'grey'}`}>
-                      {ext.webrtc_enabled ? 'WebRTC (WSS)' : 'SIP Only'}
-                    </span>
-                  </td>
-                  <td className="font-mono text-slate-700">{ext.no_answer_timeout}s</td>
-                  {canManage && (
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(ext)}
-                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs"
-                          title="Edit Extension"
-                        >
-                          <Edit2 className="w-3.5 h-3.5 text-slate-700" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedExtId(ext.id);
-                            setShowResetModal(true);
-                          }}
-                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs"
-                          title="Reset Password"
-                        >
-                          <KeyRound className="w-3.5 h-3.5 text-[#FF5430]" />
-                          <span>Reset</span>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ext.id, ext.extension_number)}
-                          className="btn-secondary !h-8 !px-2.5 !py-0 text-xs text-rose-600 hover:bg-rose-50"
-                          title="Delete Extension"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {filteredExts.length === 0 && (
-                <tr>
-                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-slate-400 text-xs">
-                    No extensions found.{canManage ? ' Click "Provision Extension" to add your first extension.' : ''}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <DataTable
+          columns={columns}
+          data={filteredExts}
+          isLoading={loading}
+          emptyTitle="No extensions found"
+          emptyDescription={canManage ? 'Click "Provision Extension" to add your first extension.' : undefined}
+          actions={
+            canManage
+              ? (ext: Extension) => (
+                  <Inline gap="2" justify="flex-end">
+                    <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} leftIcon={<Edit2 size={12} />}>
+                      Edit
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} leftIcon={<KeyRound size={12} />}>
+                      Reset
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} leftIcon={<Trash2 size={12} />}>
+                      Delete
+                    </Button>
+                  </Inline>
+                )
+              : undefined
+          }
+        />
+      </Stack>
 
       {/* Create Extension Modal */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div>
-                <h3>Provision New SIP Extension</h3>
-                <p>Create a tenant extension endpoint for desktop phones or WebRTC softphones</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="modal-close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Provision New SIP Extension"
+        subtitle="Create a tenant extension endpoint for desktop phones or WebRTC softphones"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreate} isLoading={loading}>Provision Extension</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+            <FormField label="Target Tenant">
+              <Select value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
+                {tenants.map((t: Tenant) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.sip_domain})</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
 
-            <form onSubmit={handleCreate}>
-              <div className="modal-body space-y-4">
-                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-                  <div>
-                    <label className="form-label">Target Tenant</label>
-                    <CustomSelect
-                      options={tenants.map((t: Tenant) => ({
-                        value: t.id,
-                        label: `${t.name} (${t.sip_domain})`
-                      }))}
-                      value={tenantId}
-                      onChange={(val) => setTenantId(val)}
-                    />
-                  </div>
-                )}
+          <Grid cols={2} gap="4">
+            <FormField label="Extension Number" required>
+              <Input
+                value={extNumber}
+                onChange={(e) => setExtNumber(e.target.value)}
+                placeholder="1001"
+              />
+            </FormField>
+            <FormField label="Display Name" required>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Alice Smith"
+              />
+            </FormField>
+          </Grid>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Extension Number</label>
-                    <input
-                      type="text"
-                      placeholder="1001"
-                      value={extNumber}
-                      onChange={(e) => setExtNumber(e.target.value)}
-                      className="form-control font-mono"
-                      required
-                    />
-                  </div>
+          <FormField label="User Email Address">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="alice@acme.com"
+            />
+          </FormField>
 
-                  <div>
-                    <label className="form-label">Display Name</label>
-                    <input
-                      type="text"
-                      placeholder="Alice Smith"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="form-control"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label">User Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="alice@acme.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="form-control"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">SIP Password</label>
-                    <input
-                      type="password"
-                      placeholder="SIPPassword123!"
-                      value={sipPassword}
-                      onChange={(e) => setSipPassword(e.target.value)}
-                      className="form-control"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label">Voicemail PIN</label>
-                    <input
-                      type="text"
-                      placeholder="1234"
-                      value={voicemailPin}
-                      onChange={(e) => setVoicemailPin(e.target.value)}
-                      className="form-control font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-foot">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Creating...' : 'Provision Extension'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <Grid cols={2} gap="4">
+            <FormField label="SIP Password" required>
+              <Input
+                type="password"
+                value={sipPassword}
+                onChange={(e) => setSipPassword(e.target.value)}
+                placeholder="SIPPassword123!"
+              />
+            </FormField>
+            <FormField label="Voicemail PIN">
+              <Input
+                value={voicemailPin}
+                onChange={(e) => setVoicemailPin(e.target.value)}
+                placeholder="1234"
+              />
+            </FormField>
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* Reset Password Modal */}
-      {showResetModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal max-w-md">
-            <div className="modal-head">
-              <div className="modal-icon">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <div>
-                <h3>Reset Credentials</h3>
-                <p>Update SIP authentication password or Voicemail PIN</p>
-              </div>
-              <button onClick={() => setShowResetModal(false)} className="modal-close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleResetPassword}>
-              <div className="modal-body space-y-4">
-                <div className="form-group">
-                  <label className="form-label">New SIP Password</label>
-                  <input
-                    type="password"
-                    placeholder="Leave empty to keep unchanged"
-                    value={newSipPwd}
-                    onChange={(e) => setNewSipPwd(e.target.value)}
-                    className="form-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">New Voicemail PIN</label>
-                  <input
-                    type="text"
-                    placeholder="Leave empty to keep unchanged"
-                    value={newVmPin}
-                    onChange={(e) => setNewVmPin(e.target.value)}
-                    className="form-control font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="modal-foot">
-                <button type="button" onClick={() => setShowResetModal(false)} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Updating...' : 'Save Credentials'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        title="Reset Credentials"
+        subtitle="Update SIP authentication password or Voicemail PIN"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowResetModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleResetPassword} isLoading={loading}>Save Credentials</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="New SIP Password" hint="Leave empty to keep unchanged">
+            <Input
+              type="password"
+              value={newSipPwd}
+              onChange={(e) => setNewSipPwd(e.target.value)}
+              placeholder="New password..."
+            />
+          </FormField>
+          <FormField label="New Voicemail PIN" hint="Leave empty to keep unchanged">
+            <Input
+              value={newVmPin}
+              onChange={(e) => setNewVmPin(e.target.value)}
+              placeholder="New PIN..."
+            />
+          </FormField>
+        </Stack>
+      </Modal>
 
       {/* Edit Extension Modal */}
-      {showEditModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal max-w-lg">
-            <div className="modal-head">
-              <div className="modal-icon">
-                <Edit2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3>Edit Extension</h3>
-                <p>Modify display profile, caller ID, and timeout for ext/{editFormData.extension_number}</p>
-              </div>
-              <button onClick={() => { setShowEditModal(false); setEditingExtId(null); }} className="modal-close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="form-label required">Display Name</label>
-                    <input
-                      required
-                      type="text"
-                      value={editFormData.display_name}
-                      onChange={(e) => setEditFormData({ ...editFormData, display_name: e.target.value })}
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">User Email</label>
-                    <input
-                      type="email"
-                      value={editFormData.email}
-                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Caller ID Name</label>
-                    <input
-                      type="text"
-                      value={editFormData.caller_id_name}
-                      onChange={(e) => setEditFormData({ ...editFormData, caller_id_name: e.target.value })}
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Caller ID Number</label>
-                    <input
-                      type="text"
-                      value={editFormData.caller_id_number}
-                      onChange={(e) => setEditFormData({ ...editFormData, caller_id_number: e.target.value })}
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">No-Answer Timeout (sec)</label>
-                    <input
-                      type="number"
-                      min={5}
-                      max={120}
-                      value={editFormData.no_answer_timeout}
-                      onChange={(e) => setEditFormData({ ...editFormData, no_answer_timeout: parseInt(e.target.value) || 20 })}
-                      className="form-control"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">WebRTC Softphone</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'true', label: 'Enabled (WSS / WebRTC)' },
-                        { value: 'false', label: 'Disabled (SIP Only)' }
-                      ]}
-                      value={editFormData.webrtc_enabled ? 'true' : 'false'}
-                      onChange={(val) => setEditFormData({ ...editFormData, webrtc_enabled: val === 'true' })}
-                    />
-                  </div>
-
-                  <div className="form-group col-span-2">
-                    <label className="form-label">Extension Status</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'true', label: 'Active / Registered' },
-                        { value: 'false', label: 'Suspended / Inactive' }
-                      ]}
-                      value={editFormData.enabled ? 'true' : 'false'}
-                      onChange={(val) => setEditFormData({ ...editFormData, enabled: val === 'true' })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="modal-foot">
-                <button type="button" onClick={() => { setShowEditModal(false); setEditingExtId(null); }} className="btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Saving...' : 'Save Extension Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => { setShowEditModal(false); setEditingExtId(null); }}
+        title="Edit Extension"
+        subtitle={`Modify display profile, caller ID, and timeout for ext/${editFormData.extension_number}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowEditModal(false); setEditingExtId(null); }}>Cancel</Button>
+            <Button variant="primary" onClick={handleUpdate} isLoading={loading}>Save Extension Changes</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <Grid cols={2} gap="4">
+            <FormField label="Display Name" required>
+              <Input
+                value={editFormData.display_name}
+                onChange={(e) => setEditFormData({ ...editFormData, display_name: e.target.value })}
+              />
+            </FormField>
+            <FormField label="User Email">
+              <Input
+                type="email"
+                value={editFormData.email}
+                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Caller ID Name">
+              <Input
+                value={editFormData.caller_id_name}
+                onChange={(e) => setEditFormData({ ...editFormData, caller_id_name: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Caller ID Number">
+              <Input
+                value={editFormData.caller_id_number}
+                onChange={(e) => setEditFormData({ ...editFormData, caller_id_number: e.target.value })}
+              />
+            </FormField>
+            <FormField label="No-Answer Timeout (sec)">
+              <Input
+                type="number"
+                value={String(editFormData.no_answer_timeout)}
+                onChange={(e) => setEditFormData({ ...editFormData, no_answer_timeout: parseInt(e.target.value) || 20 })}
+              />
+            </FormField>
+            <FormField label="WebRTC Softphone">
+              <Select
+                value={editFormData.webrtc_enabled ? 'true' : 'false'}
+                onChange={(e) => setEditFormData({ ...editFormData, webrtc_enabled: e.target.value === 'true' })}
+              >
+                <option value="true">Enabled (WSS / WebRTC)</option>
+                <option value="false">Disabled (SIP Only)</option>
+              </Select>
+            </FormField>
+          </Grid>
+          <FormField label="Extension Status">
+            <Select
+              value={editFormData.enabled ? 'true' : 'false'}
+              onChange={(e) => setEditFormData({ ...editFormData, enabled: e.target.value === 'true' })}
+            >
+              <option value="true">Active / Registered</option>
+              <option value="false">Suspended / Inactive</option>
+            </Select>
+          </FormField>
+        </Stack>
+      </Modal>
+    </PageContainer>
   );
 };

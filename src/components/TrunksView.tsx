@@ -1,8 +1,20 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { Network, Plus, Search, Server, ShieldCheck, Activity, CheckCircle2, Edit2, Trash2, Info, ArrowLeftRight, Building2 } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Network, Plus, ShieldCheck, Activity, CheckCircle2, Edit2, Trash2, Info, ArrowLeftRight, Building2 } from 'lucide-react';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Inline, Grid } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+  Alert,
+  Checkbox,
+} from './ui';
+import { DataTable, FilterBar, StatCard } from './patterns';
 
 interface TrunksViewProps {
   token: string;
@@ -19,7 +31,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
   const [search, setSearch] = useState('');
 
   const isReadOnly = readOnly || (user && user.role !== 'SUPER_ADMIN');
-  
+
   // View Info Modal
   const [viewInfoItem, setViewInfoItem] = useState<any | null>(null);
 
@@ -202,522 +214,332 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
     (t.itemType && t.itemType.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const columns = [
+    {
+      key: 'name',
+      header: 'Route Name',
+      sortable: true,
+      render: (t: any) => <strong>{t.name}</strong>,
+    },
+    {
+      key: 'itemType',
+      header: 'Type',
+      render: (t: any) => (
+        <Badge variant={t.itemType === 'Sofia Gateway' ? 'warning' : 'info'}>
+          {t.itemType}
+        </Badge>
+      ),
+    },
+    {
+      key: 'host',
+      header: 'SIP Host / Proxy',
+      render: (t: any) => <code>{t.host}</code>,
+    },
+    {
+      key: 'transport',
+      header: 'Transport',
+      render: (t: any) => <Badge variant="neutral">{t.transport}</Badge>,
+    },
+    {
+      key: 'assigned_tenants',
+      header: 'Assigned Tenant',
+      render: (t: any) => {
+        if (t.assigned_tenants && t.assigned_tenants.length > 0) {
+          return (
+            <Inline gap="1">
+              {t.assigned_tenants.map((ten: any) => (
+                <Badge key={ten.id} variant="success">{ten.name}</Badge>
+              ))}
+            </Inline>
+          );
+        }
+        if (t.tenant_name && t.tenant_name !== 'Shared (All Tenants)') {
+          return <Badge variant="success">{t.tenant_name}</Badge>;
+        }
+        return <Badge variant="info">Shared (All Tenants)</Badge>;
+      },
+    },
+    {
+      key: 'username',
+      header: 'Auth Username',
+      render: (t: any) => t.username || 'IP Auth',
+    },
+    {
+      key: 'enabled',
+      header: 'Status',
+      render: (t: any) => (
+        <Badge variant={t.enabled !== false ? 'success' : 'warning'}>
+          {t.enabled !== false ? 'ACTIVE' : 'DISABLED'}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">{isReadOnly ? 'Tenant Telephony' : 'Telephony Infrastructure'}</div>
-          <h1 className="page-title">{isReadOnly ? 'Assigned SIP Trunks & Gateways' : 'SIP Trunks & Gateways'}</h1>
-          <p className="page-sub">
-            {isReadOnly 
-              ? 'View active carrier SIP trunk connections and FreeSWITCH gateways allocated to your tenant.' 
-              : 'Configure carrier SIP trunk connections, proxies, tenant allocations and gateway routes'}
-          </p>
-        </div>
-        {!isReadOnly && (
-          <div>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
-              <Plus size={16} /> Add SIP Trunk
-            </button>
-          </div>
-        )}
-      </div>
+    <PageContainer
+      title={isReadOnly ? 'Assigned SIP Trunks & Gateways' : 'SIP Trunks & Gateways'}
+      subtitle={
+        isReadOnly 
+          ? 'View active carrier SIP trunk connections and FreeSWITCH gateways allocated to your tenant.' 
+          : 'Configure carrier SIP trunk connections, proxies, tenant allocations and gateway routes'
+      }
+      eyebrow={isReadOnly ? 'Tenant Telephony' : 'Telephony Infrastructure'}
+      actions={
+        !isReadOnly ? (
+          <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Plus size={16} />}>
+            Add SIP Trunk
+          </Button>
+        ) : undefined
+      }
+    >
+      <Stack gap="6">
+        <Grid cols={4} gap="4">
+          <StatCard title="Active Routes" value={trunks.length} icon={<Network size={20} />} />
+          <StatCard title="Registered" value={trunks.filter(t => t.register !== false).length} icon={<CheckCircle2 size={20} />} />
+          <StatCard title="Active Channels" value={trunks.filter(t => t.enabled !== false).length * 30} icon={<Activity size={20} />} />
+          <StatCard title="Security (SRTP)" value={`${trunks.filter(t => t.srtp).length} Enabled`} icon={<ShieldCheck size={20} />} />
+        </Grid>
 
-      {/* KPI Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Active Routes</span>
-            <div style={{ background: '#FFF0EC', padding: '6px', borderRadius: '8px', color: 'var(--orange)' }}><Network size={18} /></div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>{trunks.length}</div>
-        </div>
+        {error && <Alert variant="danger" title="Error">{error}</Alert>}
 
-        <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Registered</span>
-            <div style={{ background: '#ECFDF5', padding: '6px', borderRadius: '8px', color: '#047857' }}><CheckCircle2 size={18} /></div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>{trunks.filter(t => t.register !== false).length}</div>
-        </div>
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search gateways by name, host or tenant..."
+        />
 
-        <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Active Channels</span>
-            <div style={{ background: '#EFF6FF', padding: '6px', borderRadius: '8px', color: '#2563EB' }}><Activity size={18} /></div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>{trunks.filter(t => t.enabled !== false).length * 30}</div>
-        </div>
-
-        <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase' }}>Security (SRTP)</span>
-            <div style={{ background: '#F3E8FF', padding: '6px', borderRadius: '8px', color: '#9333EA' }}><ShieldCheck size={18} /></div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827' }}>{trunks.filter(t => t.srtp).length} Enabled</div>
-        </div>
-      </div>
-
-      {error && <div className="alert alert-danger mb-4">{error}</div>}
-
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="search-input-wrap" style={{ width: '280px' }}>
-            <Search size={16} className="search-icon" />
-            <input 
-              className="form-control"
-              style={{ height: '38px', fontSize: '12px' }}
-              placeholder="Search gateways by name, host or tenant..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Route Name</th>
-                <th>Type</th>
-                <th>SIP Host / Proxy</th>
-                <th>Transport</th>
-                <th>Assigned Tenant</th>
-                <th>Auth Username</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={8} className="text-center py-4">Loading gateways & trunks...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-4 text-muted">No assigned gateways or SIP trunks found</td></tr>
-              ) : (
-                filtered.map((t) => (
-                  <tr key={t.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#111827' }}>{t.name}</div>
-                    </td>
-                    <td>
-                      <span className={`terrix-badge ${t.itemType === 'Sofia Gateway' ? 'purple' : 'blue'}`}>
-                        {t.itemType}
-                      </span>
-                    </td>
-                    <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{t.host}</code></td>
-                    <td><span className="terrix-badge grey">{t.transport}</span></td>
-                    <td>
-                      {t.assigned_tenants && t.assigned_tenants.length > 0 ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {t.assigned_tenants.map((ten: any) => (
-                            <span key={ten.id} className="terrix-badge green" style={{ fontWeight: 700, fontSize: '11px' }}>
-                              {ten.name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : t.tenant_name && t.tenant_name !== 'Shared (All Tenants)' ? (
-                        <span className="terrix-badge green" style={{ fontWeight: 700 }}>
-                          {t.tenant_name}
-                        </span>
-                      ) : (
-                        <span className="terrix-badge blue" style={{ background: '#E0F2FE', color: '#0369A1', borderColor: '#BAE6FD', fontWeight: 700 }}>
-                          Shared (All Tenants)
-                        </span>
-                      )}
-                    </td>
-                    <td>{t.username || <span style={{ color: '#9CA3AF' }}>IP Auth</span>}</td>
-                    <td>
-                      {t.enabled !== false ? (
-                        <span className="terrix-badge green">ACTIVE</span>
-                      ) : (
-                        <span className="terrix-badge orange">DISABLED</span>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button
-                          onClick={() => setViewInfoItem(t)}
-                          className="btn-secondary !h-8 !px-2.5 text-xs flex items-center gap-1"
-                          title="View Gateway Details"
-                        >
-                          <Info size={13} className="text-slate-600" />
-                          <span>View Info</span>
-                        </button>
-                        {!isReadOnly && (
-                          <>
-                            <button
-                              onClick={() => handleEditClick(t)}
-                              className="btn-secondary !h-8 !px-2.5 text-xs"
-                              title="Edit Trunk & Tenant Assignment"
-                            >
-                              <Edit2 size={13} className="text-slate-600" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => setDeleteTrunkId(t.id)}
-                              className="btn-secondary !h-8 !px-2.5 text-xs text-rose-600 hover:bg-rose-50"
-                              title="Delete SIP Trunk"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+        <DataTable
+          columns={columns}
+          data={filtered}
+          isLoading={loading}
+          emptyTitle="No assigned gateways or SIP trunks found"
+          actions={(t: any) => (
+            <Inline gap="2" justify="flex-end">
+              <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} leftIcon={<Info size={12} />}>
+                View Info
+              </Button>
+              {!isReadOnly && (
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} leftIcon={<Edit2 size={12} />}>
+                    Edit
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} leftIcon={<Trash2 size={12} />}>
+                    Delete
+                  </Button>
+                </>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </Inline>
+          )}
+        />
+      </Stack>
 
       {/* VIEW INFO MODAL (READ ONLY) */}
-      {viewInfoItem && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '540px' }}>
-            <div className="modal-head">
-              <div className="modal-icon text-[#7C3AED] bg-purple-50"><ArrowLeftRight size={20} /></div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">{viewInfoItem.name}</h3>
-                <p className="text-xs text-slate-500">Gateway Information & Configuration Overview</p>
-              </div>
-              <button className="modal-close" onClick={() => setViewInfoItem(null)}>×</button>
-            </div>
-
-            <div className="modal-body space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Route Type</span>
-                  <span className="font-bold text-slate-800">{viewInfoItem.itemType}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Status</span>
-                  <span className="font-bold text-emerald-600">{viewInfoItem.enabled !== false ? 'ACTIVE' : 'DISABLED'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Host / Proxy Address</span>
-                  <code className="text-xs font-mono font-bold text-slate-800 bg-slate-200/60 px-1.5 py-0.5 rounded">{viewInfoItem.host}</code>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Port & Transport</span>
-                  <span className="font-bold text-slate-800">{viewInfoItem.port || 5060} ({viewInfoItem.transport || 'UDP'})</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Auth Username</span>
-                  <span className="font-bold text-slate-800">{viewInfoItem.username || 'IP / Passwordless Auth'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">SIP Realm</span>
-                  <span className="font-bold text-slate-800">{viewInfoItem.realm || 'Default Domain'}</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 col-span-2">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">Allocated Tenant</span>
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <Building2 size={14} className="text-[#FF5430]" />
-                    <span>{viewInfoItem.tenant_name ? `${viewInfoItem.tenant_name} (${viewInfoItem.tenant_domain})` : 'Shared (Available to All Tenants)'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-foot">
-              <button type="button" className="btn-secondary" onClick={() => setViewInfoItem(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!viewInfoItem}
+        onClose={() => setViewInfoItem(null)}
+        title={viewInfoItem?.name || ''}
+        subtitle="Gateway Information & Configuration Overview"
+        footer={<Button variant="secondary" onClick={() => setViewInfoItem(null)}>Close</Button>}
+      >
+        {viewInfoItem && (
+          <Stack gap="4">
+            <Grid cols={2} gap="3">
+              <FormField label="Route Type">
+                <strong>{viewInfoItem.itemType}</strong>
+              </FormField>
+              <FormField label="Status">
+                <Badge variant={viewInfoItem.enabled !== false ? 'success' : 'warning'}>
+                  {viewInfoItem.enabled !== false ? 'ACTIVE' : 'DISABLED'}
+                </Badge>
+              </FormField>
+              <FormField label="Host / Proxy Address">
+                <code>{viewInfoItem.host}</code>
+              </FormField>
+              <FormField label="Port & Transport">
+                <strong>{viewInfoItem.port || 5060} ({viewInfoItem.transport || 'UDP'})</strong>
+              </FormField>
+              <FormField label="Auth Username">
+                <strong>{viewInfoItem.username || 'IP / Passwordless Auth'}</strong>
+              </FormField>
+              <FormField label="SIP Realm">
+                <strong>{viewInfoItem.realm || 'Default Domain'}</strong>
+              </FormField>
+            </Grid>
+            <FormField label="Allocated Tenant">
+              <Inline gap="2">
+                <Building2 size={16} />
+                <span>{viewInfoItem.tenant_name ? `${viewInfoItem.tenant_name} (${viewInfoItem.tenant_domain})` : 'Shared (Available to All Tenants)'}</span>
+              </Inline>
+            </FormField>
+          </Stack>
+        )}
+      </Modal>
 
       {/* CREATE MODAL */}
-      {showModal && !isReadOnly && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon"><Server size={20} /></div>
-              <div>
-                <h3>Register SIP Trunk Connection</h3>
-                <p>Add a new carrier SIP proxy or gateway route</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            </div>
+      <Modal
+        isOpen={showModal && !isReadOnly}
+        onClose={() => setShowModal(false)}
+        title="Register SIP Trunk Connection"
+        subtitle="Add a new carrier SIP proxy or gateway route"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreateSubmit}>Register Trunk</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <Grid cols={2} gap="4">
+            <FormField label="Trunk Name" required>
+              <Input placeholder="e.g. Tata Telecommunications" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+            </FormField>
+            <FormField label="SIP Host / Proxy IP" required>
+              <Input placeholder="e.g. sip.tata.com" value={formData.host} onChange={e => setFormData({...formData, host: e.target.value})} />
+            </FormField>
+            <FormField label="SIP Port">
+              <Input type="number" value={String(formData.port)} onChange={e => setFormData({...formData, port: parseInt(e.target.value) || 5060})} />
+            </FormField>
+            <FormField label="Transport Protocol">
+              <Select value={formData.transport} onChange={e => setFormData({...formData, transport: e.target.value})}>
+                <option value="UDP">UDP (Standard)</option>
+                <option value="TCP">TCP</option>
+                <option value="TLS">TLS (Encrypted)</option>
+              </Select>
+            </FormField>
+          </Grid>
 
-            <form onSubmit={handleCreateSubmit}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Trunk Name</label>
-                    <input required className="form-control" placeholder="e.g. Tata Telecommunications" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">SIP Host / Proxy IP</label>
-                    <input required className="form-control" placeholder="e.g. sip.tata.com" value={formData.host} onChange={e => setFormData({...formData, host: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">SIP Port</label>
-                    <input type="number" className="form-control" value={formData.port} onChange={e => setFormData({...formData, port: parseInt(e.target.value) || 5060})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Transport Protocol</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'UDP', label: 'UDP (Standard)' },
-                        { value: 'TCP', label: 'TCP' },
-                        { value: 'TLS', label: 'TLS (Encrypted)' },
-                      ]}
-                      value={formData.transport}
-                      onChange={(val) => setFormData({ ...formData, transport: val })}
+          <FormField label={`Assigned Tenants (${formData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${formData.tenant_ids.length} selected`})`}>
+            <Stack gap="2">
+              <Inline gap="2">
+                <Button variant="ghost" size="sm" onClick={() => setFormData({ ...formData, tenant_ids: tenants.map(t => t.id) })}>Select All</Button>
+                <Button variant="ghost" size="sm" onClick={() => setFormData({ ...formData, tenant_ids: [] })}>Clear (Make Shared)</Button>
+              </Inline>
+              <Grid cols={2} gap="2">
+                {tenants.map(t => {
+                  const isSelected = formData.tenant_ids.includes(t.id);
+                  return (
+                    <Checkbox
+                      key={t.id}
+                      label={t.name}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...formData.tenant_ids, t.id]
+                          : formData.tenant_ids.filter((id: string) => id !== t.id);
+                        setFormData({ ...formData, tenant_ids: next });
+                      }}
                     />
-                  </div>
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
-                        Assigned Tenants ({formData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${formData.tenant_ids.length} selected`})
-                      </label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          style={{ fontSize: '11px', color: '#FF5430', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => setFormData({ ...formData, tenant_ids: tenants.map(t => t.id) })}
-                        >
-                          Select All
-                        </button>
-                        <span style={{ color: '#CBD5E1' }}>|</span>
-                        <button
-                          type="button"
-                          style={{ fontSize: '11px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => setFormData({ ...formData, tenant_ids: [] })}
-                        >
-                          Clear (Make Shared)
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{
-                      maxHeight: '130px',
-                      overflowY: 'auto',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '6px',
-                      background: '#F8FAFC'
-                    }}>
-                      {tenants.map(t => {
-                        const isSelected = formData.tenant_ids.includes(t.id);
-                        return (
-                          <label
-                            key={t.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                              border: isSelected ? '1px solid #3B82F6' : '1px solid #E2E8F0',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              userSelect: 'none'
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const next = e.target.checked
-                                  ? [...formData.tenant_ids, t.id]
-                                  : formData.tenant_ids.filter((id: string) => id !== t.id);
-                                setFormData({ ...formData, tenant_ids: next });
-                              }}
-                            />
-                            <span style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1E40AF' : '#334155' }}>
-                              {t.name}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Priority Level</label>
-                    <input type="number" min="1" max="10" className="form-control" value={formData.priority} onChange={e => setFormData({...formData, priority: parseInt(e.target.value) || 1})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Auth Username (Optional)</label>
-                    <input className="form-control" placeholder="Digest auth user" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Auth Password (Optional)</label>
-                    <input type="password" className="form-control" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Register Trunk</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  );
+                })}
+              </Grid>
+            </Stack>
+          </FormField>
+
+          <Grid cols={3} gap="4">
+            <FormField label="Priority Level">
+              <Input type="number" value={String(formData.priority)} onChange={e => setFormData({...formData, priority: parseInt(e.target.value) || 1})} />
+            </FormField>
+            <FormField label="Auth Username (Optional)">
+              <Input placeholder="Digest auth user" value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} />
+            </FormField>
+            <FormField label="Auth Password (Optional)">
+              <Input type="password" placeholder="••••••••" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+            </FormField>
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* EDIT MODAL */}
-      {editTrunk && !isReadOnly && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon"><Server size={20} /></div>
-              <div>
-                <h3>Edit {editTrunk.itemType || 'SIP Trunk'}</h3>
-                <p>Update trunk host settings and tenant assignments</p>
-              </div>
-              <button className="modal-close" onClick={() => setEditTrunk(null)}>×</button>
-            </div>
+      <Modal
+        isOpen={!!editTrunk && !isReadOnly}
+        onClose={() => setEditTrunk(null)}
+        title={`Edit ${editTrunk?.itemType || 'SIP Trunk'}`}
+        subtitle="Update trunk host settings and tenant assignments"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditTrunk(null)}>Cancel</Button>
+            <Button variant="primary" onClick={handleEditSubmit}>Update Trunk</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <Grid cols={2} gap="4">
+            <FormField label="Trunk Name" required>
+              <Input value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})} />
+            </FormField>
+            <FormField label="SIP Host / Proxy" required>
+              <Input value={editFormData.host} onChange={e => setEditFormData({...editFormData, host: e.target.value})} />
+            </FormField>
+            <FormField label="SIP Port">
+              <Input type="number" value={String(editFormData.port)} onChange={e => setEditFormData({...editFormData, port: parseInt(e.target.value) || 5060})} />
+            </FormField>
+            <FormField label="Transport Protocol">
+              <Select value={editFormData.transport} onChange={e => setEditFormData({...editFormData, transport: e.target.value})}>
+                <option value="UDP">UDP (Standard)</option>
+                <option value="TCP">TCP</option>
+                <option value="TLS">TLS (Encrypted)</option>
+              </Select>
+            </FormField>
+          </Grid>
 
-            <form onSubmit={handleEditSubmit}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Trunk Name</label>
-                    <input required className="form-control" value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">SIP Host / Proxy</label>
-                    <input required className="form-control" value={editFormData.host} onChange={e => setEditFormData({...editFormData, host: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">SIP Port</label>
-                    <input type="number" className="form-control" value={editFormData.port} onChange={e => setEditFormData({...editFormData, port: parseInt(e.target.value) || 5060})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Transport Protocol</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'UDP', label: 'UDP (Standard)' },
-                        { value: 'TCP', label: 'TCP' },
-                        { value: 'TLS', label: 'TLS (Encrypted)' },
-                      ]}
-                      value={editFormData.transport}
-                      onChange={(val) => setEditFormData({ ...editFormData, transport: val })}
+          <FormField label={`Assigned Tenants (${editFormData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${editFormData.tenant_ids.length} selected`})`}>
+            <Stack gap="2">
+              <Inline gap="2">
+                <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: tenants.map(t => t.id) })}>Select All</Button>
+                <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: [] })}>Clear (Make Shared)</Button>
+              </Inline>
+              <Grid cols={2} gap="2">
+                {tenants.map(t => {
+                  const isSelected = editFormData.tenant_ids.includes(t.id);
+                  return (
+                    <Checkbox
+                      key={t.id}
+                      label={t.name}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...editFormData.tenant_ids, t.id]
+                          : editFormData.tenant_ids.filter((id: string) => id !== t.id);
+                        setEditFormData({ ...editFormData, tenant_ids: next });
+                      }}
                     />
-                  </div>
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
-                        Assigned Tenants ({editFormData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${editFormData.tenant_ids.length} selected`})
-                      </label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          style={{ fontSize: '11px', color: '#FF5430', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => setEditFormData({ ...editFormData, tenant_ids: tenants.map(t => t.id) })}
-                        >
-                          Select All
-                        </button>
-                        <span style={{ color: '#CBD5E1' }}>|</span>
-                        <button
-                          type="button"
-                          style={{ fontSize: '11px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => setEditFormData({ ...editFormData, tenant_ids: [] })}
-                        >
-                          Clear (Make Shared)
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{
-                      maxHeight: '130px',
-                      overflowY: 'auto',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '6px',
-                      background: '#F8FAFC'
-                    }}>
-                      {tenants.map(t => {
-                        const isSelected = editFormData.tenant_ids.includes(t.id);
-                        return (
-                          <label
-                            key={t.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                              border: isSelected ? '1px solid #3B82F6' : '1px solid #E2E8F0',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              userSelect: 'none'
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const next = e.target.checked
-                                  ? [...editFormData.tenant_ids, t.id]
-                                  : editFormData.tenant_ids.filter((id: string) => id !== t.id);
-                                setEditFormData({ ...editFormData, tenant_ids: next });
-                              }}
-                            />
-                            <span style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1E40AF' : '#334155' }}>
-                              {t.name}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Priority Level</label>
-                    <input type="number" min="1" max="10" className="form-control" value={editFormData.priority} onChange={e => setEditFormData({...editFormData, priority: parseInt(e.target.value) || 1})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Auth Username</label>
-                    <input className="form-control" value={editFormData.username} onChange={e => setEditFormData({...editFormData, username: e.target.value})} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Auth Password</label>
-                    <input type="password" className="form-control" value={editFormData.password} onChange={e => setEditFormData({...editFormData, password: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setEditTrunk(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Update Trunk</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  );
+                })}
+              </Grid>
+            </Stack>
+          </FormField>
+
+          <Grid cols={3} gap="4">
+            <FormField label="Priority Level">
+              <Input type="number" value={String(editFormData.priority)} onChange={e => setEditFormData({...editFormData, priority: parseInt(e.target.value) || 1})} />
+            </FormField>
+            <FormField label="Auth Username">
+              <Input value={editFormData.username} onChange={e => setEditFormData({...editFormData, username: e.target.value})} />
+            </FormField>
+            <FormField label="Auth Password">
+              <Input type="password" value={editFormData.password} onChange={e => setEditFormData({...editFormData, password: e.target.value})} />
+            </FormField>
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* DELETE MODAL */}
-      {deleteTrunkId && !isReadOnly && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '420px' }}>
-            <div className="modal-head">
-              <div className="modal-icon red"><Trash2 size={20} /></div>
-              <div>
-                <h3>Delete Gateway / Trunk</h3>
-                <p>Are you sure you want to remove this route?</p>
-              </div>
-              <button className="modal-close" onClick={() => setDeleteTrunkId(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p className="text-sm text-slate-600">
-                Deleting this route will disable inbound/outbound call routing for numbers relying on this connection.
-              </p>
-            </div>
-            <div className="modal-foot">
-              <button type="button" className="btn-secondary" onClick={() => setDeleteTrunkId(null)}>Cancel</button>
-              <button type="button" className="btn-danger" onClick={handleDeleteConfirm}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        isOpen={!!deleteTrunkId && !isReadOnly}
+        onClose={() => setDeleteTrunkId(null)}
+        title="Delete Gateway / Trunk"
+        subtitle="Are you sure you want to remove this route?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteTrunkId(null)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteConfirm}>Delete</Button>
+          </>
+        }
+      >
+        <p>
+          Deleting this route will disable inbound/outbound call routing for numbers relying on this connection.
+        </p>
+      </Modal>
+    </PageContainer>
   );
 };
