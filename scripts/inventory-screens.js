@@ -53,7 +53,8 @@ screens.forEach((s) => {
   let importantCount = (content.match(/!important/g) || []).length;
   let totalViolations = hexCount + inlineCount + importantCount;
 
-  const isMigrated = ['src/App.tsx', 'src/components/LoginScreen.tsx', 'src/components/Sidebar.tsx', 'src/components/Topbar.tsx', 'src/components/DashboardView.tsx', 'src/components/AuthView.tsx'].includes(s.file);
+  const usesDS = /from ['"].*?\/(ui|layout|patterns)['"]/.test(content) || content.includes("PageContainer") || content.includes("Button") || content.includes("DataTable");
+  const isMigrated = usesDS && totalViolations === 0;
 
   console.log(`| ${s.screen} | \`${s.file}\` | ${isMigrated ? 'Yes' : 'No'} | ${totalViolations} (${hexCount} hex, ${inlineCount} inline, ${importantCount} !imp) |`);
 });
