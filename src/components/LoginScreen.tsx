@@ -3,7 +3,7 @@ import { TerrixLogo } from './TerrixLogo';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 import { LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
-
+import { Button, Input, FormField } from './ui';
 
 interface LoginScreenProps {
   onLoginSuccess: (token: string, user: User) => void;
@@ -67,7 +67,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         <div className="login-visual">
           <div className="space-y-6 text-left">
             <TerrixLogo size="large" />
-            
+
             <div className="space-y-2 mt-6">
               <h2 className="text-xl font-extrabold text-white tracking-tight">
                 Enterprise Multi-Tenant PBX
@@ -98,7 +98,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         <div className="login-form-area">
           <div className="login-form">
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-lg bg-[#FFF0EC] text-[#FF5430]">
+              <div className="p-2 rounded-lg bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)]">
                 {isSeeding ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
               </div>
               <h1 className="login-title mb-0">
@@ -127,72 +127,74 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
             {!isSeeding ? (
               <form onSubmit={handleLogin}>
-                <div className="mb-3">
-                  <label className="form-label">Username or Email</label>
-                  <input
+                <FormField label="Username or Email" required>
+                  <Input
                     type="text"
-                    className="form-control"
                     value={loginUser}
                     onChange={(e) => setLoginUser(e.target.value)}
                     placeholder="Enter your username or email"
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-4">
-                  <label className="form-label">Password</label>
-                  <input
+                <FormField label="Password" required>
+                  <Input
                     type="password"
-                    className="form-control"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
                   />
-                </div>
+                </FormField>
 
-                <button type="submit" disabled={loading} className="login-submit">
-                  {loading ? 'Authenticating...' : 'Log In'}
-                </button>
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  variant="primary"
+                  size="lg"
+                  style={{ width: '100%', marginTop: '8px' }}
+                >
+                  Log In
+                </Button>
               </form>
             ) : (
               <form onSubmit={handleSeed}>
-                <div className="mb-3">
-                  <label className="form-label">Super Admin Username</label>
-                  <input
+                <FormField label="Super Admin Username" required>
+                  <Input
                     type="text"
-                    className="form-control"
                     value={seedUser}
                     onChange={(e) => setSeedUser(e.target.value)}
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-3">
-                  <label className="form-label">Email Address</label>
-                  <input
+                <FormField label="Email Address" required>
+                  <Input
                     type="email"
-                    className="form-control"
                     value={seedEmail}
                     onChange={(e) => setSeedEmail(e.target.value)}
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-4">
-                  <label className="form-label">Password</label>
-                  <input
+                <FormField label="Password" required>
+                  <Input
                     type="password"
-                    className="form-control"
                     value={seedPassword}
                     onChange={(e) => setSeedPassword(e.target.value)}
                     required
                   />
-                </div>
+                </FormField>
 
-                <button type="submit" disabled={loading} className="login-submit">
-                  {loading ? 'Seeding Account...' : 'Seed SuperAdmin Account'}
-                </button>
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  variant="primary"
+                  size="lg"
+                  style={{ width: '100%', marginTop: '8px' }}
+                >
+                  Seed SuperAdmin Account
+                </Button>
               </form>
             )}
 
