@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Voicemail, Mail, RefreshCw, Edit2, Plus, Search, Trash2 } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Voicemail, RefreshCw, Edit2, Plus, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import type { User } from '../types';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Inline, Grid } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+  Checkbox,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface VoicemailViewProps {
   token: string | null;
@@ -67,7 +78,6 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
     fetchData();
   }, [token]);
 
-  // Tenant-scoped extensions
   const tenantExtensions = useMemo(() => {
     if (user?.role === 'SUPER_ADMIN') return extensions;
     return extensions.filter(e => e.tenant_id === user?.tenant_id || !e.tenant_id);
@@ -169,266 +179,192 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
 
   const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
 
+  const columns = [
+    {
+      key: 'extension_number',
+      header: 'Extension / Mailbox',
+      sortable: true,
+      render: (b: VoicemailBoxItem) => (
+        <Inline gap="2">
+          <Voicemail size={16} />
+          <strong>ext/{b.extension_number}</strong>
+          {b.display_name && <Badge variant="neutral">{b.display_name}</Badge>}
+        </Inline>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (b: VoicemailBoxItem) => (
+        <Badge variant={b.voicemail_box_id ? 'success' : 'neutral'}>
+          {b.voicemail_box_id ? 'ACTIVE' : 'DEFAULT'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'email_address',
+      header: 'Email Delivery',
+      render: (b: VoicemailBoxItem) => (
+        b.email_notification && (b.email_address || b.extension_email) ? (
+          <span>{b.email_address || b.extension_email}</span>
+        ) : (
+          <Badge variant="neutral">Disabled</Badge>
+        )
+      ),
+    },
+    {
+      key: 'email_attach_file',
+      header: 'Attachment',
+      render: (b: VoicemailBoxItem) => (
+        <Badge variant={b.email_attach_file ? 'warning' : 'neutral'}>
+          {b.email_attach_file ? 'WAV ATTACHED' : 'NOTIFICATION ONLY'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'delete_after_email',
+      header: 'Auto-Purge',
+      render: (b: VoicemailBoxItem) => (
+        <Badge variant={b.delete_after_email ? 'danger' : 'neutral'}>
+          {b.delete_after_email ? 'Delete on send' : 'Retain in box'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'greeting_path',
+      header: 'Greeting Audio',
+      render: (b: VoicemailBoxItem) => (
+        <code>{b.greeting_path ? b.greeting_path.split('/').pop() : 'Standard Greeting'}</code>
+      ),
+    },
+  ];
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Unified Messaging</div>
-          <h1 className="page-title">Voicemail Management</h1>
-          <p className="page-sub">Configure extension voicemail boxes, PIN codes, audio greetings, and email notifications</p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={fetchData} className="btn-secondary" title="Refresh">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+    <PageContainer
+      title="Voicemail Management"
+      subtitle="Configure extension voicemail boxes, PIN codes, audio greetings, and email notifications"
+      eyebrow="Unified Messaging"
+      actions={
+        <Inline gap="3">
+          <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
+            Refresh
+          </Button>
           {canManage && (
-            <button onClick={openCreateModal} className="btn-primary">
-              <Plus size={16} /> Setup Voicemail Box
-            </button>
+            <Button variant="primary" onClick={openCreateModal} leftIcon={<Plus size={16} />}>
+              Setup Voicemail Box
+            </Button>
           )}
-        </div>
-      </div>
+        </Inline>
+      }
+    >
+      <Stack gap="6">
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search voicemail boxes..."
+        />
 
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="search-input-wrap" style={{ width: '280px' }}>
-            <Search size={16} className="search-icon" />
-            <input
-              className="form-control"
-              style={{ height: '38px', fontSize: '12px' }}
-              placeholder="Search voicemail boxes..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
-            Total <strong>{filtered.length}</strong> mailbox{filtered.length !== 1 ? 'es' : ''}
-          </div>
-        </div>
-
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Extension / Mailbox</th>
-                <th>Status</th>
-                <th>Email Delivery</th>
-                <th>Attachment</th>
-                <th>Auto-Purge</th>
-                <th>Greeting Audio</th>
-                {canManage && <th className="text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">Loading voicemail boxes...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4 text-muted">No voicemail boxes configured yet</td></tr>
-              ) : (
-                filtered.map(b => (
-                  <tr key={b.extension_id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#FFF0EC', color: '#FF5430', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Voicemail size={14} />
-                        </div>
-                        <div>
-                          <strong style={{ color: '#111827', fontSize: '13px' }}>ext/{b.extension_number}</strong>
-                          {b.display_name && <div style={{ fontSize: '11px', color: '#6B7280' }}>{b.display_name}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`terrix-badge ${b.voicemail_box_id ? 'green' : 'grey'}`}>
-                        {b.voicemail_box_id ? 'ACTIVE' : 'DEFAULT'}
-                      </span>
-                    </td>
-                    <td>
-                      {b.email_notification && (b.email_address || b.extension_email) ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#16A34A' }}>
-                          <Mail size={13} />
-                          <span>{b.email_address || b.extension_email}</span>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Disabled</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`terrix-badge ${b.email_attach_file ? 'orange' : 'grey'}`}>
-                        {b.email_attach_file ? 'WAV ATTACHED' : 'NOTIFICATION ONLY'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '12px', color: b.delete_after_email ? '#DC2626' : '#6B7280' }}>
-                        {b.delete_after_email ? 'Delete on send' : 'Retain in box'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '12px', color: '#4B5563', fontFamily: 'monospace' }}>
-                        {b.greeting_path ? b.greeting_path.split('/').pop() : 'Standard Greeting'}
-                      </span>
-                    </td>
-                    {canManage && (
-                      <td className="text-right">
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '5px 10px', fontSize: '11px' }}
-                            onClick={() => openEditModal(b)}
-                          >
-                            <Edit2 size={13} style={{ marginRight: '4px' }} /> Configure
-                          </button>
-                          {b.voicemail_box_id && (
-                            <button
-                              type="button"
-                              className="btn-secondary text-rose-600 hover:bg-rose-50"
-                              style={{ padding: '5px 8px', fontSize: '11px' }}
-                              onClick={() => handleDeleteBox(b.extension_id, b.extension_number)}
-                              title="Delete Voicemail Box"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
+        <DataTable
+          columns={columns}
+          data={filtered}
+          isLoading={loading}
+          emptyTitle="No voicemail boxes configured yet"
+          actions={canManage ? (b: VoicemailBoxItem) => (
+            <Inline gap="2" justify="flex-end">
+              <Button variant="secondary" size="sm" onClick={() => openEditModal(b)} leftIcon={<Edit2 size={12} />}>
+                Configure
+              </Button>
+              {b.voicemail_box_id && (
+                <Button variant="danger" size="sm" onClick={() => handleDeleteBox(b.extension_id, b.extension_number)} leftIcon={<Trash2 size={12} />}>
+                  Delete
+                </Button>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </Inline>
+          ) : undefined}
+        />
+      </Stack>
 
       {/* Setup / Configure Modal */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '580px' }}>
-            <div className="modal-head">
-              <div className="modal-icon"><Voicemail size={20} /></div>
-              <div>
-                <h3>Configure Voicemail Box</h3>
-                <p>Manage mailbox PIN, email attachments, and custom audio greetings</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleSave}>
-              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label required">Select Extension</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Choose Extension --' },
-                        ...tenantExtensions.map(e => ({
-                          value: e.id,
-                          label: `ext/${e.extension_number} — ${e.display_name || 'Extension'} ${e.email ? `(${e.email})` : ''}`
-                        }))
-                      ]}
-                      value={selectedExtId}
-                      onChange={handleExtensionChange}
-                    />
-                  </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Configure Voicemail Box"
+        subtitle="Manage mailbox PIN, email attachments, and custom audio greetings"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</Button>
+            <Button variant="primary" onClick={handleSave} isLoading={saving}>Save Voicemail Settings</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="Select Extension" required>
+            <Select
+              value={selectedExtId}
+              onChange={e => handleExtensionChange(e.target.value)}
+            >
+              <option value="">-- Choose Extension --</option>
+              {tenantExtensions.map(e => (
+                <option key={e.id} value={e.id}>
+                  ext/{e.extension_number} — {e.display_name || 'Extension'} {e.email ? `(${e.email})` : ''}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label required">Mailbox PIN (4-10 Digits)</label>
-                    <input
-                      type="password"
-                      required
-                      minLength={4}
-                      maxLength={10}
-                      className="form-control"
-                      value={mailboxPin}
-                      onChange={e => setMailboxPin(e.target.value)}
-                      placeholder="e.g. 1234"
-                    />
-                    <small style={{ color: '#6B7280', fontSize: '10.5px', marginTop: '3px' }}>
-                      Default subscriber pin: 1234
-                    </small>
-                  </div>
+          <Grid cols={2} gap="4">
+            <FormField label="Mailbox PIN (4-10 Digits)" required hint="Default subscriber pin: 1234">
+              <Input
+                type="password"
+                value={mailboxPin}
+                onChange={e => setMailboxPin(e.target.value)}
+                placeholder="e.g. 1234"
+              />
+            </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label">Custom Greeting Prompt</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- System Default Greeting --' },
-                        ...audioFiles.map(a => ({
-                          value: a.file_path || a.file_name,
-                          label: `${a.name || a.file_name} (${a.category})`
-                        }))
-                      ]}
-                      value={greetingPath}
-                      onChange={setGreetingPath}
-                    />
-                  </div>
+            <FormField label="Custom Greeting Prompt">
+              <Select
+                value={greetingPath}
+                onChange={e => setGreetingPath(e.target.value)}
+              >
+                <option value="">-- System Default Greeting --</option>
+                {audioFiles.map(a => (
+                  <option key={a.id} value={a.file_path || a.file_name}>
+                    {a.name || a.file_name} ({a.category})
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </Grid>
 
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label">Notification Email Address</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={emailAddress}
-                      onChange={e => setEmailAddress(e.target.value)}
-                      placeholder="agent@company.com"
-                    />
-                  </div>
+          <FormField label="Notification Email Address">
+            <Input
+              type="email"
+              value={emailAddress}
+              onChange={e => setEmailAddress(e.target.value)}
+              placeholder="agent@company.com"
+            />
+          </FormField>
 
-                  {/* Toggles */}
-                  <div className="form-group" style={{ gridColumn: '1 / -1', background: '#F8FAFC', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={emailNotification}
-                        onChange={e => setEmailNotification(e.target.checked)}
-                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
-                      />
-                      <div>
-                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Send Email Notification on New Voicemail</strong>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Dispatches SMTP alert when caller leaves a message</div>
-                      </div>
-                    </label>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={emailAttachFile}
-                        onChange={e => setEmailAttachFile(e.target.checked)}
-                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
-                      />
-                      <div>
-                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Attach Audio Recording (.wav) to Email</strong>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Enables listening to voicemail directly from mobile email</div>
-                      </div>
-                    </label>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={deleteAfterEmail}
-                        onChange={e => setDeleteAfterEmail(e.target.checked)}
-                        style={{ accentColor: '#FF5430', width: '16px', height: '16px' }}
-                      />
-                      <div>
-                        <strong style={{ fontSize: '12.5px', color: '#111827' }}>Delete from Server After Successful Email</strong>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>Prevents mailbox disk quota exhaustion</div>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Voicemail Settings'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+          <Stack gap="2">
+            <Checkbox
+              label="Send Email Notification on New Voicemail"
+              checked={emailNotification}
+              onChange={e => setEmailNotification(e.target.checked)}
+            />
+            <Checkbox
+              label="Attach Audio Recording (.wav) to Email"
+              checked={emailAttachFile}
+              onChange={e => setEmailAttachFile(e.target.checked)}
+            />
+            <Checkbox
+              label="Delete from Server After Successful Email"
+              checked={deleteAfterEmail}
+              onChange={e => setDeleteAfterEmail(e.target.checked)}
+            />
+          </Stack>
+        </Stack>
+      </Modal>
+    </PageContainer>
   );
 };
