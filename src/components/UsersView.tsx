@@ -4,10 +4,11 @@ import type { User as UserType } from '../types';
 import { UserPlus, RefreshCw, Trash2, Settings } from 'lucide-react';
 
 // Design System imports
-import { PageHeader } from './layout/PageHeader';
+import { PageHeader } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import { Button, Card, Badge, Alert, Modal, FormField, Input, Select, Checkbox } from './ui';
-import { DataTable, Column, FilterBar } from './patterns';
+import { DataTable, FilterBar } from './patterns';
+import type { Column } from './patterns';
 
 const AVAILABLE_MODULES = [
   { id: 'dashboard', label: 'Dashboard Overview', icon: 'LayoutDashboard', desc: 'System status & KPI widgets' },
@@ -154,9 +155,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     if (!permModalUser) return;
     setSavingPerms(true);
     try {
-      await apiService.updateUser(token, permModalUser.id, {
-        allowed_modules: editModules
-      });
+      await apiService.updateUserPermissions(token, permModalUser.id, editModules);
       setPermModalUser(null);
       fetchData();
     } catch (err: any) {
@@ -197,10 +196,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'TENANT_ADMIN';
 
   const columns: Column<UserType>[] = [
-    { key: 'username', header: 'Username', sortable: true, render: (u) => <span className="font-bold">{u.username}</span> },
+    { key: 'username', header: 'Username', sortable: true, render: (u: UserType) => <span className="font-bold">{u.username}</span> },
     { key: 'email', header: 'Email' },
-    { key: 'role', header: 'Role', render: (u) => <Badge variant="primary">{u.role}</Badge> },
-    { key: 'tenant_domain', header: 'Tenant Domain', render: (u) => <span className="font-mono">{u.tenant_domain || 'Global'}</span> },
+    { key: 'role', header: 'Role', render: (u: UserType) => <Badge variant="primary">{u.role}</Badge> },
+    { key: 'tenant_domain', header: 'Tenant Domain', render: (u: UserType) => <span className="font-mono">{u.tenant_domain || 'Global'}</span> },
     { key: 'status', header: 'Status', render: () => <Badge variant="success">Active</Badge> },
   ];
 
@@ -271,7 +270,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
           isLoading={loading}
           emptyTitle="No users found"
           emptyDescription="Provision a new user account to get started."
-          actions={(u) => (
+          actions={(u: UserType) => (
             <Inline gap="1" justify="flex-end">
               {u.role === 'SUB_ADMIN' && (
                 <Button variant="ghost" size="sm" onClick={() => openPermModal(u)} title="Configure Permissions">

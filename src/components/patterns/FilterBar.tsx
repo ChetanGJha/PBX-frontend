@@ -2,16 +2,16 @@ import React from 'react';
 import { SearchInput } from './Patterns';
 
 export interface FilterBarProps {
-  searchValue: string;
-  onSearchChange: (value: string) => void;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
   filters?: React.ReactNode;
   actions?: React.ReactNode;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
-  searchValue,
-  onSearchChange,
+  searchValue = '',
+  onSearchChange = () => {},
   searchPlaceholder = 'Search records...',
   filters,
   actions,
@@ -28,7 +28,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '280px' }}>
-        <SearchInput value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} />
+        {(searchValue !== undefined || !filters) && (
+          <SearchInput value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} />
+        )}
         {filters}
       </div>
 

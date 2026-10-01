@@ -74,11 +74,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
       {/* Grid: Active Admin Profile & Platform Access Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Super Admin Profile Card */}
-        <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Card className="flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div style={{ padding: '8px', backgroundColor: 'var(--pbx-color-primary-100)', color: 'var(--pbx-action-primary)', borderRadius: 'var(--pbx-radius-md)' }}>
+                <div className="p-2 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] rounded-lg">
                   <UserCheck size={20} />
                 </div>
                 <div>
@@ -128,11 +128,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
         </Card>
 
         {/* Platform Access Controls Card */}
-        <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <Card className="flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div style={{ padding: '8px', backgroundColor: 'var(--pbx-bg-subtle)', color: 'var(--pbx-text-primary)', borderRadius: 'var(--pbx-radius-md)' }}>
+                <div className="p-2 bg-[var(--pbx-bg-subtle)] text-[var(--pbx-text-primary)] rounded-lg">
                   <Lock size={20} />
                 </div>
                 <div>
@@ -146,7 +146,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <Server size={16} color="#FF5430" />
+                  <Server size={16} className="text-[var(--pbx-accent-primary)]" />
                   <span>Multi-Tenant Isolation</span>
                 </div>
                 <Badge variant="success">100% Enforced</Badge>
@@ -154,7 +154,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
 
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <Cpu size={16} color="#FF5430" />
+                  <Cpu size={16} className="text-[var(--pbx-accent-primary)]" />
                   <span>FreeSWITCH Media Engine</span>
                 </div>
                 <Badge variant="primary">Full Control</Badge>
@@ -162,7 +162,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
 
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <Database size={16} color="#059669" />
+                  <Database size={16} className="text-emerald-600" />
                   <span>PostgreSQL & Redis DB</span>
                 </div>
                 <Badge variant="success">Connected</Badge>
@@ -170,7 +170,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
 
               <div className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2 text-slate-500">
-                  <ShieldCheck size={16} color="#059669" />
+                  <ShieldCheck size={16} className="text-emerald-600" />
                   <span>API Rate Limiting & Auth</span>
                 </div>
                 <Badge variant="success">Active</Badge>
@@ -183,7 +183,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
       {/* Bootstrap Additional Admin Account Card */}
       <Card>
         <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-          <div style={{ padding: '8px', backgroundColor: 'var(--pbx-color-primary-100)', color: 'var(--pbx-action-primary)', borderRadius: 'var(--pbx-radius-md)' }}>
+          <div className="p-2 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] rounded-lg">
             <UserPlus size={20} />
           </div>
           <div>
@@ -227,7 +227,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    className="bg-transparent border-0 cursor-pointer p-0"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -239,7 +239,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
 
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-slate-500">
-              <KeyRound size={16} color="#FF5430" />
+              <KeyRound size={16} className="text-[var(--pbx-accent-primary)]" />
               <span>Seeds a root platform administrator with global configuration permissions.</span>
             </div>
             <Button type="submit" isLoading={loading} variant="primary">

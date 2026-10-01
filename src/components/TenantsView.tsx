@@ -4,10 +4,11 @@ import type { Tenant, User } from '../types';
 import { Plus, RefreshCw, Edit2, Trash2 } from 'lucide-react';
 
 // Design System imports
-import { PageHeader } from './layout/PageHeader';
+import { PageHeader } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import { Button, Card, Badge, Alert, Modal, FormField, Input } from './ui';
-import { DataTable, Column, FilterBar } from './patterns';
+import { DataTable, FilterBar } from './patterns';
+import type { Column } from './patterns';
 
 interface TenantsViewProps {
   token: string;
@@ -129,12 +130,12 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
   );
 
   const columns: Column<Tenant>[] = [
-    { key: 'name', header: 'Tenant Name', sortable: true, render: (t) => <span className="font-bold">{t.name}</span> },
-    { key: 'domain', header: 'Web Domain', render: (t) => <span className="font-mono">{t.domain}</span> },
-    { key: 'sip_domain', header: 'SIP Domain', render: (t) => <span className="font-mono">{t.sip_domain}</span> },
+    { key: 'name', header: 'Tenant Name', sortable: true, render: (t: Tenant) => <span className="font-bold">{t.name}</span> },
+    { key: 'domain', header: 'Web Domain', render: (t: Tenant) => <span className="font-mono">{t.domain}</span> },
+    { key: 'sip_domain', header: 'SIP Domain', render: (t: Tenant) => <span className="font-mono">{t.sip_domain}</span> },
     { key: 'timezone', header: 'Timezone' },
-    { key: 'max_extensions', header: 'Max Ext', render: (t) => <span className="font-semibold">{t.max_extensions}</span> },
-    { key: 'max_concurrent_calls', header: 'Max Calls', render: (t) => <span className="font-semibold">{t.max_concurrent_calls}</span> },
+    { key: 'max_extensions', header: 'Max Ext', render: (t: Tenant) => <span className="font-semibold">{t.max_extensions}</span> },
+    { key: 'max_concurrent_calls', header: 'Max Calls', render: (t: Tenant) => <span className="font-semibold">{t.max_concurrent_calls}</span> },
     { key: 'enabled', header: 'Status', render: () => <Badge variant="success">Active</Badge> },
   ];
 
@@ -175,7 +176,7 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
           isLoading={loading}
           emptyTitle="No tenants found"
           emptyDescription='Click "Add New Tenant" to provision a tenant domain.'
-          actions={(t) => (
+          actions={(t: Tenant) => (
             <Inline gap="1" justify="flex-end">
               <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)}>
                 <Edit2 size={14} />

@@ -3,39 +3,42 @@ import { TerrixLogo } from './TerrixLogo';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 import { LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
+
+// Design System imports
 import { Button, Input, FormField } from './ui';
 
 interface LoginScreenProps {
   onLoginSuccess: (token: string, user: User) => void;
+  initialMessage?: { text: string; type: 'success' | 'error' } | null;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initialMessage }) => {
   const [isSeeding, setIsSeeding] = useState(false);
-
-  // Login state
-  const [loginUser, setLoginUser] = useState('superadmin');
-  const [loginPassword, setLoginPassword] = useState('SuperSecurePassword123!');
-
-  // Seed state
-  const [seedUser, setSeedUser] = useState('superadmin');
-  const [seedEmail, setSeedEmail] = useState('admin@pbx.com');
-  const [seedPassword, setSeedPassword] = useState('SuperSecurePassword123!');
-
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(initialMessage || null);
+
+  // Login form state
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // Seed form state
+  const [seedUser, setSeedUser] = useState('superadmin');
+  const [seedEmail, setSeedEmail] = useState('admin@pbx.local');
+  const [seedPassword, setSeedPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
     try {
-      const res = await apiService.login({
-        username_or_email: loginUser,
-        password: loginPassword,
-      });
+      const res = await apiService.login({ username_or_email: loginUser, password: loginPassword });
       onLoginSuccess(res.access_token, res.user);
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+      setMessage({
+        text: err.message || 'Invalid username or password. Please try again.',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -45,27 +48,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
     try {
-      const res = await apiService.seedSuperAdmin({
+      await apiService.seedSuperAdmin({
         username: seedUser,
         email: seedEmail,
-        password: seedPassword,
+        password: seedPassword
       });
-      setMessage({ type: 'success', text: `SuperAdmin seeded successfully! User ID: ${res.user_id}` });
+      setMessage({
+        text: 'SuperAdmin account bootstrapped successfully! You can now log in.',
+        type: 'success'
+      });
       setIsSeeding(false);
+      setLoginUser(seedUser);
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+      setMessage({
+        text: err.message || 'Failed to bootstrap SuperAdmin account.',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section id="loginScreen">
-      <div className="login-box">
-        {/* Left Visual Pane */}
-        <div className="login-visual">
-          <div className="space-y-6 text-left">
+    <section className="login-screen-wrap">
+      <div className="login-card">
+        {/* Left Visual Area */}
+        <div className="login-visual-area">
+          <div className="login-visual-content">
             <TerrixLogo size="large" />
 
             <div className="space-y-2 mt-6">
@@ -79,7 +90,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
             <div className="space-y-2.5 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#FF5430] shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-[var(--pbx-accent-primary)] shrink-0" />
                 <span>100% Isolated Tenant Domains</span>
               </div>
               <div className="flex items-center gap-2">
@@ -152,7 +163,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   isLoading={loading}
                   variant="primary"
                   size="lg"
-                  style={{ width: '100%', marginTop: '8px' }}
+                  className="w-full mt-2"
                 >
                   Log In
                 </Button>
@@ -191,7 +202,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                   isLoading={loading}
                   variant="primary"
                   size="lg"
-                  style={{ width: '100%', marginTop: '8px' }}
+                  className="w-full mt-2"
                 >
                   Seed SuperAdmin Account
                 </Button>
@@ -202,7 +213,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <button
                 type="button"
                 onClick={() => setIsSeeding(!isSeeding)}
-                className="text-xs font-bold text-[#FF5430] hover:underline bg-transparent border-0 cursor-pointer"
+                className="text-xs font-bold text-[var(--pbx-accent-primary)] hover:underline bg-transparent border-0 cursor-pointer"
               >
                 {isSeeding ? '← Back to Login' : 'Need to bootstrap SuperAdmin account? Click here'}
               </button>

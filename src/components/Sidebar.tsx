@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
 
       {/* Sidebar Footer */}
       <div className="sidebar-footer">
-        <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 px-2 py-1">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
           <Badge variant="success" size="sm">
             Ready
           </Badge>

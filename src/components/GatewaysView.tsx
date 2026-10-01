@@ -2,8 +2,18 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { Link } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Link as LinkIcon } from 'lucide-react';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Grid } from './layout/Stack';
+import {
+  Button,
+  Select,
+  Input,
+  Badge,
+  Modal,
+  FormField
+} from './ui';
+import { DataTable } from './patterns';
 
 interface GatewaysViewProps {
   token: string;
@@ -62,141 +72,103 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
     }
   };
 
-  // Combine Sofia Gateways and Carrier SIP Trunks into unified selector list
   const availableTrunksAndGateways = [
     ...trunks.map(t => ({ id: t.id, name: `${t.name} (${t.host}) [SIP Trunk]` })),
     ...gateways.map(g => ({ id: g.id, name: `${g.name} (${g.proxy}) [Sofia Gateway]` }))
   ];
 
+  const columns = [
+    { key: 'name', header: 'Gateway / Trunk Name', sortable: true, render: (g: any) => <strong className="text-[var(--pbx-text-primary)]">{g.name}</strong> },
+    { key: 'proxy', header: 'SIP Proxy / Host', render: (g: any) => <code className="code-box">{g.proxy}</code> },
+    { key: 'tenant_name', header: 'Assigned Tenant', render: (g: any) => g.tenant_name ? <Badge variant="warning">{g.tenant_name}</Badge> : <Badge variant="neutral">GLOBAL TRUNK</Badge> },
+    { key: 'codecs', header: 'Codecs' },
+    { key: 'register', header: 'Registration', render: (g: any) => g.register ? <Badge variant="success">REGISTERED</Badge> : <Badge variant="neutral">STATIC IP</Badge> },
+    { key: 'status', header: 'Status', render: () => <Badge variant="success">ONLINE</Badge> },
+  ];
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">FreeSWITCH Sofia Core</div>
-          <h1 className="page-title">SIP Trunks & Gateway Assignments</h1>
-          <p className="page-sub">Assign carrier SIP trunks to tenants and specify inbound/outbound priority rules</p>
-        </div>
-        <div>
-          {user?.role === 'SUPER_ADMIN' && (
-            <button className="btn-primary" onClick={() => setShowAssignModal(true)}>
-              <Link size={16} /> Assign SIP Trunk to Tenant
-            </button>
-          )}
-        </div>
-      </div>
+    <PageContainer
+      title="SIP Trunks & Gateway Assignments"
+      subtitle="Assign carrier SIP trunks to tenants and specify inbound/outbound priority rules"
+      eyebrow="FreeSWITCH Sofia Core"
+      actions={
+        user?.role === 'SUPER_ADMIN' ? (
+          <Button variant="primary" onClick={() => setShowAssignModal(true)} leftIcon={<LinkIcon size={16} />}>
+            Assign SIP Trunk to Tenant
+          </Button>
+        ) : undefined
+      }
+    >
+      <Stack gap="6">
+        <DataTable
+          columns={columns}
+          data={gateways}
+          isLoading={loading}
+          emptyTitle="No gateways configured"
+        />
+      </Stack>
 
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Gateway / Trunk Name</th>
-                <th>SIP Proxy / Host</th>
-                <th>Assigned Tenant</th>
-                <th>Codecs</th>
-                <th>Registration</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading Sofia Gateways...</td></tr>
-              ) : gateways.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">No gateways configured</td></tr>
-              ) : (
-                gateways.map((g) => (
-                  <tr key={g.id}>
-                    <td><div style={{ fontWeight: 700, color: '#111827' }}>{g.name}</div></td>
-                    <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{g.proxy}</code></td>
-                    <td>
-                      {g.tenant_name ? (
-                        <span className="terrix-badge orange">{g.tenant_name}</span>
-                      ) : (
-                        <span className="terrix-badge grey">GLOBAL TRUNK</span>
-                      )}
-                    </td>
-                    <td>{g.codecs}</td>
-                    <td>
-                      {g.register ? (
-                        <span className="terrix-badge green">REGISTERED</span>
-                      ) : (
-                        <span className="terrix-badge grey">STATIC IP</span>
-                      )}
-                    </td>
-                    <td><span className="terrix-badge green">ONLINE</span></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign SIP Trunk / Gateway to Tenant"
+        subtitle="Select provider SIP Trunk and configure tenant routing bounds"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAssignModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleAssign}>Save Assignment</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAssign}>
+          <Stack gap="4">
+            <Grid cols={2} gap="4">
+              <FormField label="Target Tenant">
+                <Select
+                  value={assignForm.tenant_id}
+                  onChange={(e) => setAssignForm({ ...assignForm, tenant_id: e.target.value })}
+                >
+                  <option value="">-- Select Tenant --</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                  ))}
+                </Select>
+              </FormField>
 
-      {showAssignModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon"><Link size={20} /></div>
-              <div>
-                <h3>Assign SIP Trunk / Gateway to Tenant</h3>
-                <p>Select provider SIP Trunk and configure tenant routing bounds</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowAssignModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleAssign}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Target Tenant</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Select Tenant --' },
-                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                      ]}
-                      value={assignForm.tenant_id}
-                      onChange={(val) => setAssignForm({ ...assignForm, tenant_id: val })}
-                    />
-                  </div>
+              <FormField label="SIP Trunk Provider / Gateway">
+                <Select
+                  value={assignForm.gateway_id}
+                  onChange={(e) => setAssignForm({ ...assignForm, gateway_id: e.target.value })}
+                >
+                  <option value="">-- Select SIP Trunk Provider --</option>
+                  {availableTrunksAndGateways.map(item => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </Select>
+              </FormField>
 
-                  {/* Requirement 3: Shows SIP Trunk Name from SIP Trunks Section */}
-                  <div className="form-group">
-                    <label className="form-label">SIP Trunk Provider / Gateway</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Select SIP Trunk Provider --' },
-                        ...availableTrunksAndGateways.map(item => ({ value: item.id, label: item.name }))
-                      ]}
-                      value={assignForm.gateway_id}
-                      onChange={(val) => setAssignForm({ ...assignForm, gateway_id: val })}
-                    />
-                  </div>
+              <FormField label="Call Direction">
+                <Select
+                  value={assignForm.direction}
+                  onChange={(e) => setAssignForm({ ...assignForm, direction: e.target.value })}
+                >
+                  <option value="inbound_outbound">Inbound & Outbound</option>
+                  <option value="inbound_only">Inbound Only</option>
+                  <option value="outbound_only">Outbound Only</option>
+                </Select>
+              </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label">Call Direction</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'inbound_outbound', label: 'Inbound & Outbound' },
-                        { value: 'inbound_only', label: 'Inbound Only' },
-                        { value: 'outbound_only', label: 'Outbound Only' },
-                      ]}
-                      value={assignForm.direction}
-                      onChange={(val) => setAssignForm({ ...assignForm, direction: val })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Priority Level (1 = Highest)</label>
-                    <input type="number" className="form-control" value={assignForm.priority} onChange={e => setAssignForm({...assignForm, priority: parseInt(e.target.value) || 1})} />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowAssignModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Assignment</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+              <FormField label="Priority Level (1 = Highest)">
+                <Input
+                  type="number"
+                  value={String(assignForm.priority)}
+                  onChange={e => setAssignForm({ ...assignForm, priority: parseInt(e.target.value) || 1 })}
+                />
+              </FormField>
+            </Grid>
+          </Stack>
+        </form>
+      </Modal>
+    </PageContainer>
   );
 };

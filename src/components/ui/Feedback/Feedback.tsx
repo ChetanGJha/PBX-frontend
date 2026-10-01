@@ -90,12 +90,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 export interface AlertProps {
   variant?: 'info' | 'success' | 'warning' | 'danger';
   title?: string;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }
 
 export const Alert: React.FC<AlertProps> = ({
   variant = 'info',
   title,
+  icon,
   children,
 }) => {
   const styles: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode }> = {
@@ -121,7 +123,7 @@ export const Alert: React.FC<AlertProps> = ({
         fontSize: '13px',
       }}
     >
-      <div style={{ marginTop: '2px', flexShrink: 0 }}>{current.icon}</div>
+      <div style={{ marginTop: '2px', flexShrink: 0 }}>{icon || current.icon}</div>
       <div style={{ flex: 1 }}>
         {title && <div style={{ fontWeight: 700, marginBottom: '2px' }}>{title}</div>}
         <div>{children}</div>

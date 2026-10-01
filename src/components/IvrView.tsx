@@ -438,7 +438,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
                 <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
                   {uploadingTarget === 'modal_create' ? 'Uploading...' : 'Upload File'}
                 </Button>
-                <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleModalAudioUpload('create', e)} />
+                <input type="file" accept="audio/*" className="hidden" onChange={e => handleModalAudioUpload('create', e)} />
               </label>
             </Inline>
           </FormField>
@@ -514,7 +514,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
                 <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
                   {uploadingTarget === 'modal_edit' ? 'Uploading...' : 'Upload Audio'}
                 </Button>
-                <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleModalAudioUpload('edit', e)} />
+                <input type="file" accept="audio/*" className="hidden" onChange={e => handleModalAudioUpload('edit', e)} />
               </label>
             </Inline>
           </FormField>

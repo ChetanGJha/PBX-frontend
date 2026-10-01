@@ -27,6 +27,7 @@ import { BusinessHoursView } from './components/BusinessHoursView';
 import { EmailSettingsView } from './components/EmailSettingsView';
 import { ToastProvider } from './components/ToastProvider';
 import { DesignSystemShowcase } from './components/DesignSystemShowcase';
+import { Modal, Button } from './components/ui';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
 
@@ -173,7 +174,7 @@ export const App: React.FC = () => {
 
   return (
     <ToastProvider>
-      <div id="appScreen" style={{ display: 'block' }}>
+      <div id="appScreen" className="block">
         <Sidebar
           collapsed={collapsed}
           activeTab={activeTab}
@@ -315,90 +316,28 @@ export const App: React.FC = () => {
       </div>
 
       {/* ── SESSION EXPIRED MODAL OVERLAY ──────────────────────────── */}
-      {showSessionExpiredModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 99999,
-            padding: '20px'
-          }}
-        >
-          <div
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              maxWidth: '440px',
-              width: '100%',
-              padding: '32px 28px 24px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              textAlign: 'center',
-              border: '1px solid #E2E8F0'
+      <Modal
+        isOpen={showSessionExpiredModal}
+        onClose={() => {
+          setShowSessionExpiredModal(false);
+          handleLogout();
+        }}
+        title="Session Expired"
+        subtitle="Your authentication session has expired or become invalid. Please log out and re-authenticate to continue using the PBX administration portal."
+        footer={
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowSessionExpiredModal(false);
+              handleLogout();
             }}
+            leftIcon={<LogOut size={16} />}
+            className="w-full justify-center"
           >
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: '#FEF2F2',
-                border: '1px solid #FEE2E2',
-                color: '#EF4444',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
-              }}
-            >
-              <LogOut size={32} />
-            </div>
-
-            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-              Session Expired
-            </h3>
-
-            <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.6, marginBottom: '24px' }}>
-              Your authentication session has expired or become invalid. Please log out and re-authenticate to continue using the PBX administration portal.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSessionExpiredModal(false);
-                  handleLogout();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px 20px',
-                  backgroundColor: '#FF5430',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(255, 84, 48, 0.3)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <LogOut size={16} />
-                <span>Log Out & Sign In Again</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            Log Out & Sign In Again
+          </Button>
+        }
+      />
     </ToastProvider>
   );
 };
