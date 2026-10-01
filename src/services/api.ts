@@ -945,7 +945,10 @@ export const apiService = {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok && res.status !== 204) throw new Error('Failed to delete business hours schedule');
+    if (!res.ok && res.status !== 204) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to delete business hours schedule');
+    }
     return true;
   },
 
