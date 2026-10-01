@@ -78,6 +78,7 @@ export const TableCell: React.FC<TableCellProps> = ({
         fontSize: header ? '11px' : '13px',
         textTransform: header ? 'uppercase' : 'none',
         letterSpacing: header ? '0.04em' : 'normal',
+        textAlign: 'center',
         ...style,
       }}
       {...props}
@@ -109,11 +110,11 @@ export const SortableHeader: React.FC<SortableHeaderProps> = ({
   return (
     <TableCell
       header
-      style={{ cursor: 'pointer', userSelect: 'none', ...style }}
+      style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center', ...style }}
       onClick={() => onSort && onSort(sortKey)}
       {...props}
     >
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
         <span>{children}</span>
         {isSorted ? (
           sortOrder === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />

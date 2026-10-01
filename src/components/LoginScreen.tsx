@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TerrixLogo } from './TerrixLogo';
+import logoSvg from '../assets/Logo.svg';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 import { LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -17,13 +17,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(initialMessage || null);
 
-  // Login form state
+  // Login form state (empty initial values)
   const [loginUser, setLoginUser] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Seed form state
-  const [seedUser, setSeedUser] = useState('superadmin');
-  const [seedEmail, setSeedEmail] = useState('admin@pbx.local');
+  // Seed form state (empty initial values)
+  const [seedUser, setSeedUser] = useState('');
+  const [seedEmail, setSeedEmail] = useState('');
   const [seedPassword, setSeedPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -77,9 +77,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
         {/* Left Visual Area */}
         <div className="login-visual-area">
           <div className="login-visual-content">
-            <TerrixLogo size="large" />
+            <img src={logoSvg} alt="Terrix Logo" className="w-16 h-16 rounded-xl bg-white p-2 mb-4 shadow-sm" />
 
-            <div className="space-y-2 mt-6">
+            <div className="space-y-2 mt-4">
               <h2 className="text-xl font-extrabold text-white tracking-tight">
                 Enterprise Multi-Tenant PBX
               </h2>
@@ -90,7 +90,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
 
             <div className="space-y-2.5 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[var(--pbx-accent-primary)] shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-[var(--pbx-action-primary)] shrink-0" />
                 <span>100% Isolated Tenant Domains</span>
               </div>
               <div className="flex items-center gap-2">
@@ -144,6 +144,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     value={loginUser}
                     onChange={(e) => setLoginUser(e.target.value)}
                     placeholder="Enter your username or email"
+                    autoComplete="username"
                     required
                   />
                 </FormField>
@@ -154,6 +155,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                     required
                   />
                 </FormField>
@@ -175,6 +177,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="text"
                     value={seedUser}
                     onChange={(e) => setSeedUser(e.target.value)}
+                    autoComplete="username"
                     required
                   />
                 </FormField>
@@ -184,6 +187,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="email"
                     value={seedEmail}
                     onChange={(e) => setSeedEmail(e.target.value)}
+                    autoComplete="email"
                     required
                   />
                 </FormField>
@@ -193,6 +197,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="password"
                     value={seedPassword}
                     onChange={(e) => setSeedPassword(e.target.value)}
+                    autoComplete="new-password"
                     required
                   />
                 </FormField>
@@ -208,16 +213,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                 </Button>
               </form>
             )}
-
-            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSeeding(!isSeeding)}
-                className="text-xs font-bold text-[var(--pbx-accent-primary)] hover:underline bg-transparent border-0 cursor-pointer"
-              >
-                {isSeeding ? '← Back to Login' : 'Need to bootstrap SuperAdmin account? Click here'}
-              </button>
-            </div>
           </div>
         </div>
       </div>

@@ -16,8 +16,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// Design System imports
-import { PageHeader } from './layout/PageContainer';
+import { PageContainer, PageHeader } from './layout/PageContainer';
+import { Stack, Grid } from './layout/Stack';
 import { Card, StatCard, Heading, Text, Button, Badge } from './ui';
 
 interface DashboardViewProps {
@@ -89,99 +89,100 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
   };
 
   return (
-    <div className="space-y-8">
-      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
-      <PageHeader
-        title={isSuper ? 'Global System Administration' : `Tenant Dashboard (${(user as any)?.tenant_name || user?.tenant_domain || 'Tenant Domain'})`}
-        subtitle="Platform health, real-time telephony status, and resource usage overview."
-        actions={
-          <Badge variant={status.database === 'connected' ? 'success' : 'danger'}>
-            {status.database === 'connected' ? (
-              <span className="flex items-center gap-1.5"><CheckCircle size={14} /> PBX Engine Online</span>
-            ) : (
-              <span className="flex items-center gap-1.5"><AlertCircle size={14} /> PBX Engine Offline</span>
-            )}
-          </Badge>
-        }
-      />
+    <PageContainer>
+      <Stack gap="6">
+        {/* ── HEADER ───────────────────────────────────────────────────────────── */}
+        <PageHeader
+          title={isSuper ? 'Global System Administration' : `Tenant Dashboard (${(user as any)?.tenant_name || user?.tenant_domain || 'Tenant Domain'})`}
+          subtitle="Platform health, real-time telephony status, and resource usage overview."
+          actions={
+            <Badge variant={status.database === 'connected' ? 'success' : 'danger'}>
+              {status.database === 'connected' ? (
+                <span className="flex items-center gap-1.5"><CheckCircle size={14} /> PBX Engine Online</span>
+              ) : (
+                <span className="flex items-center gap-1.5"><AlertCircle size={14} /> PBX Engine Offline</span>
+              )}
+            </Badge>
+          }
+        />
 
-      {/* ── METRICS GRID ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isSuper ? (
-          <>
-            <div className="cursor-pointer" onClick={() => setActiveTab('tenants')}>
+        {/* ── METRICS GRID ────────────────────────────────────────────────────── */}
+        <Grid cols={4} gap="6">
+          {isSuper ? (
+            <>
+              <div className="cursor-pointer" onClick={() => setActiveTab('tenants')}>
+                <StatCard
+                  title="Active Tenants"
+                  value={tenantCount}
+                  icon={<Building2 size={20} />}
+                  trend="Multi-Tenant Domain Isolations"
+                />
+              </div>
+
+              <div className="cursor-pointer" onClick={() => setActiveTab('users')}>
+                <StatCard
+                  title="Total Users"
+                  value={userCount}
+                  icon={<Users size={20} />}
+                  trend="RBAC Platform Accounts"
+                />
+              </div>
+
+              <div className="cursor-pointer" onClick={() => setActiveTab('trunks')}>
+                <StatCard
+                  title="Carrier Trunks"
+                  value={gatewayCount}
+                  icon={<ArrowLeftRight size={20} />}
+                  trend="Active Carrier Routes"
+                />
+              </div>
+
               <StatCard
-                title="Active Tenants"
-                value={tenantCount}
-                icon={<Building2 size={20} />}
-                trend="Multi-Tenant Domain Isolations"
+                title="Media Core & DB"
+                value={status.database === 'connected' ? 'Connected' : 'Offline'}
+                icon={<Server size={20} />}
+                trend="FreeSWITCH 1.10.x Active"
               />
-            </div>
+            </>
+          ) : (
+            <>
+              <div className="cursor-pointer" onClick={() => setActiveTab('extensions')}>
+                <StatCard
+                  title="Active Extensions"
+                  value={extensionCount}
+                  icon={<Phone size={20} />}
+                  trend="SIP & WebRTC Active"
+                />
+              </div>
 
-            <div className="cursor-pointer" onClick={() => setActiveTab('users')}>
+              <div className="cursor-pointer" onClick={() => setActiveTab('tenant-trunks')}>
+                <StatCard
+                  title="Active Gateways"
+                  value={gatewayCount}
+                  icon={<ArrowLeftRight size={20} />}
+                  trend="Assigned In/Out Trunks"
+                />
+              </div>
+
               <StatCard
-                title="Total Users"
-                value={userCount}
-                icon={<Users size={20} />}
-                trend="RBAC Platform Accounts"
+                title="Assigned DIDs"
+                value={didCount}
+                icon={<Hash size={20} />}
+                trend="Inbound Phone Numbers"
               />
-            </div>
 
-            <div className="cursor-pointer" onClick={() => setActiveTab('trunks')}>
               <StatCard
-                title="Carrier Trunks"
-                value={gatewayCount}
-                icon={<ArrowLeftRight size={20} />}
-                trend="Active Carrier Routes"
+                title="PBX Engine Status"
+                value={status.database === 'connected' ? 'Operational' : 'Degraded'}
+                icon={<Server size={20} />}
+                trend="mod_xml_curl Ready"
               />
-            </div>
+            </>
+          )}
+        </Grid>
 
-            <StatCard
-              title="Media Core & DB"
-              value={status.database === 'connected' ? 'Connected' : 'Offline'}
-              icon={<Server size={20} />}
-              trend="FreeSWITCH 1.10.x Active"
-            />
-          </>
-        ) : (
-          <>
-            <div className="cursor-pointer" onClick={() => setActiveTab('extensions')}>
-              <StatCard
-                title="Active Extensions"
-                value={extensionCount}
-                icon={<Phone size={20} />}
-                trend="SIP & WebRTC Active"
-              />
-            </div>
-
-            <div className="cursor-pointer" onClick={() => setActiveTab('tenant-trunks')}>
-              <StatCard
-                title="Active Gateways"
-                value={gatewayCount}
-                icon={<ArrowLeftRight size={20} />}
-                trend="Assigned In/Out Trunks"
-              />
-            </div>
-
-            <StatCard
-              title="Assigned DIDs"
-              value={didCount}
-              icon={<Hash size={20} />}
-              trend="Inbound Phone Numbers"
-            />
-
-            <StatCard
-              title="PBX Engine Status"
-              value={status.database === 'connected' ? 'Operational' : 'Degraded'}
-              icon={<Server size={20} />}
-              trend="mod_xml_curl Ready"
-            />
-          </>
-        )}
-      </div>
-
-      {/* ── QUICK NAVIGATION CARDS ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* ── QUICK NAVIGATION CARDS ───────────────────────────────────────────── */}
+        <Grid cols={3} gap="6">
         {isSuper ? (
           <>
             <Card className="flex flex-col justify-between gap-4">
@@ -317,7 +318,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             )}
           </>
         )}
-      </div>
-    </div>
+        </Grid>
+      </Stack>
+    </PageContainer>
   );
 };

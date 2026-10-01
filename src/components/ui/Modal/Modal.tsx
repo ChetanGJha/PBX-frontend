@@ -134,14 +134,15 @@ export const Modal: React.FC<ModalProps> = ({
         {(title || subtitle) && (
           <div
             style={{
-              padding: '20px 24px',
+              padding: '24px',
               borderBottom: '1px solid var(--pbx-border-default)',
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               justifyContent: 'space-between',
+              gap: '16px',
             }}
           >
-            <div>
+            <div style={{ flex: 1 }}>
               {title && <Heading id={titleId} level={3}>{title}</Heading>}
               {subtitle && (
                 <p style={{ fontSize: '13px', color: 'var(--pbx-text-secondary)', marginTop: '4px', margin: '4px 0 0 0' }}>
@@ -156,11 +157,12 @@ export const Modal: React.FC<ModalProps> = ({
                 border: 'none',
                 color: 'var(--pbx-text-muted)',
                 cursor: 'pointer',
-                padding: '4px',
+                padding: '6px',
                 borderRadius: 'var(--pbx-radius-md)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
               aria-label="Close dialog"
             >
@@ -174,7 +176,7 @@ export const Modal: React.FC<ModalProps> = ({
         {footer && (
           <div
             style={{
-              padding: '16px 24px',
+              padding: '24px',
               borderTop: '1px solid var(--pbx-border-default)',
               backgroundColor: 'var(--pbx-bg-subtle)',
               borderBottomLeftRadius: 'var(--pbx-radius-xl)',

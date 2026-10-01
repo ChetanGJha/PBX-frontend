@@ -6,6 +6,7 @@ import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
+  Card,
   Input,
   Select,
   FormField,
@@ -88,6 +89,61 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
       setAudioFiles(updatedAudios);
     } catch (e) {}
     return res.file_name;
+  };
+
+  const handleCanvasGreetingUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeIvr) return;
+
+    try {
+      setUploadingTarget('canvas_greeting');
+      const fileName = await uploadAudioFile(file, 'ivr_greeting', activeIvr.tenant_id);
+      await apiService.updateIvr(token, activeIvr.id, { greeting_audio: fileName });
+      setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
+      loadData();
+    } catch (err: any) {
+      showErrorModal('Upload Failed', err.message || 'Failed to upload greeting audio');
+    } finally {
+      setUploadingTarget(null);
+    }
+  };
+
+  const handleCanvasGreetingChange = async (fileName: string) => {
+    if (!activeIvr) return;
+    try {
+      await apiService.updateIvr(token, activeIvr.id, { greeting_audio: fileName });
+      setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
+      loadData();
+    } catch (err: any) {
+      showErrorModal('Update Failed', err.message || 'Failed to update greeting audio');
+    }
+  };
+
+  const handleCardAudioUpload = async (dtmf_key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeIvr) return;
+
+    try {
+      setUploadingTarget('keypad_' + dtmf_key);
+      const fileName = await uploadAudioFile(file, 'ivr_prompt', activeIvr.tenant_id);
+      const payload = {
+        dtmf_key,
+        action_type: 'play_audio',
+        action_target: fileName
+      };
+      await apiService.upsertIvrNode(token, activeIvr.id, payload);
+      const updatedNodes = await apiService.getIvrNodes(token, activeIvr.id);
+      setActiveNodes(updatedNodes);
+    } catch (err: any) {
+      showErrorModal('Audio Upload Failed', err.message || 'Failed to upload audio file');
+    } finally {
+      setUploadingTarget(null);
+    }
+  };
+
+  const handleCardDrop = async (dtmf_key: string, actionType: string) => {
+    if (!activeIvr) return;
+    await handleCardActionChange(dtmf_key, actionType);
   };
 
   const handleModalAudioUpload = async (targetField: 'create' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,11 +555,42 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
             Select a keypad digit below to assign call routing targets (extensions, queues, voicemail, or audio playback).
           </Alert>
 
+          <Card padding="sm" className="bg-slate-50">
+            <Inline justify="between" align="center">
+              <div>
+                <div className="text-xs font-bold text-slate-900">IVR Entry Greeting Audio</div>
+                <div className="text-[11px] text-slate-500">Active prompt played when caller enters this IVR menu</div>
+              </div>
+              <Inline gap="2" align="center">
+                <Select
+                  value={activeIvr?.greeting_audio || ''}
+                  onChange={e => handleCanvasGreetingChange(e.target.value)}
+                  className="w-56"
+                >
+                  {audioFiles.map(a => (
+                    <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                  ))}
+                </Select>
+                <label className="cursor-pointer">
+                  <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
+                    {uploadingTarget === 'canvas_greeting' ? 'Uploading...' : 'Upload Prompt'}
+                  </Button>
+                  <input type="file" accept="audio/*" className="hidden" onChange={handleCanvasGreetingUpload} />
+                </label>
+              </Inline>
+            </Inline>
+          </Card>
+
           <Grid cols={3} gap="4">
             {dtmfKeys.map(key => {
               const node = activeNodes.find(n => n.dtmf_key === key);
               return (
-                <Stack key={key} gap="2">
+                <div
+                  key={key}
+                  onDragOver={(e: React.DragEvent) => e.preventDefault()}
+                  onDrop={() => handleCardDrop(key, 'extension')}
+                >
+                  <Stack gap="2">
                   <Inline gap="2">
                     <Badge variant={node ? 'primary' : 'neutral'}>Key {key}</Badge>
                     {node && (
@@ -552,14 +639,20 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
                       )}
 
                       {node.action_type === 'play_audio' && (
-                        <Select
-                          value={node.action_target}
-                          onChange={e => handleCardTargetChange(key, 'play_audio', e.target.value)}
-                        >
-                          {audioFiles.map(a => (
-                            <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
-                          ))}
-                        </Select>
+                        <Stack gap="1">
+                          <Select
+                            value={node.action_target}
+                            onChange={e => handleCardTargetChange(key, 'play_audio', e.target.value)}
+                          >
+                            {audioFiles.map(a => (
+                              <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                            ))}
+                          </Select>
+                          <label className="text-[10px] text-[var(--pbx-action-primary)] font-bold cursor-pointer inline-flex items-center gap-1 bg-amber-50 px-2 py-1 rounded border border-amber-200 justify-center">
+                            <UploadCloud size={12} /> {uploadingTarget === 'keypad_' + key ? 'Uploading...' : 'Upload New Audio'}
+                            <input type="file" accept="audio/*" className="hidden" onChange={e => handleCardAudioUpload(key, e)} />
+                          </label>
+                        </Stack>
                       )}
 
                       {node.action_type === 'voicemail' && (
@@ -572,8 +665,9 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
                     </>
                   )}
                 </Stack>
-              );
-            })}
+              </div>
+            );
+          })}
           </Grid>
         </Stack>
       </Modal>

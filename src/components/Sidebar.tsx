@@ -4,9 +4,10 @@ import {
   PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
   HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock, Mail, GitBranch
 } from 'lucide-react';
-import { TerrixLogo } from './TerrixLogo';
 import type { User as UserType } from '../types';
 import { Avatar, Badge } from './ui';
+
+import logoSvg from '../assets/Logo.svg';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -42,7 +43,6 @@ const navGroups: NavGroup[] = [
       { id: 'users',       label: 'Global Users',      icon: Users,           roles: ['SUPER_ADMIN'] },
       { id: 'trunks',      label: 'SIP Trunks',        icon: ArrowLeftRight,  roles: ['SUPER_ADMIN'] },
       { id: 'dids',        label: 'DID Inventory',     icon: Hash,            roles: ['SUPER_ADMIN'] },
-      { id: 'email-settings', label: 'SMTP & Email',     icon: Mail,            roles: ['SUPER_ADMIN'] },
     ],
   },
   {
@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       {/* Brand Header */}
       <div className="brand flex items-center gap-3">
-        <TerrixLogo size="small" />
+        <img src={logoSvg} alt="Terrix PBX Logo" className="w-8 h-8 rounded-lg object-contain" />
         <div className="brand-name">
           Terrix AI
           <small>PBX System</small>

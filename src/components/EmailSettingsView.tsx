@@ -370,153 +370,199 @@ export const EmailSettingsView: React.FC<EmailSettingsViewProps> = ({ token, use
 
         {/* Form Grid */}
         <form onSubmit={handleSave}>
-          <Grid cols={12} gap="6">
-            <div className="col-span-8 space-y-6">
-              <Card title="1. Server Connection & Security">
-                <Stack gap="4">
-                  <Grid cols={3} gap="4">
-                    <div className="col-span-2">
-                      <FormField label="SMTP Server Host" required>
-                        <Input
-                          value={smtpHost}
-                          onChange={(e) => setSmtpHost(e.target.value)}
-                          placeholder="e.g. smtp.gmail.com"
-                          required
-                        />
-                      </FormField>
-                    </div>
+          <Stack gap="6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column (8 Cols): Server Config & Credentials */}
+              <div className="lg:col-span-8 space-y-6">
+                <Card>
+                  <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                    <Globe size={18} className="text-[var(--pbx-action-primary)]" />
                     <div>
-                      <FormField label="Port" required>
-                        <Input
-                          type="number"
-                          value={String(smtpPort)}
-                          onChange={(e) => setSmtpPort(Number(e.target.value))}
-                          required
-                        />
-                      </FormField>
+                      <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">Outbound Server Configuration</h3>
+                      <p className="text-xs text-slate-500">Primary SMTP gateway hostname and connection port</p>
                     </div>
-                  </Grid>
+                  </div>
 
-                  <Inline gap="2" align="center">
-                    <span className="text-xs font-semibold text-[var(--pbx-text-secondary)]">Presets:</span>
-                    {[
-                      { port: 587, label: '587 (STARTTLS)' },
-                      { port: 465, label: '465 (SSL)' },
-                      { port: 25, label: '25 (Plain)' }
-                    ].map((p) => (
-                      <Button
-                        key={p.port}
-                        type="button"
-                        variant={smtpPort === p.port ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => {
-                          setSmtpPort(p.port);
-                          setUseTls(p.port !== 25);
-                        }}
-                      >
-                        {p.label}
-                      </Button>
-                    ))}
-                  </Inline>
+                  <Stack gap="4">
+                    <Grid cols={3} gap="4">
+                      <div className="col-span-2">
+                        <FormField label="SMTP Host / Server Domain" required>
+                          <Input
+                            type="text"
+                            value={smtpHost}
+                            onChange={(e) => setSmtpHost(e.target.value)}
+                            placeholder="smtp.example.com"
+                            required
+                          />
+                        </FormField>
+                      </div>
+                      <div>
+                        <FormField label="Port" required>
+                          <Input
+                            type="number"
+                            value={String(smtpPort)}
+                            onChange={(e) => setSmtpPort(Number(e.target.value))}
+                            placeholder="587"
+                            required
+                          />
+                        </FormField>
+                      </div>
+                    </Grid>
 
-                  <Card padding="sm" className="bg-[var(--pbx-bg-subtle)]">
-                    <Inline justify="between" align="center">
-                      <Inline gap="3" align="center">
-                        <ShieldCheck size={20} className="text-emerald-600" />
-                        <div>
-                          <div className="text-xs font-bold text-[var(--pbx-text-primary)]">Enable STARTTLS / Encryption</div>
-                          <div className="text-[11px] text-[var(--pbx-text-muted)]">Encrypts communication during SMTP handshake.</div>
-                        </div>
-                      </Inline>
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-sm text-slate-900">Enforce TLS / STARTTLS Encryption</div>
+                        <div className="text-xs text-slate-500">Encrypt outbound emails over SSL/TLS</div>
+                      </div>
                       <input
                         type="checkbox"
                         checked={useTls}
                         onChange={(e) => setUseTls(e.target.checked)}
-                        className="w-4 h-4 accent-[var(--pbx-accent-primary)] cursor-pointer"
+                        className="w-5 h-5 accent-[var(--pbx-action-primary)] cursor-pointer"
                       />
-                    </Inline>
-                  </Card>
-                </Stack>
-              </Card>
+                    </div>
+                  </Stack>
+                </Card>
 
-              <Card title="2. Credentials & Sender Identity">
-                <Stack gap="4">
-                  <Grid cols={2} gap="4">
-                    <FormField label="SMTP Username / API Key">
-                      <Input
-                        value={smtpUsername}
-                        onChange={(e) => setSmtpUsername(e.target.value)}
-                        placeholder="user@domain.com or apikey"
-                      />
-                    </FormField>
+                <Card>
+                  <div className="flex items-center gap-2 pb-4 mb-6 border-b border-slate-100">
+                    <ShieldCheck size={18} className="text-[var(--pbx-action-primary)]" />
+                    <div>
+                      <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">Authentication & Sender Identity</h3>
+                      <p className="text-xs text-slate-500">Relay credentials and default email headers</p>
+                    </div>
+                  </div>
 
-                    <FormField label="SMTP Password / Secret">
-                      <Input
-                        type="password"
-                        value={smtpPassword}
-                        onChange={(e) => setSmtpPassword(e.target.value)}
-                        placeholder={settings?.smtp_password ? '••••••••' : 'Enter password'}
-                      />
-                    </FormField>
+                  <Stack gap="4">
+                    <Grid cols={2} gap="4">
+                      <FormField label="SMTP Username / API Key">
+                        <Input
+                          type="text"
+                          value={smtpUsername}
+                          onChange={(e) => setSmtpUsername(e.target.value)}
+                          placeholder="user@domain.com or apikey"
+                        />
+                      </FormField>
 
-                    <FormField label="Sender Email (From)" required>
-                      <Input
-                        type="email"
-                        value={fromEmail}
-                        onChange={(e) => setFromEmail(e.target.value)}
-                        placeholder="voicemail@mycompany.com"
-                        required
-                      />
-                    </FormField>
+                      <FormField label="SMTP Password / Secret">
+                        <Input
+                          type="password"
+                          value={smtpPassword}
+                          onChange={(e) => setSmtpPassword(e.target.value)}
+                          placeholder={settings?.smtp_password ? '••••••••' : 'Enter password'}
+                        />
+                      </FormField>
+                    </Grid>
 
-                    <FormField label="Sender Display Name">
-                      <Input
-                        value={fromName}
-                        onChange={(e) => setFromName(e.target.value)}
-                        placeholder="PBX Voicemail"
-                      />
-                    </FormField>
-                  </Grid>
-                </Stack>
-              </Card>
-            </div>
+                    <Grid cols={2} gap="4">
+                      <FormField label="From Email Address" required>
+                        <Input
+                          type="email"
+                          value={fromEmail}
+                          onChange={(e) => setFromEmail(e.target.value)}
+                          placeholder="voicemail@mycompany.com"
+                          required
+                        />
+                      </FormField>
 
-            <div className="col-span-4 space-y-6">
-              <Card title="Live Delivery Test">
-                <Stack gap="4">
-                  <p className="text-xs text-[var(--pbx-text-secondary)]">
-                    Send a test message to verify host connectivity and credentials before saving.
+                      <FormField label="Sender Display Name">
+                        <Input
+                          type="text"
+                          value={fromName}
+                          onChange={(e) => setFromName(e.target.value)}
+                          placeholder="e.g. Acme PBX Voicemail"
+                        />
+                      </FormField>
+                    </Grid>
+                  </Stack>
+                </Card>
+              </div>
+
+              {/* Right Column (4 Cols): Live Test & Quick Help */}
+              <div className="lg:col-span-4 space-y-6">
+                <Card>
+                  <div className="flex items-center gap-2 pb-4 mb-4 border-b border-slate-100">
+                    <Send size={16} className="text-[var(--pbx-action-primary)]" />
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900">Live Delivery Test</h3>
+                  </div>
+
+                  <p className="text-xs text-slate-500 mb-4">
+                    Dispatch an immediate test email to verify host connectivity, TLS negotiation, and credentials before saving.
                   </p>
 
-                  <FormField label="Recipient Email">
-                    <Input
-                      type="email"
-                      value={testRecipient}
-                      onChange={(e) => setTestRecipient(e.target.value)}
-                      placeholder="recipient@example.com"
-                    />
-                  </FormField>
+                  <Stack gap="4">
+                    <FormField label="Destination Email Address">
+                      <Input
+                        type="email"
+                        value={testRecipient}
+                        onChange={(e) => setTestRecipient(e.target.value)}
+                        placeholder="recipient@example.com"
+                      />
+                    </FormField>
 
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleSendTestEmail}
+                      isLoading={testing}
+                      className="w-full justify-center"
+                    >
+                      <Send size={14} /> Send Test Email
+                    </Button>
+
+                    {testResult && (
+                      <Alert variant={testResult.success ? 'success' : 'danger'}>
+                        <div className="font-bold">{testResult.success ? 'Verification Succeeded!' : 'Connection Error:'}</div>
+                        <div className="text-xs mt-1">{testResult.success ? testResult.message : testResult.error}</div>
+                      </Alert>
+                    )}
+                  </Stack>
+                </Card>
+
+                <Card className="bg-slate-50">
+                  <div className="font-bold text-xs text-slate-900 mb-2 flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-[var(--pbx-action-primary)]" />
+                    Voicemail Audio Attachments
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    When an extension receives a voicemail, the FreeSWITCH engine automatically converts the recording to standard WAV format and delivers it with transcript metadata to the extension's notification email address.
+                  </p>
+                </Card>
+              </div>
+            </div>
+
+            {/* Bottom Action Bar */}
+            <Card>
+              <Inline justify="between" align="center">
+                <div className="text-xs text-slate-500">
+                  {settings?.updated_at ? (
+                    <span>Last updated: {new Date(settings.updated_at).toLocaleString()}</span>
+                  ) : (
+                    <span>Configure your SMTP settings to activate email notifications</span>
+                  )}
+                </div>
+
+                <Inline gap="3">
                   <Button
+                    type="button"
+                    onClick={() => fetchSettings(true)}
+                    isLoading={loading}
                     variant="secondary"
-                    onClick={handleSendTestEmail}
-                    isLoading={testing}
-                    leftIcon={<Send size={14} />}
-                    className="w-full justify-center"
                   >
-                    Send Test Email
+                    <RefreshCw size={14} /> Reload Settings
                   </Button>
 
-                  {testResult && (
-                    <Alert variant={testResult.success ? 'success' : 'danger'}>
-                      <div className="font-bold">{testResult.success ? 'Verification Succeeded!' : 'Connection Error'}</div>
-                      <div className="text-xs mt-1">{testResult.success ? testResult.message : testResult.error}</div>
-                    </Alert>
-                  )}
-                </Stack>
-              </Card>
-            </div>
-          </Grid>
+                  <Button
+                    type="submit"
+                    isLoading={saving}
+                    variant="primary"
+                  >
+                    <Save size={16} /> Save SMTP Settings
+                  </Button>
+                </Inline>
+              </Inline>
+            </Card>
+          </Stack>
         </form>
       </Stack>
     </PageContainer>
