@@ -1,2 +1,5 @@
+# Base Commit: 2474d9f (origin/dev-tejas)
+# Protected Files (API calls, auth/session logic, state context, type definitions)
 src/services/api.ts
 src/types.ts
+src/components/ToastProvider.tsx

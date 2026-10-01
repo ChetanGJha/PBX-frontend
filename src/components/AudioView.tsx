@@ -2,8 +2,18 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService, getApiBaseUrl } from '../services/api';
-import { Upload, Play, Pause, Trash2, Mic, Volume2, VolumeX, Music, Search } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Upload, Play, Pause, Trash2, Mic, Volume2, VolumeX, Music } from 'lucide-react';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Inline } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface AudioViewProps {
   token: string;
@@ -181,186 +191,113 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
 
   const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
 
-  return (
-    <div style={{ paddingBottom: currentPlaying ? '80px' : '0' }}>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Audio Asset Library</div>
-          <h1 className="page-title">Voice Prompts & Greetings</h1>
-          <p className="page-sub">Upload and stream custom WAV/MP3 prompts for IVRs, call greetings, and music-on-hold</p>
-        </div>
-        {canManage && (
+  const columns = [
+    {
+      key: 'name',
+      header: 'Audio Name',
+      sortable: true,
+      render: (a: any) => (
+        <Inline gap="3" align="center">
+          <div className="w-8 h-8 rounded-lg bg-[var(--pbx-accent-light)] text-[var(--pbx-accent-primary)] flex items-center justify-center">
+            <Music size={16} />
+          </div>
           <div>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
-              <Upload size={16} /> Upload Audio Prompt
-            </button>
+            <div className="font-bold text-[var(--pbx-text-primary)]">{a.name || a.file_name}</div>
+            {a.tenant_name && <div className="text-xs text-[var(--pbx-text-muted)]">Tenant: {a.tenant_name}</div>}
           </div>
-        )}
-      </div>
+        </Inline>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      render: (a: any) => (
+        <Badge variant={a.category === 'ivr_greeting' ? 'success' : a.category === 'music_on_hold' ? 'warning' : 'neutral'}>
+          {a.category ? a.category.replace('_', ' ').toUpperCase() : 'GENERAL'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'file_name',
+      header: 'File Name',
+      render: (a: any) => <code className="code-box">{a.file_name}</code>,
+    },
+    {
+      key: 'file_size',
+      header: 'File Size',
+      render: (a: any) => (a.file_size ? `${(a.file_size / 1024).toFixed(1)} KB` : '—'),
+    },
+    {
+      key: 'created_at',
+      header: 'Uploaded',
+      render: (a: any) => (a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'),
+    },
+  ];
 
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="search-input-wrap" style={{ width: '280px' }}>
-            <Search size={16} className="search-icon" />
-            <input
-              className="form-control"
-              style={{ height: '38px', fontSize: '12px' }}
-              placeholder="Search audio prompts..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
-            Showing <strong>{filtered.length}</strong> audio asset{filtered.length !== 1 ? 's' : ''}
-          </div>
-        </div>
+  return (
+    <PageContainer
+      title="Voice Prompts & Greetings"
+      subtitle="Upload and stream custom WAV/MP3 prompts for IVRs, call greetings, and music-on-hold"
+      eyebrow="Audio Asset Library"
+      actions={
+        canManage ? (
+          <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Upload size={16} />}>
+            Upload Audio Prompt
+          </Button>
+        ) : undefined
+      }
+    >
+      <Stack gap="6">
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search audio prompts..."
+        />
 
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Audio Name</th>
-                <th>Category</th>
-                <th>File Name</th>
-                <th>File Size</th>
-                <th>Uploaded</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading audio files...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">No custom audio prompts found</td></tr>
-              ) : (
-                filtered.map(a => {
-                  const isThisPlaying = currentPlaying?.id === a.id && isPlaying;
-                  return (
-                    <tr key={a.id} style={{ background: currentPlaying?.id === a.id ? '#FFF9F5' : undefined }}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '8px',
-                            background: isThisPlaying ? '#FF5430' : '#FFF0EC',
-                            color: isThisPlaying ? '#FFFFFF' : '#FF5430',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}>
-                            <Music size={16} />
-                          </div>
-                          <div>
-                            <strong style={{ color: '#111827', fontSize: '13px' }}>{a.name || a.file_name}</strong>
-                            {a.tenant_name && <div style={{ fontSize: '10.5px', color: '#6B7280' }}>Tenant: {a.tenant_name}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`terrix-badge ${a.category === 'ivr_greeting' ? 'green' : a.category === 'music_on_hold' ? 'orange' : 'grey'}`}>
-                          {a.category.replace('_', ' ').toUpperCase()}
-                        </span>
-                      </td>
-                      <td>
-                        <code className="code-box" style={{ padding: '3px 8px', fontSize: '11px' }}>{a.file_name}</code>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '12px', color: '#4B5563' }}>
-                          {a.file_size ? `${(a.file_size / 1024).toFixed(1)} KB` : '—'}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '11.5px', color: '#6B7280' }}>
-                          {a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}
-                        </span>
-                      </td>
-                      <td className="text-right">
-                        <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            type="button"
-                            className={isThisPlaying ? "btn-primary" : "btn-secondary"}
-                            style={{ padding: '5px 12px', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                            onClick={() => handleTogglePlay(a)}
-                          >
-                            {isThisPlaying ? (
-                              <>
-                                <Pause size={13} /> Pause
-                              </>
-                            ) : (
-                              <>
-                                <Play size={13} /> Play
-                              </>
-                            )}
-                          </button>
-                          {canManage && (
-                            <button
-                              type="button"
-                              className="btn-secondary text-rose-600"
-                              style={{ padding: '5px 8px', fontSize: '11px' }}
-                              onClick={() => handleDelete(a)}
-                              title="Delete Audio"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <DataTable
+          columns={columns}
+          data={filtered}
+          isLoading={loading}
+          emptyTitle="No custom audio prompts found"
+          actions={(a: any) => {
+            const isThisPlaying = currentPlaying?.id === a.id && isPlaying;
+            return (
+              <Inline gap="2" justify="flex-end">
+                <Button
+                  variant={isThisPlaying ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleTogglePlay(a)}
+                  leftIcon={isThisPlaying ? <Pause size={13} /> : <Play size={13} />}
+                >
+                  {isThisPlaying ? 'Pause' : 'Play'}
+                </Button>
+                {canManage && (
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(a)} leftIcon={<Trash2 size={13} />}>
+                    Delete
+                  </Button>
+                )}
+              </Inline>
+            );
+          }}
+        />
+      </Stack>
 
       {/* Floating Audio Player Bar */}
       {currentPlaying && (
-        <div style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'min(760px, 94%)',
-          background: '#0F172A',
-          color: '#FFFFFF',
-          borderRadius: '14px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-          padding: '12px 20px',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          backdropFilter: 'blur(8px)'
-        }}>
-          <button
-            type="button"
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[min(760px,94%)] bg-slate-900 text-white rounded-xl shadow-2xl p-4 z-50 flex items-center gap-4 backdrop-blur-md">
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => handleTogglePlay(currentPlaying)}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              background: '#FF5430',
-              border: 'none',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              flexShrink: 0
-            }}
+            className="w-10 h-10 rounded-full p-0 flex items-center justify-center shrink-0"
           >
-            {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: '2px' }} />}
-          </button>
+            {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+          </Button>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {currentPlaying.name || currentPlaying.file_name}
-              </span>
-              <span style={{ color: '#94A3B8', fontFamily: 'monospace' }}>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="font-bold truncate">{currentPlaying.name || currentPlaying.file_name}</span>
+              <span className="text-slate-400 font-mono">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
@@ -370,103 +307,78 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
               max={duration || 100}
               value={currentTime}
               onChange={handleSeek}
-              style={{ width: '100%', height: '4px', accentColor: '#FF5430', cursor: 'pointer' }}
+              className="w-full h-1 accent-[var(--pbx-accent-primary)] cursor-pointer"
             />
           </div>
 
           <button
             type="button"
             onClick={handleToggleMute}
-            style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+            className="bg-transparent border-0 text-slate-400 hover:text-white cursor-pointer"
           >
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
 
-          <button
-            type="button"
-            onClick={handleStop}
-            style={{
-              background: '#334155',
-              border: 'none',
-              color: '#F1F5F9',
-              fontSize: '11px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600
-            }}
-          >
+          <Button variant="secondary" size="sm" onClick={handleStop}>
             Close
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Upload Modal */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '520px' }}>
-            <div className="modal-head">
-              <div className="modal-icon"><Mic size={20} /></div>
-              <div>
-                <h3>Upload Voice Prompt</h3>
-                <p>Upload WAV, MP3, or OGG audio file for tenant dialplans</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleUpload}>
-              <div className="modal-body">
-                {user?.role === 'SUPER_ADMIN' && (
-                  <div className="form-group mb-3">
-                    <label className="form-label">Target Tenant (Optional)</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Global / Select Tenant --' },
-                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                      ]}
-                      value={tenantId}
-                      onChange={(val) => setTenantId(val)}
-                    />
-                  </div>
-                )}
-                <div className="form-group mb-3">
-                  <label className="form-label required">Prompt Category</label>
-                  <CustomSelect
-                    options={[
-                      { value: 'ivr_greeting', label: 'IVR Welcome Prompt' },
-                      { value: 'ivr_prompt', label: 'IVR Menu Option Prompt' },
-                      { value: 'voicemail_greeting', label: 'Voicemail Greeting' },
-                      { value: 'music_on_hold', label: 'Music On Hold (MOH)' },
-                    ]}
-                    value={category}
-                    onChange={(val) => setCategory(val)}
-                  />
-                </div>
-                <div className="form-group mb-3">
-                  <label className="form-label required">Audio Recording File</label>
-                  <input
-                    required
-                    type="file"
-                    accept="audio/wav,audio/wave,audio/x-wav,audio/mpeg,audio/mp3,audio/ogg"
-                    className="form-control"
-                    onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)}
-                  />
-                  <small style={{ color: '#6B7280', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                    Supported formats: 16-bit 8kHz/16kHz WAV, MP3, OGG (Max 25MB)
-                  </small>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={uploading}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Upload Audio Prompt'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Upload Voice Prompt"
+        subtitle="Upload WAV, MP3, or OGG audio file for tenant dialplans"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)} disabled={uploading}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleUpload} isLoading={uploading}>
+              Upload Audio Prompt
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUpload}>
+          <Stack gap="4">
+            {user?.role === 'SUPER_ADMIN' && (
+              <FormField label="Target Tenant (Optional)">
+                <Select value={tenantId} onChange={e => setTenantId(e.target.value)}>
+                  <option value="">-- Global / Select Tenant --</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.domain})
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
+
+            <FormField label="Prompt Category" required>
+              <Select value={category} onChange={e => setCategory(e.target.value)}>
+                <option value="ivr_greeting">IVR Welcome Prompt</option>
+                <option value="ivr_prompt">IVR Menu Option Prompt</option>
+                <option value="voicemail_greeting">Voicemail Greeting</option>
+                <option value="music_on_hold">Music On Hold (MOH)</option>
+              </Select>
+            </FormField>
+
+            <FormField label="Audio Recording File" required>
+              <Input
+                type="file"
+                accept="audio/wav,audio/wave,audio/x-wav,audio/mpeg,audio/mp3,audio/ogg"
+                onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+              />
+              <span className="text-xs text-[var(--pbx-text-muted)] mt-1 block">
+                Supported formats: 16-bit 8kHz/16kHz WAV, MP3, OGG (Max 25MB)
+              </span>
+            </FormField>
+          </Stack>
+        </form>
+      </Modal>
+    </PageContainer>
   );
 };

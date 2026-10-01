@@ -19,7 +19,7 @@ export const Table: React.FC<TableProps> = ({
         style={{
           width: '100%',
           borderCollapse: 'collapse',
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--pbx-bg-surface)',
           fontSize: '13px',
           textAlign: 'left',
           ...style,
