@@ -17,17 +17,27 @@ import {
 } from 'lucide-react';
 
 // Design System imports
-import { PageHeader } from './layout/PageHeader';
+import { PageHeader } from './layout/PageContainer';
 import { Card, StatCard, Heading, Text, Button, Badge } from './ui';
 
 interface DashboardViewProps {
   token: string;
   user?: User | null;
+  tenantCount?: number;
+  extensionCount?: number;
+  didCount?: number;
+  gatewayCount?: number;
+  trunkCount?: number;
   setActiveTab: (tab: string) => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setActiveTab }) => {
-  const [status, setStatus] = useState<SystemStatus>({ database: 'disconnected' });
+  const [status, setStatus] = useState<SystemStatus>({
+    healthy: false,
+    ready: false,
+    database: 'disconnected',
+    redis: 'disconnected'
+  });
   const [tenantCount, setTenantCount] = useState<number>(0);
   const [userCount, setUserCount] = useState<number>(0);
   const [extensionCount, setExtensionCount] = useState<number>(0);
@@ -37,10 +47,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const data = await apiService.getHealth();
+        const data = await apiService.checkHealth();
         setStatus(data);
       } catch {
-        setStatus({ database: 'error' });
+        setStatus({ healthy: false, ready: false, database: 'disconnected', redis: 'disconnected' });
       }
     };
 
@@ -82,7 +92,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
     <div className="space-y-8">
       {/* ── HEADER ───────────────────────────────────────────────────────────── */}
       <PageHeader
-        title={isSuper ? 'Global System Administration' : `Tenant Dashboard (${user?.tenant_name || user?.tenant_domain || 'Tenant Domain'})`}
+        title={isSuper ? 'Global System Administration' : `Tenant Dashboard (${(user as any)?.tenant_name || user?.tenant_domain || 'Tenant Domain'})`}
         subtitle="Platform health, real-time telephony status, and resource usage overview."
         actions={
           <Badge variant={status.database === 'connected' ? 'success' : 'danger'}>

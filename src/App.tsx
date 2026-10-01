@@ -196,13 +196,13 @@ export const App: React.FC = () => {
             {/* ── SHARED: DASHBOARD ─────────────────────────────────── */}
             {activeTab === 'dashboard' && (
               <DashboardView
-                status={status}
+                token={token || ''}
                 user={user}
                 tenantCount={tenants.length}
                 extensionCount={extensions.length}
                 didCount={dids.length}
-                gatewayCount={gateways.length + trunks.length}
-                trunkCount={trunks.length + gateways.length}
+                gatewayCount={gateways.length}
+                trunkCount={trunks.length}
                 setActiveTab={handleSetTab}
               />
             )}
@@ -337,7 +337,9 @@ export const App: React.FC = () => {
             Log Out & Sign In Again
           </Button>
         }
-      />
+      >
+        <p>Please log out and sign in again to restore your active session.</p>
+      </Modal>
     </ToastProvider>
   );
 };

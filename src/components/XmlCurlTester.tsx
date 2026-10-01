@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Copy, Check, FileCode, Cpu } from 'lucide-react';
+import { Send, Copy, Check, FileCode } from 'lucide-react';
 import { apiService } from '../services/api';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Grid } from './layout/Stack';

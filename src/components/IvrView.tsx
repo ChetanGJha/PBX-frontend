@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
-import { GitBranch, Plus, Volume2, Edit, Trash2, ArrowRight, PhoneCall, Layers, Move, Users, PhoneForwarded, Voicemail, PhoneOff, UploadCloud, Info } from 'lucide-react';
+import { GitBranch, Plus, Volume2, Edit, Trash2, UploadCloud } from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
@@ -39,7 +39,6 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const [activeIvr, setActiveIvr] = useState<any>(null);
   const [activeNodes, setActiveNodes] = useState<any[]>([]);
-  const [draggedActionType, setDraggedActionType] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -76,6 +75,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     loadData();
   }, [token]);
 
+  // Helper for uploading audio files
   const uploadAudioFile = async (file: File, category: string = 'ivr_greeting', tenantId?: string) => {
     const fd = new FormData();
     fd.append('file', file);
@@ -88,56 +88,6 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
       setAudioFiles(updatedAudios);
     } catch (e) {}
     return res.file_name;
-  };
-
-  const handleCanvasGreetingUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeIvr) return;
-
-    try {
-      setUploadingTarget('canvas_greeting');
-      const fileName = await uploadAudioFile(file, 'ivr_greeting', activeIvr.tenant_id);
-      await apiService.updateIvr(token, activeIvr.id, { greeting_audio: fileName });
-      setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
-      loadData();
-    } catch (err: any) {
-      showErrorModal('Upload Failed', err.message || 'Failed to upload greeting audio');
-    } finally {
-      setUploadingTarget(null);
-    }
-  };
-
-  const handleCanvasGreetingChange = async (fileName: string) => {
-    if (!activeIvr) return;
-    try {
-      await apiService.updateIvr(token, activeIvr.id, { greeting_audio: fileName });
-      setActiveIvr((prev: any) => ({ ...prev, greeting_audio: fileName }));
-      loadData();
-    } catch (err: any) {
-      showErrorModal('Update Failed', err.message || 'Failed to update greeting audio');
-    }
-  };
-
-  const handleCardAudioUpload = async (dtmf_key: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeIvr) return;
-
-    try {
-      setUploadingTarget('keypad_' + dtmf_key);
-      const fileName = await uploadAudioFile(file, 'ivr_prompt', activeIvr.tenant_id);
-      const payload = {
-        dtmf_key,
-        action_type: 'play_audio',
-        action_target: fileName
-      };
-      await apiService.upsertIvrNode(token, activeIvr.id, payload);
-      const updatedNodes = await apiService.getIvrNodes(token, activeIvr.id);
-      setActiveNodes(updatedNodes);
-    } catch (err: any) {
-      showErrorModal('Audio Upload Failed', err.message || 'Failed to upload audio file');
-    } finally {
-      setUploadingTarget(null);
-    }
   };
 
   const handleModalAudioUpload = async (targetField: 'create' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,11 +212,6 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     } catch (err: any) {
       showErrorModal('Error', err.message || 'Action failed');
     }
-  };
-
-  const handleCardDrop = async (dtmf_key: string, actionType: string) => {
-    if (!activeIvr) return;
-    await handleCardActionChange(dtmf_key, actionType);
   };
 
   const handleDeleteNode = async (nodeId: string) => {

@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline, Grid } from './layout/Stack';
-import { Button, Card, Badge, Alert } from './ui';
+import { Button, Card, Alert } from './ui';
 
 interface HelpViewProps {
   user?: any;

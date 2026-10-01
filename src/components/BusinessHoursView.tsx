@@ -4,7 +4,7 @@ import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import {
   Clock, Plus, Trash2, Calendar, Globe, Sun, Moon, Save,
-  RefreshCw, Building2, ChevronRight
+  RefreshCw, ChevronRight
 } from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline, Grid } from './layout/Stack';

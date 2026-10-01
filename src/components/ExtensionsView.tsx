@@ -1,6 +1,6 @@
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
-import { Phone, Plus, RefreshCw, KeyRound, Edit2, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, KeyRound, Edit2, Trash2 } from 'lucide-react';
 
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';

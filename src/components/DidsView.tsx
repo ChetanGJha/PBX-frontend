@@ -2,7 +2,7 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { Hash, Plus, Link2, Unlink, CheckCircle2, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Link2, Unlink, Edit2, Trash2 } from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline } from './layout/Stack';
 import {

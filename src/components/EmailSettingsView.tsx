@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Mail,
   Send,
   Save,
   RotateCcw,
   CheckCircle2,
   AlertTriangle,
   Globe,
-  Server,
-  Eye,
-  EyeOff,
   RefreshCw,
-  Info,
-  Lock,
   ShieldCheck,
   Check,
-  User,
-  KeyRound,
   Sparkles
 } from 'lucide-react';
 import { apiService } from '../services/api';
@@ -112,7 +104,6 @@ export const EmailSettingsView: React.FC<EmailSettingsViewProps> = ({ token, use
   const [useTls, setUseTls] = useState(true);
   const [smtpUsername, setSmtpUsername] = useState('');
   const [smtpPassword, setSmtpPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [fromEmail, setFromEmail] = useState('');
   const [fromName, setFromName] = useState('PBX Voicemail');
 
@@ -461,7 +452,7 @@ export const EmailSettingsView: React.FC<EmailSettingsViewProps> = ({ token, use
 
                     <FormField label="SMTP Password / Secret">
                       <Input
-                        type={showPassword ? 'text' : 'password'}
+                        type="password"
                         value={smtpPassword}
                         onChange={(e) => setSmtpPassword(e.target.value)}
                         placeholder={settings?.smtp_password ? '••••••••' : 'Enter password'}
