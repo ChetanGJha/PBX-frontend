@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { Heading } from '../Typography/Typography';
 
@@ -21,19 +21,65 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'md',
   footer,
 }) => {
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (!isOpen) return;
+
+      if (e.key === 'Escape') {
         onClose();
       }
+
+      // Focus trap
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+
+        const firstElement = focusables[0];
+        const lastElement = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            lastElement.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            firstElement.focus();
+            e.preventDefault();
+          }
+        }
+      }
     };
+
     if (isOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
+
+      // Focus first input or modal container
+      setTimeout(() => {
+        if (modalRef.current) {
+          const firstInput = modalRef.current.querySelector<HTMLElement>('input, button');
+          if (firstInput) {
+            firstInput.focus();
+          } else {
+            modalRef.current.focus();
+          }
+        }
+      }, 50);
     }
+
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
+      if (previousActiveElement.current) {
+        previousActiveElement.current.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -47,9 +93,12 @@ export const Modal: React.FC<ModalProps> = ({
     '2xl': '900px',
   };
 
+  const titleId = title ? `modal-title-${title.replace(/\s+/g, '-').toLowerCase()}` : undefined;
+
   return (
     <div
       aria-modal="true"
+      aria-labelledby={titleId}
       role="dialog"
       style={{
         position: 'fixed',
@@ -59,7 +108,7 @@ export const Modal: React.FC<ModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: 'var(--pbx-z-modal, 1400)' as any,
         padding: '20px',
       }}
       onClick={(e) => {
@@ -67,8 +116,10 @@ export const Modal: React.FC<ModalProps> = ({
       }}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--pbx-bg-surface)',
           borderRadius: 'var(--pbx-radius-xl)',
           width: '100%',
           maxWidth: maxWidths[maxWidth],
@@ -77,7 +128,7 @@ export const Modal: React.FC<ModalProps> = ({
           flexDirection: 'column',
           boxShadow: 'var(--pbx-shadow-xl)',
           border: '1px solid var(--pbx-border-default)',
-          animation: 'fadeIn 0.15s ease-out',
+          outline: 'none',
         }}
       >
         {(title || subtitle) && (
@@ -91,9 +142,9 @@ export const Modal: React.FC<ModalProps> = ({
             }}
           >
             <div>
-              {title && <Heading level={3}>{title}</Heading>}
+              {title && <Heading id={titleId} level={3}>{title}</Heading>}
               {subtitle && (
-                <p style={{ fontSize: '13px', color: 'var(--pbx-text-secondary)', marginTop: '4px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--pbx-text-secondary)', marginTop: '4px', margin: '4px 0 0 0' }}>
                   {subtitle}
                 </p>
               )}
@@ -111,7 +162,7 @@ export const Modal: React.FC<ModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
-              aria-label="Close"
+              aria-label="Close dialog"
             >
               <X size={20} />
             </button>

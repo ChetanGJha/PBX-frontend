@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Phone, Server, Hash, ArrowLeftRight, GitBranch, List, BarChart2, Voicemail } from 'lucide-react';
 import type { SystemStatus, User } from '../types';
+import { PageHeader, StatCard, Card, Button, Heading, Text } from './ui';
 
 interface DashboardViewProps {
   status: SystemStatus;
@@ -60,100 +61,86 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">{isSuper ? 'Platform Administration' : 'Tenant Operations'}</div>
-          <h1 className="page-title">{isSuper ? 'Platform Super Admin Dashboard' : 'Tenant PBX Dashboard'}</h1>
-          <p className="page-sub">
-            {isSuper
-              ? 'Global oversight of multi-tenant domains, FreeSWITCH media core, carrier gateways, and telephone number allocations.'
-              : `Operational dashboard for ${user?.tenant_domain || 'your organization'}: manage extensions, inbound DIDs, auto-attendants, and call routing.`}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={isSuper ? 'Platform Super Admin Dashboard' : 'Tenant PBX Dashboard'}
+        subtitle={
+          isSuper
+            ? 'Global oversight of multi-tenant domains, FreeSWITCH media core, carrier gateways, and telephone number allocations.'
+            : `Operational dashboard for ${user?.tenant_domain || 'your organization'}: manage extensions, inbound DIDs, auto-attendants, and call routing.`
+        }
+      />
 
       {/* ── STATS GRID ───────────────────────────────────────────────────────── */}
-      <div className="stats-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {isSuper ? (
           <>
-            <div className="stat-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('tenants')}>
-              <div className="stat-card-header">
-                <span className="stat-label">Platform Tenants</span>
-                <Building2 size={18} color="#FF5430" />
-              </div>
-              <div className="stat-value">{tenantCount}</div>
-              <div className="stat-trend">+100% Isolated Domains</div>
+            <div className="cursor-pointer" onClick={() => setActiveTab('tenants')}>
+              <StatCard
+                title="Platform Tenants"
+                value={tenantCount}
+                icon={<Building2 size={20} />}
+                trend="+100% Isolated Domains"
+              />
             </div>
 
-            <div className="stat-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('dids')}>
-              <div className="stat-card-header">
-                <span className="stat-label">Total Inbound DIDs</span>
-                <Hash size={18} color="#2563EB" />
-              </div>
-              <div className="stat-value">{didCount}</div>
-              <div className="stat-trend text-blue-600">Global Inventory</div>
+            <div className="cursor-pointer" onClick={() => setActiveTab('dids')}>
+              <StatCard
+                title="Total Inbound DIDs"
+                value={didCount}
+                icon={<Hash size={20} />}
+                trend="Global Inventory"
+              />
             </div>
 
-            <div className="stat-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('trunks')}>
-              <div className="stat-card-header">
-                <span className="stat-label">SIP Trunks & Gateways</span>
-                <ArrowLeftRight size={18} color="#7C3AED" />
-              </div>
-              <div className="stat-value">{trunkCount !== undefined ? trunkCount : gatewayCount}</div>
-              <div className="stat-trend text-purple-600">Active Carrier Routes</div>
+            <div className="cursor-pointer" onClick={() => setActiveTab('trunks')}>
+              <StatCard
+                title="SIP Trunks & Gateways"
+                value={trunkCount !== undefined ? trunkCount : gatewayCount}
+                icon={<ArrowLeftRight size={20} />}
+                trend="Active Carrier Routes"
+              />
             </div>
 
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <span className="stat-label">Media Core & DB</span>
-                <Server size={18} color="#55A878" />
-              </div>
-              <div className="stat-value text-emerald-600">
-                {status.database === 'connected' ? 'Connected' : 'Offline'}
-              </div>
-              <div className="stat-trend text-slate-400">FreeSWITCH 1.10.x Active</div>
-            </div>
+            <StatCard
+              title="Media Core & DB"
+              value={status.database === 'connected' ? 'Connected' : 'Offline'}
+              icon={<Server size={20} />}
+              trend="FreeSWITCH 1.10.x Active"
+            />
           </>
         ) : (
           <>
-            <div className="stat-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('extensions')}>
-              <div className="stat-card-header">
-                <span className="stat-label">Active Extensions</span>
-                <Phone size={18} color="#FF5430" />
-              </div>
-              <div className="stat-value">{extensionCount}</div>
-              <div className="stat-trend text-orange-600">SIP & WebRTC Active</div>
+            <div className="cursor-pointer" onClick={() => setActiveTab('extensions')}>
+              <StatCard
+                title="Active Extensions"
+                value={extensionCount}
+                icon={<Phone size={20} />}
+                trend="SIP & WebRTC Active"
+              />
             </div>
 
-            <div className="stat-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('tenant-trunks')}>
-              <div className="stat-card-header">
-                <span className="stat-label">Active Gateways</span>
-                <ArrowLeftRight size={18} color="#7C3AED" />
-              </div>
-              <div className="stat-value">{gatewayCount}</div>
-              <div className="stat-trend text-purple-600">Assigned In/Out Trunks</div>
+            <div className="cursor-pointer" onClick={() => setActiveTab('tenant-trunks')}>
+              <StatCard
+                title="Active Gateways"
+                value={gatewayCount}
+                icon={<ArrowLeftRight size={20} />}
+                trend="Assigned In/Out Trunks"
+              />
             </div>
 
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <span className="stat-label">Assigned DIDs</span>
-                <Hash size={18} color="#2563EB" />
-              </div>
-              <div className="stat-value">{didCount}</div>
-              <div className="stat-trend text-blue-600">Inbound Phone Numbers</div>
-            </div>
+            <StatCard
+              title="Assigned DIDs"
+              value={didCount}
+              icon={<Hash size={20} />}
+              trend="Inbound Phone Numbers"
+            />
 
-            <div className="stat-card">
-              <div className="stat-card-header">
-                <span className="stat-label">PBX Engine Status</span>
-                <Server size={18} color="#55A878" />
-              </div>
-              <div className="stat-value text-emerald-600">
-                {status.database === 'connected' ? 'Operational' : 'Degraded'}
-              </div>
-              <div className="stat-trend text-slate-400">mod_xml_curl Ready</div>
-            </div>
+            <StatCard
+              title="PBX Engine Status"
+              value={status.database === 'connected' ? 'Operational' : 'Degraded'}
+              icon={<Server size={20} />}
+              trend="mod_xml_curl Ready"
+            />
           </>
         )}
       </div>
@@ -162,120 +149,136 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {isSuper ? (
           <>
-            <div className="card p-6 flex flex-col justify-between space-y-4">
+            <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
               <div>
-                <div className="p-3 bg-[#FFF0EC] text-[#FF5430] w-fit rounded-xl mb-3 flex items-center justify-center">
+                <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-primary-100)', color: 'var(--pbx-action-primary)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                   <Building2 size={24} />
                 </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">Tenants Registry</h3>
-                <p className="text-xs text-slate-500">Provision client tenant domains, extension quotas, and domain bindings.</p>
+                <Heading level={3}>Tenants Registry</Heading>
+                <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                  Provision client tenant domains, extension quotas, and domain bindings.
+                </Text>
               </div>
-              <button onClick={() => setActiveTab('tenants')} className="btn-primary w-full justify-center">
-                <span>Manage Tenants</span>
-              </button>
-            </div>
+              <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab('tenants')}>
+                Manage Tenants
+              </Button>
+            </Card>
 
-            <div className="card p-6 flex flex-col justify-between space-y-4">
+            <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
               <div>
-                <div className="p-3 bg-blue-50 text-blue-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-info-50)', color: 'var(--pbx-color-info-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                   <Hash size={24} />
                 </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">DID Inventory</h3>
-                <p className="text-xs text-slate-500">Manage pool of telephone numbers and allocate them to tenant domains.</p>
+                <Heading level={3}>DID Inventory</Heading>
+                <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                  Manage pool of telephone numbers and allocate them to tenant domains.
+                </Text>
               </div>
-              <button onClick={() => setActiveTab('dids')} className="btn-primary w-full justify-center">
-                <span>Manage DIDs</span>
-              </button>
-            </div>
+              <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab('dids')}>
+                Manage DIDs
+              </Button>
+            </Card>
 
-            <div className="card p-6 flex flex-col justify-between space-y-4">
+            <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
               <div>
-                <div className="p-3 bg-purple-50 text-purple-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-indigo-50)', color: 'var(--pbx-color-indigo-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                   <ArrowLeftRight size={24} />
                 </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">SIP Trunks & Gateways</h3>
-                <p className="text-xs text-slate-500">Configure upstream carrier Sofia gateways, outbound proxies, and codecs.</p>
+                <Heading level={3}>SIP Trunks & Gateways</Heading>
+                <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                  Configure upstream carrier Sofia gateways, outbound proxies, and codecs.
+                </Text>
               </div>
-              <button onClick={() => setActiveTab('trunks')} className="btn-primary w-full justify-center">
-                <span>Configure Trunks</span>
-              </button>
-            </div>
+              <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab('trunks')}>
+                Configure Trunks
+              </Button>
+            </Card>
           </>
         ) : (
           <>
             {canAccessTab('extensions') && (
-              <div className="card p-6 flex flex-col justify-between space-y-4">
+              <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
-                  <div className="p-3 bg-[#FFF0EC] text-[#FF5430] w-fit rounded-xl mb-3 flex items-center justify-center">
+                  <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-primary-100)', color: 'var(--pbx-action-primary)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                     <Phone size={24} />
                   </div>
-                  <h3 className="font-bold text-base text-slate-900 mb-1">Extension Management</h3>
-                  <p className="text-xs text-slate-500">View and manage SIP & WebRTC softphone credentials and extension status.</p>
+                  <Heading level={3}>Extension Management</Heading>
+                  <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                    View and manage SIP & WebRTC softphone credentials and extension status.
+                  </Text>
                 </div>
-                <button onClick={() => setActiveTab('extensions')} className="btn-primary w-full justify-center">
-                  <span>Manage Extensions</span>
-                </button>
-              </div>
+                <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab('extensions')}>
+                  Manage Extensions
+                </Button>
+              </Card>
             )}
 
             {(canAccessTab('ivr') || canAccessTab('call-routing')) && (
-              <div className="card p-6 flex flex-col justify-between space-y-4">
+              <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
-                  <div className="p-3 bg-blue-50 text-blue-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                  <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-info-50)', color: 'var(--pbx-color-info-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                     <GitBranch size={24} />
                   </div>
-                  <h3 className="font-bold text-base text-slate-900 mb-1">Call Routing & IVR</h3>
-                  <p className="text-xs text-slate-500">Design visual drag-and-drop auto-attendants and map inbound DIDs to departments.</p>
+                  <Heading level={3}>Call Routing & IVR</Heading>
+                  <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                    Design visual drag-and-drop auto-attendants and map inbound DIDs to departments.
+                  </Text>
                 </div>
-                <button onClick={() => setActiveTab(canAccessTab('ivr') ? 'ivr' : 'call-routing')} className="btn-primary w-full justify-center">
-                  <span>{canAccessTab('ivr') ? 'Design IVR Flow' : 'View Call Routing'}</span>
-                </button>
-              </div>
+                <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab(canAccessTab('ivr') ? 'ivr' : 'call-routing')}>
+                  {canAccessTab('ivr') ? 'Design IVR Flow' : 'View Call Routing'}
+                </Button>
+              </Card>
             )}
 
             {(canAccessTab('queues') || canAccessTab('hunt-groups')) && (
-              <div className="card p-6 flex flex-col justify-between space-y-4">
+              <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
-                  <div className="p-3 bg-emerald-50 text-emerald-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                  <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-success-50)', color: 'var(--pbx-color-success-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                     <List size={24} />
                   </div>
-                  <h3 className="font-bold text-base text-slate-900 mb-1">Call Queues & Hunt Groups</h3>
-                  <p className="text-xs text-slate-500">Manage agent queues, ring groups, and call distribution strategies.</p>
+                  <Heading level={3}>Call Queues & Hunt Groups</Heading>
+                  <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                    Manage agent queues, ring groups, and call distribution strategies.
+                  </Text>
                 </div>
-                <button onClick={() => setActiveTab(canAccessTab('queues') ? 'queues' : 'hunt-groups')} className="btn-primary w-full justify-center">
-                  <span>{canAccessTab('queues') ? 'Manage Queues' : 'Manage Hunt Groups'}</span>
-                </button>
-              </div>
+                <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab(canAccessTab('queues') ? 'queues' : 'hunt-groups')}>
+                  {canAccessTab('queues') ? 'Manage Queues' : 'Manage Hunt Groups'}
+                </Button>
+              </Card>
             )}
 
             {canAccessTab('reports') && (
-              <div className="card p-6 flex flex-col justify-between space-y-4">
+              <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
-                  <div className="p-3 bg-amber-50 text-amber-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                  <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-warning-50)', color: 'var(--pbx-color-warning-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                     <BarChart2 size={24} />
                   </div>
-                  <h3 className="font-bold text-base text-slate-900 mb-1">CDR & Analytics</h3>
-                  <p className="text-xs text-slate-500">View call detail records, call logs, and performance analytics.</p>
+                  <Heading level={3}>CDR & Analytics</Heading>
+                  <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                    View call detail records, call logs, and performance analytics.
+                  </Text>
                 </div>
-                <button onClick={() => setActiveTab('reports')} className="btn-primary w-full justify-center">
-                  <span>View CDR & Reports</span>
-                </button>
-              </div>
+                <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab('reports')}>
+                  View CDR & Reports
+                </Button>
+              </Card>
             )}
 
             {(canAccessTab('voicemail') || canAccessTab('call-forwarding')) && (
-              <div className="card p-6 flex flex-col justify-between space-y-4">
+              <Card style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
-                  <div className="p-3 bg-indigo-50 text-indigo-600 w-fit rounded-xl mb-3 flex items-center justify-center">
+                  <div style={{ padding: '12px', backgroundColor: 'var(--pbx-color-indigo-50)', color: 'var(--pbx-color-indigo-700)', width: 'fit-content', borderRadius: 'var(--pbx-radius-lg)', marginBottom: '12px' }}>
                     <Voicemail size={24} />
                   </div>
-                  <h3 className="font-bold text-base text-slate-900 mb-1">Voicemail & Forwarding</h3>
-                  <p className="text-xs text-slate-500">Manage extension voicemail boxes, PINs, and call forwarding rules.</p>
+                  <Heading level={3}>Voicemail & Forwarding</Heading>
+                  <Text size="sm" variant="secondary" style={{ marginTop: '4px' }}>
+                    Manage extension voicemail boxes, PINs, and call forwarding rules.
+                  </Text>
                 </div>
-                <button onClick={() => setActiveTab(canAccessTab('voicemail') ? 'voicemail' : 'call-forwarding')} className="btn-primary w-full justify-center">
-                  <span>{canAccessTab('voicemail') ? 'Voicemail Settings' : 'Call Forwarding'}</span>
-                </button>
-              </div>
+                <Button variant="primary" style={{ width: '100%' }} onClick={() => setActiveTab(canAccessTab('voicemail') ? 'voicemail' : 'call-forwarding')}>
+                  {canAccessTab('voicemail') ? 'Voicemail Settings' : 'Call Forwarding'}
+                </Button>
+              </Card>
             )}
           </>
         )}
@@ -283,4 +286,3 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     </div>
   );
 };
-

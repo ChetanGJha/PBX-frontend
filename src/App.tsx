@@ -26,6 +26,7 @@ import { ContactsView } from './components/ContactsView';
 import { BusinessHoursView } from './components/BusinessHoursView';
 import { EmailSettingsView } from './components/EmailSettingsView';
 import { ToastProvider } from './components/ToastProvider';
+import { DesignSystemShowcase } from './components/DesignSystemShowcase';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
 
@@ -203,6 +204,10 @@ export const App: React.FC = () => {
                 trunkCount={trunks.length + gateways.length}
                 setActiveTab={handleSetTab}
               />
+            )}
+
+            {activeTab === 'design-system' && (
+              <DesignSystemShowcase />
             )}
 
             {/* ── SUPER ADMIN ONLY ──────────────────────────────────── */}

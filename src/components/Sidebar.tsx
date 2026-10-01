@@ -1,11 +1,12 @@
 import React from 'react';
 import {
   LayoutDashboard, Building2, Phone, Terminal, ShieldCheck, Users,
-  GitBranch, PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
-  HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock, Mail
+  PhoneCall, PhoneForwarded, Voicemail, Hash, BarChart2, Music,
+  HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock, Mail, GitBranch
 } from 'lucide-react';
 import { TerrixLogo } from './TerrixLogo';
 import type { User as UserType } from '../types';
+import { Avatar, Badge } from './ui';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -128,14 +129,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
       {/* Compact User Profile Badge */}
       {!collapsed && user && (
         <div className="mx-3 my-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF5430] to-[#ED6140] text-white flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs">
-            {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
-          </div>
+          <Avatar name={user.username || 'User'} size="sm" />
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-800 truncate leading-tight">
               {user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username}
             </div>
-            <div className="text-[10px] font-bold text-[#FF5430] uppercase tracking-wide truncate mt-0.5">
+            <div className="text-[10px] font-bold text-[var(--pbx-action-primary)] uppercase tracking-wide truncate mt-0.5">
               {role.replace('_', ' ')}
             </div>
           </div>
@@ -161,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
                     className={`nav-item ${isActive ? 'active' : ''}`}
                     title={collapsed ? item.label : undefined}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#FF5430]' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[var(--pbx-action-primary)]' : 'text-slate-400 group-hover:text-slate-600'}`} />
                     <span className="nav-text truncate">{item.label}</span>
                   </button>
                 );
@@ -174,15 +173,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, activeTab, setActiv
       {/* Sidebar Footer */}
       <div className="sidebar-footer">
         <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 px-2 py-1">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span className="nav-text text-slate-600">v2.0.0 • Engine Ready</span>
+          <Badge variant="success" size="sm">
+            Ready
+          </Badge>
+          <span className="nav-text text-slate-600">v2.0.0 • PBX Engine</span>
         </div>
       </div>
     </aside>
   );
 };
-
-
