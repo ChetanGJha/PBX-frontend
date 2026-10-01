@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Terminal, Send, Copy, Check, FileCode, Cpu } from 'lucide-react';
+import { Send, Copy, Check, FileCode, Cpu } from 'lucide-react';
 import { apiService } from '../services/api';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Grid } from './layout/Stack';
+import { Button, Card, Input, FormField } from './ui';
 
 export const XmlCurlTester: React.FC = () => {
   const [domain, setDomain] = useState('acme.local');
@@ -32,105 +35,87 @@ export const XmlCurlTester: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Terminal className="w-6 h-6 text-emerald-400" />
-          <span>FreeSWITCH mod_xml_curl Directory Console</span>
-        </h2>
-        <p className="text-xs text-slate-400">
-          Simulate FreeSWITCH HTTP POST requests (`POST /freeswitch/xml`) to inspect dynamic XML directory responses and multi-tenant context variables.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <PageContainer
+      title="FreeSWITCH mod_xml_curl Directory Console"
+      subtitle="Simulate FreeSWITCH HTTP POST requests (`POST /freeswitch/xml`) to inspect dynamic XML directory responses and multi-tenant context variables."
+      eyebrow="Telephony Engine Debugger"
+    >
+      <Grid cols={3} gap="6">
         {/* Request Form */}
-        <div className="glass-card p-6 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Cpu className="w-4 h-4 text-emerald-400" />
-            <span>Simulate FreeSWITCH Event Request</span>
-          </div>
+        <Card title="Simulate FreeSWITCH Event Request">
+          <form onSubmit={handleTest}>
+            <Stack gap="4">
+              <FormField label="Section">
+                <Input value="directory" disabled className="bg-slate-50 font-mono" />
+              </FormField>
 
-          <form onSubmit={handleTest} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Section</label>
-              <input type="text" value="directory" disabled className="input-field opacity-60 font-mono" />
-            </div>
+              <FormField label="SIP Domain (`domain` / `key_value`)" required>
+                <Input
+                  required
+                  placeholder="acme.local"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  className="font-mono"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">SIP Domain (`domain` / `key_value`)</label>
-              <input
-                type="text"
-                placeholder="acme.local"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                className="input-field font-mono"
-                required
-              />
-            </div>
+              <FormField label="SIP User / Extension (`user`)" required>
+                <Input
+                  required
+                  placeholder="1001"
+                  value={user}
+                  onChange={(e) => setUser(e.target.value)}
+                  className="font-mono"
+                />
+              </FormField>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">SIP User / Extension (`user`)</label>
-              <input
-                type="text"
-                placeholder="1001"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                className="input-field font-mono"
-                required
-              />
-            </div>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={loading}
+                leftIcon={<Send size={14} />}
+                className="w-full justify-center"
+              >
+                Execute mod_xml_curl Lookup
+              </Button>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full justify-center bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/30"
-            >
-              <Send className="w-4 h-4" />
-              <span>{loading ? 'Fetching XML...' : 'Execute mod_xml_curl Lookup'}</span>
-            </button>
+              <Card padding="sm" className="bg-[var(--pbx-bg-subtle)]">
+                <Stack gap="1" className="font-mono text-xs">
+                  <div className="font-bold text-[var(--pbx-text-primary)] font-sans">FreeSWITCH Request Format:</div>
+                  <div className="text-[var(--pbx-accent-primary)] font-bold">POST /freeswitch/xml</div>
+                  <div className="text-[var(--pbx-text-muted)]">Content-Type: application/x-www-form-urlencoded</div>
+                  <code className="code-box break-all">section=directory&domain={domain}&user={user}</code>
+                </Stack>
+              </Card>
+            </Stack>
           </form>
-
-          <div className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-            <div className="font-semibold text-slate-300">FreeSWITCH Request Format:</div>
-            <div className="font-mono text-cyan-300">POST /freeswitch/xml</div>
-            <div className="font-mono text-slate-400">Content-Type: application/x-www-form-urlencoded</div>
-            <div className="font-mono text-slate-400">section=directory&domain={domain}&user={user}</div>
-          </div>
-        </div>
+        </Card>
 
         {/* XML Output Console */}
-        <div className="lg:col-span-2 glass-card p-6 border border-slate-800 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                <FileCode className="w-4 h-4 text-cyan-400" />
-                <span>Generated FreeSWITCH XML Response</span>
-              </div>
-              {xmlResult && (
-                <button
-                  onClick={handleCopy}
-                  className="text-xs text-slate-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy XML'}</span>
-                </button>
-              )}
-            </div>
-
+        <div className="col-span-2">
+          <Card
+            title="Generated FreeSWITCH XML Response"
+            actions={
+              xmlResult ? (
+                <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}>
+                  {copied ? 'Copied' : 'Copy XML'}
+                </Button>
+              ) : undefined
+            }
+          >
             {xmlResult ? (
-              <pre className="code-block text-xs max-h-[420px] overflow-y-auto whitespace-pre-wrap text-emerald-300 font-mono">
+              <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap bg-slate-950 text-emerald-400 p-4 rounded-xl border border-slate-800 font-mono text-xs leading-relaxed">
                 {xmlResult}
               </pre>
             ) : (
-              <div className="h-[320px] border border-dashed border-slate-800 rounded-lg flex flex-col items-center justify-center text-slate-500 text-xs">
-                <FileCode className="w-8 h-8 mb-2 opacity-40" />
+              <div className="h-[320px] border border-dashed border-[var(--pbx-border)] rounded-xl flex flex-col items-center justify-center text-[var(--pbx-text-muted)] text-xs">
+                <FileCode size={32} className="mb-2 opacity-40 text-[var(--pbx-accent-primary)]" />
                 <span>Click "Execute mod_xml_curl Lookup" to test dynamic XML generation.</span>
               </div>
             )}
-          </div>
+          </Card>
         </div>
-      </div>
-    </div>
+      </Grid>
+    </PageContainer>
   );
 };
