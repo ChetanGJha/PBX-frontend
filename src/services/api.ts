@@ -659,7 +659,10 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to create user');
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(parseErrorDetail(err, 'Failed to create user'));
+    }
     return res.json();
   },
   async deleteUser(token: string, userId: string) {

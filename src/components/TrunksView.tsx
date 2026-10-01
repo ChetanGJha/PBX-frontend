@@ -35,6 +35,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
     realm: '',
     priority: 1,
     tenant_id: '',
+    tenant_ids: [] as string[],
     register: true,
     srtp: false
   });
@@ -51,6 +52,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
     realm: '',
     priority: 1,
     tenant_id: '',
+    tenant_ids: [] as string[],
     register: true,
     srtp: false
   });
@@ -104,7 +106,8 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
     try {
       const payload = {
         ...formData,
-        tenant_id: formData.tenant_id && formData.tenant_id.trim() !== '' ? formData.tenant_id : null
+        tenant_ids: formData.tenant_ids,
+        tenant_id: formData.tenant_ids.length === 1 ? formData.tenant_ids[0] : null
       };
       await apiService.createTrunk(token, payload);
       setShowModal(false);
@@ -119,6 +122,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
         realm: '',
         priority: 1,
         tenant_id: '',
+        tenant_ids: [],
         register: true,
         srtp: false
       });
@@ -129,6 +133,12 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
   };
 
   const handleEditClick = (trunk: any) => {
+    const assignedIds: string[] = Array.isArray(trunk.tenant_ids)
+      ? trunk.tenant_ids
+      : (trunk.assigned_tenants && Array.isArray(trunk.assigned_tenants)
+          ? trunk.assigned_tenants.map((x: any) => x.id)
+          : (trunk.tenant_id ? [trunk.tenant_id] : []));
+
     setEditTrunk(trunk);
     setEditFormData({
       name: trunk.name || '',
@@ -139,7 +149,8 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
       password: trunk.password || '',
       realm: trunk.realm || '',
       priority: trunk.priority || 1,
-      tenant_id: trunk.tenant_id || '',
+      tenant_id: assignedIds[0] || '',
+      tenant_ids: assignedIds,
       register: trunk.register !== undefined ? trunk.register : true,
       srtp: trunk.srtp !== undefined ? trunk.srtp : false
     });
@@ -151,7 +162,8 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
     try {
       const payload = {
         ...editFormData,
-        tenant_id: editFormData.tenant_id && editFormData.tenant_id.trim() !== '' ? editFormData.tenant_id : null
+        tenant_ids: editFormData.tenant_ids,
+        tenant_id: editFormData.tenant_ids.length === 1 ? editFormData.tenant_ids[0] : null
       };
       if (editTrunk.itemType === 'Sofia Gateway') {
         await apiService.updateGateway(token, editTrunk.id, payload);
@@ -295,9 +307,17 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                     <td><code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>{t.host}</code></td>
                     <td><span className="terrix-badge grey">{t.transport}</span></td>
                     <td>
-                      {t.tenant_name ? (
+                      {t.assigned_tenants && t.assigned_tenants.length > 0 ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {t.assigned_tenants.map((ten: any) => (
+                            <span key={ten.id} className="terrix-badge green" style={{ fontWeight: 700, fontSize: '11px' }}>
+                              {ten.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : t.tenant_name && t.tenant_name !== 'Shared (All Tenants)' ? (
                         <span className="terrix-badge green" style={{ fontWeight: 700 }}>
-                          {t.tenant_name} ({t.tenant_domain})
+                          {t.tenant_name}
                         </span>
                       ) : (
                         <span className="terrix-badge blue" style={{ background: '#E0F2FE', color: '#0369A1', borderColor: '#BAE6FD', fontWeight: 700 }}>
@@ -448,16 +468,75 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                       onChange={(val) => setFormData({ ...formData, transport: val })}
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Assign to Tenant (Optional)</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Shared (Global / All Tenants) --' },
-                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                      ]}
-                      value={formData.tenant_id}
-                      onChange={(val) => setFormData({ ...formData, tenant_id: val })}
-                    />
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
+                        Assigned Tenants ({formData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${formData.tenant_ids.length} selected`})
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          style={{ fontSize: '11px', color: '#FF5430', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => setFormData({ ...formData, tenant_ids: tenants.map(t => t.id) })}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: '#CBD5E1' }}>|</span>
+                        <button
+                          type="button"
+                          style={{ fontSize: '11px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => setFormData({ ...formData, tenant_ids: [] })}
+                        >
+                          Clear (Make Shared)
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{
+                      maxHeight: '130px',
+                      overflowY: 'auto',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '6px',
+                      background: '#F8FAFC'
+                    }}>
+                      {tenants.map(t => {
+                        const isSelected = formData.tenant_ids.includes(t.id);
+                        return (
+                          <label
+                            key={t.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                              border: isSelected ? '1px solid #3B82F6' : '1px solid #E2E8F0',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...formData.tenant_ids, t.id]
+                                  : formData.tenant_ids.filter((id: string) => id !== t.id);
+                                setFormData({ ...formData, tenant_ids: next });
+                              }}
+                            />
+                            <span style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1E40AF' : '#334155' }}>
+                              {t.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Priority Level</label>
@@ -522,16 +601,75 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
                       onChange={(val) => setEditFormData({ ...editFormData, transport: val })}
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Assign to Tenant (Optional)</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Shared (Global / All Tenants) --' },
-                        ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                      ]}
-                      value={editFormData.tenant_id}
-                      onChange={(val) => setEditFormData({ ...editFormData, tenant_id: val })}
-                    />
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
+                        Assigned Tenants ({editFormData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${editFormData.tenant_ids.length} selected`})
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          style={{ fontSize: '11px', color: '#FF5430', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => setEditFormData({ ...editFormData, tenant_ids: tenants.map(t => t.id) })}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: '#CBD5E1' }}>|</span>
+                        <button
+                          type="button"
+                          style={{ fontSize: '11px', color: '#64748B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                          onClick={() => setEditFormData({ ...editFormData, tenant_ids: [] })}
+                        >
+                          Clear (Make Shared)
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{
+                      maxHeight: '130px',
+                      overflowY: 'auto',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '6px',
+                      background: '#F8FAFC'
+                    }}>
+                      {tenants.map(t => {
+                        const isSelected = editFormData.tenant_ids.includes(t.id);
+                        return (
+                          <label
+                            key={t.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                              border: isSelected ? '1px solid #3B82F6' : '1px solid #E2E8F0',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...editFormData.tenant_ids, t.id]
+                                  : editFormData.tenant_ids.filter((id: string) => id !== t.id);
+                                setEditFormData({ ...editFormData, tenant_ids: next });
+                              }}
+                            />
+                            <span style={{ fontWeight: isSelected ? 700 : 500, color: isSelected ? '#1E40AF' : '#334155' }}>
+                              {t.name}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Priority Level</label>
