@@ -230,11 +230,11 @@ export const CallBlockView: React.FC<CallBlockViewProps> = ({ token, user }) => 
           emptyTitle="No blocked caller IDs"
           emptyDescription='Click "Block Caller ID" to blacklist unwanted callers.'
           actions={(b: any) => (
-            <Inline gap="2" justify="flex-end" wrap={false}>
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)}>
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)} title="Edit">
                 <Edit2 size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(b.id, b.number)}>
+              <Button variant="ghost" size="sm" onClick={() => handleDelete(b.id, b.number)} title="Delete">
                 <Trash2 size={14} className="text-rose-600" />
               </Button>
             </Inline>

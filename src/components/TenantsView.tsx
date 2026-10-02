@@ -177,11 +177,11 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
           emptyTitle="No tenants found"
           emptyDescription='Click "Add New Tenant" to provision a tenant domain.'
           actions={(t: Tenant) => (
-            <Inline gap="1" justify="flex-end">
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)}>
+            <Inline gap="1" justify="center" wrap={false}>
+              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)} title="Edit">
                 <Edit2 size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id)}>
+              <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id)} title="Delete">
                 <Trash2 size={14} className="text-rose-600" />
               </Button>
             </Inline>

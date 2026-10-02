@@ -305,15 +305,15 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
           actions={
             canManage
               ? (ext: Extension) => (
-                  <Inline gap="2" justify="flex-end">
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} leftIcon={<Edit2 size={12} />}>
-                      Edit
+                  <Inline gap="2" justify="center" wrap={false}>
+                    <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} title="Edit">
+                      <Edit2 size={14} />
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} leftIcon={<KeyRound size={12} />}>
-                      Reset
+                    <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} title="Reset Password">
+                      <KeyRound size={14} />
                     </Button>
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} leftIcon={<Trash2 size={12} />}>
-                      Delete
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} title="Delete">
+                      <Trash2 size={14} />
                     </Button>
                   </Inline>
                 )

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
-import { GitBranch, Plus, Volume2, Edit, Trash2, UploadCloud } from 'lucide-react';
+import { GitBranch, Plus, Volume2, Edit, Trash2, UploadCloud, Palette } from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
@@ -369,17 +369,17 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
           emptyTitle="No IVR Flows Configured"
           emptyDescription={canManage ? 'Create your first auto-attendant flow to start routing incoming customer calls automatically.' : undefined}
           actions={(ivr: any) => (
-            <Inline gap="2" justify="flex-end" wrap={false}>
-              <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)}>
-                🎨 Open Designer
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)} title="Open Designer">
+                <Palette size={14} />
               </Button>
               {canManage && (
                 <>
-                  <Button variant="secondary" size="sm" onClick={() => openEditModal(ivr)} leftIcon={<Edit size={12} />}>
-                    Edit
+                  <Button variant="secondary" size="sm" onClick={() => openEditModal(ivr)} title="Edit">
+                    <Edit size={14} />
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }} leftIcon={<Trash2 size={12} />}>
-                    Delete
+                  <Button variant="danger" size="sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }} title="Delete">
+                    <Trash2 size={14} />
                   </Button>
                 </>
               )}

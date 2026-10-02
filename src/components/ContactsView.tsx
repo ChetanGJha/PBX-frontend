@@ -211,11 +211,11 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ token, user }) => {
           emptyTitle="No contacts found"
           emptyDescription='Click "Add Contact" to populate your directory.'
           actions={(c: any) => (
-            <Inline gap="2" justify="flex-end">
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)}>
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
                 <Edit2 size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, `${c.first_name} ${c.last_name || ''}`)}>
+              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, `${c.first_name} ${c.last_name || ''}`)} title="Delete">
                 <Trash2 size={14} className="text-rose-600" />
               </Button>
             </Inline>

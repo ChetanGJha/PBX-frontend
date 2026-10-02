@@ -314,17 +314,17 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
           isLoading={loading}
           emptyTitle="No assigned gateways or SIP trunks found"
           actions={(t: any) => (
-            <Inline gap="2" justify="flex-end" wrap={false}>
-              <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} leftIcon={<Info size={12} />}>
-                View Info
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} title="View Info">
+                <Info size={14} />
               </Button>
               {!isReadOnly && (
                 <>
-                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} leftIcon={<Edit2 size={12} />}>
-                    Edit
+                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} title="Edit">
+                    <Edit2 size={14} />
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} leftIcon={<Trash2 size={12} />}>
-                    Delete
+                  <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} title="Delete">
+                    <Trash2 size={14} />
                   </Button>
                 </>
               )}

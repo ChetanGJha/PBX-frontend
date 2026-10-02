@@ -312,9 +312,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
                 size="sm"
                 onClick={() => handlePlayRecording(r)}
                 isLoading={audioLoadingId === r.recording_id}
-                leftIcon={playingRecordingId === r.recording_id ? <Pause size={12} /> : <Volume2 size={12} />}
+                title={playingRecordingId === r.recording_id ? 'Pause' : 'Play'}
               >
-                {playingRecordingId === r.recording_id ? 'Pause' : 'Play'}
+                {playingRecordingId === r.recording_id ? <Pause size={14} /> : <Volume2 size={14} />}
               </Button>
             ) : undefined}
           />
@@ -350,9 +350,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
                 size="sm"
                 onClick={() => handlePlayRecording(r)}
                 isLoading={audioLoadingId === r.id}
-                leftIcon={playingRecordingId === r.id ? <Pause size={12} /> : <Volume2 size={12} />}
+                title={playingRecordingId === r.id ? 'Pause' : 'Play'}
               >
-                {playingRecordingId === r.id ? 'Pause' : 'Play'}
+                {playingRecordingId === r.id ? <Pause size={14} /> : <Volume2 size={14} />}
               </Button>
             )}
           />

@@ -262,18 +262,18 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
           actions={(a: any) => {
             const isThisPlaying = currentPlaying?.id === a.id && isPlaying;
             return (
-              <Inline gap="2" justify="flex-end" wrap={false}>
+              <Inline gap="2" justify="center" wrap={false}>
                 <Button
                   variant={isThisPlaying ? 'primary' : 'secondary'}
                   size="sm"
                   onClick={() => handleTogglePlay(a)}
-                  leftIcon={isThisPlaying ? <Pause size={13} /> : <Play size={13} />}
+                  title={isThisPlaying ? 'Pause' : 'Play'}
                 >
-                  {isThisPlaying ? 'Pause' : 'Play'}
+                  {isThisPlaying ? <Pause size={14} /> : <Play size={14} />}
                 </Button>
                 {canManage && (
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(a)} leftIcon={<Trash2 size={13} />}>
-                    Delete
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(a)} title="Delete">
+                    <Trash2 size={14} />
                   </Button>
                 )}
               </Inline>

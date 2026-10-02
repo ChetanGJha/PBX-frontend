@@ -270,11 +270,11 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
           emptyTitle="No conference rooms configured"
           emptyDescription='Click "Create Conference Room" to set up your first room.'
           actions={(c: any) => (
-            <Inline gap="2" justify="flex-end" wrap={false}>
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)}>
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
                 <Edit2 size={14} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)}>
+              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)} title="Delete">
                 <Trash2 size={14} className="text-rose-600" />
               </Button>
             </Inline>

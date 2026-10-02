@@ -228,21 +228,21 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
           emptyTitle="No DIDs in inventory"
           actions={(d: any) => (
             user?.role === 'SUPER_ADMIN' ? (
-              <Inline gap="2" justify="flex-end" wrap={false}>
-                <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} leftIcon={<Edit2 size={12} />}>
-                  Edit
+              <Inline gap="2" justify="center" wrap={false}>
+                <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
+                  <Edit2 size={14} />
                 </Button>
                 {d.tenant_id ? (
-                  <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} leftIcon={<Unlink size={12} />}>
-                    Unassign
+                  <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
+                    <Unlink size={14} />
                   </Button>
                 ) : (
-                  <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} leftIcon={<Link2 size={12} />}>
-                    Assign
+                  <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
+                    <Link2 size={14} />
                   </Button>
                 )}
-                <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} leftIcon={<Trash2 size={12} />}>
-                  Delete
+                <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
+                  <Trash2 size={14} />
                 </Button>
               </Inline>
             ) : (
