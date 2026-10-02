@@ -314,7 +314,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
           isLoading={loading}
           emptyTitle="No assigned gateways or SIP trunks found"
           actions={(t: any) => (
-            <Inline gap="2" justify="flex-end">
+            <Inline gap="2" justify="flex-end" wrap={false}>
               <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} leftIcon={<Info size={12} />}>
                 View Info
               </Button>

@@ -271,7 +271,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
           emptyTitle="No users found"
           emptyDescription="Provision a new user account to get started."
           actions={(u: UserType) => (
-            <Inline gap="1" justify="flex-end">
+            <Inline gap="1" justify="flex-end" wrap={false}>
               {u.role === 'SUB_ADMIN' && (
                 <Button variant="ghost" size="sm" onClick={() => openPermModal(u)} title="Configure Permissions">
                   <Settings size={14} />

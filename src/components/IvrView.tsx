@@ -369,7 +369,7 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
           emptyTitle="No IVR Flows Configured"
           emptyDescription={canManage ? 'Create your first auto-attendant flow to start routing incoming customer calls automatically.' : undefined}
           actions={(ivr: any) => (
-            <Inline gap="2" justify="flex-end">
+            <Inline gap="2" justify="flex-end" wrap={false}>
               <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)}>
                 🎨 Open Designer
               </Button>

@@ -61,7 +61,7 @@ export function DataTable<T extends Record<string, any>>({
                 </TableCell>
               )
             )}
-            {actions && <TableCell header style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Actions</TableCell>}
+            {actions && <TableCell header style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '1%' }}>Actions</TableCell>}
           </TableRow>
         </TableHeader>
 
@@ -90,8 +90,8 @@ export function DataTable<T extends Record<string, any>>({
                   </TableCell>
                 ))}
                 {actions && (
-                  <TableCell style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'nowrap' }}>
+                  <TableCell style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '1%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexWrap: 'nowrap', width: 'max-content', marginLeft: 'auto' }}>
                       {actions(row)}
                     </div>
                   </TableCell>

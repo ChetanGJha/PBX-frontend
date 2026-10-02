@@ -48,6 +48,7 @@ export interface InlineProps {
   gap?: '1' | '2' | '3' | '4' | '5' | '6' | '8' | number | string;
   align?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
   justify?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'between';
+  wrap?: boolean;
   children: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
@@ -57,6 +58,7 @@ export const Inline: React.FC<InlineProps> = ({
   gap = '3',
   align = 'center',
   justify = 'flex-start',
+  wrap = true,
   children,
   style,
   className = '',
@@ -79,7 +81,7 @@ export const Inline: React.FC<InlineProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        flexWrap: wrap ? 'wrap' : 'nowrap',
         gap: gapValue,
         alignItems: align,
         justifyContent: justifyValue,

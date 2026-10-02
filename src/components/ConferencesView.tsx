@@ -270,7 +270,7 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
           emptyTitle="No conference rooms configured"
           emptyDescription='Click "Create Conference Room" to set up your first room.'
           actions={(c: any) => (
-            <Inline gap="2" justify="flex-end">
+            <Inline gap="2" justify="flex-end" wrap={false}>
               <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)}>
                 <Edit2 size={14} />
               </Button>

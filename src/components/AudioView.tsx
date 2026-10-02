@@ -262,7 +262,7 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
           actions={(a: any) => {
             const isThisPlaying = currentPlaying?.id === a.id && isPlaying;
             return (
-              <Inline gap="2" justify="flex-end">
+              <Inline gap="2" justify="flex-end" wrap={false}>
                 <Button
                   variant={isThisPlaying ? 'primary' : 'secondary'}
                   size="sm"

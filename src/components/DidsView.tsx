@@ -228,7 +228,7 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
           emptyTitle="No DIDs in inventory"
           actions={(d: any) => (
             user?.role === 'SUPER_ADMIN' ? (
-              <Inline gap="2" justify="flex-end">
+              <Inline gap="2" justify="flex-end" wrap={false}>
                 <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} leftIcon={<Edit2 size={12} />}>
                   Edit
                 </Button>
