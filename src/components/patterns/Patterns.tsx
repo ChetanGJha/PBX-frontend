@@ -97,6 +97,8 @@ export interface StatCardProps {
   icon?: React.ReactNode;
   trend?: string;
   variant?: 'neutral' | 'primary' | 'success';
+  style?: React.CSSProperties;
+  className?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -104,6 +106,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   value,
   icon,
   trend,
+  style,
+  className = '',
 }) => {
   return (
     <div
@@ -116,7 +120,10 @@ export const StatCard: React.FC<StatCardProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        height: '100%',
+        ...style,
       }}
+      className={className}
     >
       <div>
         <Text size="xs" variant="secondary" weight="bold" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -142,6 +149,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           {icon}

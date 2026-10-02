@@ -110,7 +110,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
         <Grid cols={4} gap="6">
           {isSuper ? (
             <>
-              <div className="cursor-pointer" onClick={() => setActiveTab('tenants')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('tenants')}>
                 <StatCard
                   title="Active Tenants"
                   value={tenantCount}
@@ -119,7 +119,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                 />
               </div>
 
-              <div className="cursor-pointer" onClick={() => setActiveTab('users')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('users')}>
                 <StatCard
                   title="Total Users"
                   value={userCount}
@@ -128,7 +128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                 />
               </div>
 
-              <div className="cursor-pointer" onClick={() => setActiveTab('trunks')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('trunks')}>
                 <StatCard
                   title="Carrier Trunks"
                   value={gatewayCount}
@@ -146,7 +146,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             </>
           ) : (
             <>
-              <div className="cursor-pointer" onClick={() => setActiveTab('extensions')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('extensions')}>
                 <StatCard
                   title="Active Extensions"
                   value={extensionCount}
@@ -155,7 +155,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                 />
               </div>
 
-              <div className="cursor-pointer" onClick={() => setActiveTab('tenant-trunks')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('tenant-trunks')}>
                 <StatCard
                   title="Active Gateways"
                   value={gatewayCount}
@@ -182,10 +182,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
         </Grid>
 
         {/* ── QUICK NAVIGATION CARDS ───────────────────────────────────────────── */}
-        <Grid cols={3} gap="6">
+        <Grid cols={4} gap="6">
         {isSuper ? (
           <>
-            <Card className="flex flex-col justify-between gap-4">
+            <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
                 <div className="p-3 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] w-fit rounded-lg mb-3">
                   <Building2 size={24} />
@@ -200,7 +200,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
               </Button>
             </Card>
 
-            <Card className="flex flex-col justify-between gap-4">
+            <Card className="flex flex-col justify-between gap-4 h-full">
+              <div>
+                <div className="p-3 bg-[var(--pbx-color-success-50)] text-[var(--pbx-color-success-700)] w-fit rounded-lg mb-3">
+                  <Users size={24} />
+                </div>
+                <Heading level={3}>Global Users</Heading>
+                <Text size="sm" variant="secondary" className="mt-1">
+                  Manage platform RBAC users, super admins, and tenant administrators.
+                </Text>
+              </div>
+              <Button variant="primary" className="w-full" onClick={() => setActiveTab('users')}>
+                Manage Users
+              </Button>
+            </Card>
+
+            <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
                 <div className="p-3 bg-[var(--pbx-color-info-50)] text-[var(--pbx-color-info-700)] w-fit rounded-lg mb-3">
                   <Hash size={24} />
@@ -215,7 +230,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
               </Button>
             </Card>
 
-            <Card className="flex flex-col justify-between gap-4">
+            <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
                 <div className="p-3 bg-[var(--pbx-color-indigo-50)] text-[var(--pbx-color-indigo-700)] w-fit rounded-lg mb-3">
                   <ArrowLeftRight size={24} />
