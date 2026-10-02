@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import logoSvg from '../assets/Logo.svg';
+import logoSvg from '../assets/LogoTransparent.svg';
 import { apiService } from '../services/api';
 import type { User } from '../types';
-import { LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 // Design System imports
 import { Button, Input, FormField } from './ui';
@@ -77,51 +77,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
         {/* Left Visual Area */}
         <div className="login-visual-area">
           <div className="login-visual-content">
-            <img src={logoSvg} alt="Terrix Logo" className="w-16 h-16 rounded-xl bg-white p-2 mb-4 shadow-sm" />
-
-            <div className="space-y-2 mt-4">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">
-                Enterprise Multi-Tenant PBX
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Powered by FreeSWITCH 1.10.x, FastAPI control plane, dynamic mod_xml_curl directory routing, and WebRTC endpoints.
-              </p>
-            </div>
-
-            <div className="space-y-2.5 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[var(--pbx-action-primary)] shrink-0" />
-                <span>100% Isolated Tenant Domains</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span>Dynamic SIP Directory XML Generation</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" />
-                <span>SIP Softphone & WebRTC Support</span>
-              </div>
-            </div>
+            <img
+              src={logoSvg}
+              alt="Logo"
+              className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[440px] lg:h-[440px] object-contain transition-transform duration-300 hover:scale-105"
+            />
           </div>
         </div>
 
         {/* Right Form Area */}
         <div className="login-form-area">
           <div className="login-form">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-lg bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)]">
-                {isSeeding ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
-              </div>
-              <h1 className="login-title mb-0">
-                {isSeeding ? 'Bootstrap SuperAdmin' : 'Log In'}
-              </h1>
-            </div>
+            <h1 className="login-title">
+              {isSeeding ? 'Bootstrap SuperAdmin' : 'Log In'}
+            </h1>
 
-            <div className="login-subtitle">
+            <p className="login-subtitle">
               {isSeeding
                 ? 'Create the platform Super Admin account for initial setup.'
-                : 'Enter your credentials to access the Terrix AI PBX engine securely.'}
-            </div>
+                : 'Enter your details to access your account securely.'}
+            </p>
 
             {message && (
               <div
@@ -177,6 +152,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="text"
                     value={seedUser}
                     onChange={(e) => setSeedUser(e.target.value)}
+                    placeholder="Enter super admin username"
                     autoComplete="username"
                     required
                   />
@@ -187,6 +163,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="email"
                     value={seedEmail}
                     onChange={(e) => setSeedEmail(e.target.value)}
+                    placeholder="Enter your email"
                     autoComplete="email"
                     required
                   />
@@ -197,6 +174,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
                     type="password"
                     value={seedPassword}
                     onChange={(e) => setSeedPassword(e.target.value)}
+                    placeholder="Enter your password"
                     autoComplete="new-password"
                     required
                   />
