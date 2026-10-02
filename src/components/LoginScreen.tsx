@@ -80,7 +80,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
             <img
               src={logoSvg}
               alt="Logo"
-              className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[440px] lg:h-[440px] object-contain transition-transform duration-300 hover:scale-105"
+              className="login-logo-img transition-transform duration-300 hover:scale-105"
             />
           </div>
         </div>
@@ -100,11 +100,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initia
 
             {message && (
               <div
-                className={`p-3.5 mb-4 rounded-lg text-xs font-semibold flex items-center gap-2 ${
-                  message.type === 'success'
+                className={`p-3.5 mb-4 rounded-lg text-xs font-semibold flex items-center gap-2 ${message.type === 'success'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : 'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
+                  }`}
               >
                 {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 <span>{message.text}</span>

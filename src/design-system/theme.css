@@ -25,7 +25,8 @@
   padding: 0;
 }
 
-html, body {
+html,
+body {
   min-height: 100%;
   font-family: var(--font-sans);
   color: var(--pbx-text-primary);
@@ -35,7 +36,10 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -125,7 +129,7 @@ select {
 
 .login-card {
   display: flex;
-  width: min(1280px, 92vw);
+  width: min(1280px, 94vw);
   min-height: 600px;
   background: transparent;
   border-radius: 0;
@@ -133,12 +137,13 @@ select {
   border: none;
   box-shadow: none;
   align-items: center;
+  justify-content: center;
 }
 
 .login-visual-area {
-  width: 52%;
+  width: 50%;
   background: transparent;
-  padding: 32px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -153,9 +158,19 @@ select {
   justify-content: center;
 }
 
+.login-logo-img {
+  width: 473.54px;
+  height: 474.73px;
+  max-width: 100%;
+  object-fit: contain;
+  flex: none;
+  order: 0;
+  flex-grow: 0;
+}
+
 .login-form-area {
-  width: 48%;
-  padding: 32px 48px;
+  width: 50%;
+  padding: 24px 32px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -163,23 +178,38 @@ select {
 }
 
 .login-form {
-  width: 100%;
-  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0px;
+  gap: 24px;
+  width: min(521.57px, 100%);
+  min-height: 539.85px;
   margin: 0 auto;
+  flex: none;
+  order: 1;
+  flex-grow: 0;
+}
+
+.login-form form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .login-title {
-  font-size: 34px;
+  font-size: 36px;
   font-weight: 800;
   color: var(--pbx-text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   letter-spacing: -0.02em;
 }
 
 .login-subtitle {
   font-size: 15px;
   color: var(--pbx-text-secondary);
-  margin-bottom: 32px;
+  margin-bottom: 8px;
   line-height: 1.5;
 }
 
@@ -301,7 +331,7 @@ select {
   background: var(--pbx-bg-canvas);
 }
 
-.sidebar.collapsed ~ .main {
+.sidebar.collapsed~.main {
   margin-left: var(--sidebar-collapsed);
 }
 
