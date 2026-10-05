@@ -4,7 +4,7 @@ import { Plus, RefreshCw, KeyRound, Edit2, Trash2 } from 'lucide-react';
 
 import { apiService } from '../services/api';
 import type { Extension, Tenant } from '../types';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -14,7 +14,6 @@ import {
   Modal,
   Badge,
   Alert,
-  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -258,10 +257,10 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="SIP Extensions"
-      subtitle="Manage SIP digest credentials and WebRTC softphone configurations (/api/v1/extensions)."
-      eyebrow="Endpoint Provisioning"
+      subtitle="Manage SIP digest credentials and WebRTC softphone configurations."
+      eyebrow="ENDPOINT PROVISIONING"
       actions={
         <Inline gap="3">
           <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
@@ -274,58 +273,53 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
           )}
         </Inline>
       }
+      alert={error ? <Alert variant="danger" title="Error">{error}</Alert> : undefined}
+      filterBar={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search extension or name..."
+          filters={
+            user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? (
+              <Select
+                value={selectedTenantFilter}
+                onChange={(e) => setSelectedTenantFilter(e.target.value)}
+                className="w-48"
+              >
+                <option value="">All Tenants</option>
+                {tenants.map((t: Tenant) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Select>
+            ) : undefined
+          }
+        />
+      }
     >
-      <Stack gap="6">
-        {error && <Alert variant="danger" title="Error">{error}</Alert>}
-
-        <Card padding="sm">
-          <FilterBar
-            searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
-            searchPlaceholder="Search extension or name..."
-            filters={
-              user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? (
-                <Select
-                  value={selectedTenantFilter}
-                  onChange={(e) => setSelectedTenantFilter(e.target.value)}
-                >
-                  <option value="">All Tenants</option>
-                  {tenants.map((t: Tenant) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </Select>
-              ) : undefined
-            }
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filteredExts}
-            isLoading={loading}
-            emptyTitle="No extensions found"
-            emptyDescription={canManage ? 'Click "Provision Extension" to add your first extension.' : undefined}
-            actions={
-              canManage
-                ? (ext: Extension) => (
-                    <Inline gap="2" justify="center" wrap={false}>
-                      <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} title="Edit">
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} title="Reset Password">
-                        <KeyRound size={14} />
-                      </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} title="Delete">
-                        <Trash2 size={14} />
-                      </Button>
-                    </Inline>
-                  )
-                : undefined
-            }
-          />
-        </Card>
-      </Stack>
+      <DataTable
+        columns={columns}
+        data={filteredExts}
+        isLoading={loading}
+        emptyTitle="No extensions found"
+        emptyDescription={canManage ? 'Click "Provision Extension" to add your first extension.' : undefined}
+        actions={
+          canManage
+            ? (ext: Extension) => (
+              <Inline gap="2" justify="center" wrap={false}>
+                <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} title="Edit">
+                  <Edit2 size={14} />
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} title="Reset Password">
+                  <KeyRound size={14} />
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} title="Delete">
+                  <Trash2 size={14} />
+                </Button>
+              </Inline>
+            )
+            : undefined
+        }
+      />
 
       {/* Create Extension Modal */}
       <Modal
@@ -497,6 +491,6 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
           </FormField>
         </Stack>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { ShieldAlert, Plus, Edit2, Trash2, Ban, PhoneOff, CheckCircle2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -163,18 +163,16 @@ export const CallBlockView: React.FC<CallBlockViewProps> = ({ token, user }) => 
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Call Block (Blacklist)"
       subtitle="Prevent spam, robocalls, and abusive callers from reaching your extensions, queues, or IVR."
-      eyebrow="Security & Fraud Prevention"
+      eyebrow="SECURITY & FRAUD PREVENTION"
       actions={
         <Button variant="primary" onClick={handleOpenCreate} leftIcon={<Plus size={16} />}>
           Block Caller ID
         </Button>
       }
-    >
-      <Stack gap="6">
-        {/* Stats */}
+      alert={
         <Grid cols={3} gap="4">
           <Card>
             <Inline gap="4" align="center">
@@ -212,40 +210,37 @@ export const CallBlockView: React.FC<CallBlockViewProps> = ({ token, user }) => 
             </Inline>
           </Card>
         </Grid>
-
-        <Card padding="sm">
-          <FilterBar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search number or description..."
-            actions={
-              <div className="text-xs text-[var(--pbx-text-muted)]">
-                Incoming calls matching any blocked number are intercepted before routing
-              </div>
-            }
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            isLoading={loading}
-            emptyTitle="No blocked caller IDs"
-            emptyDescription='Click "Block Caller ID" to blacklist unwanted callers.'
-            actions={(b: any) => (
-              <Inline gap="2" justify="center" wrap={false}>
-                <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)} title="Edit">
-                  <Edit2 size={14} />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(b.id, b.number)} title="Delete">
-                  <Trash2 size={14} className="text-rose-600" />
-                </Button>
-              </Inline>
-            )}
-          />
-        </Card>
-      </Stack>
+      }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search number or description..."
+          actions={
+            <div className="text-xs text-[var(--pbx-text-muted)]">
+              Incoming calls matching any blocked number are intercepted before routing
+            </div>
+          }
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No blocked caller IDs"
+        emptyDescription='Click "Block Caller ID" to blacklist unwanted callers.'
+        actions={(b: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(b)} title="Edit">
+              <Edit2 size={14} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(b.id, b.number)} title="Delete">
+              <Trash2 size={14} className="text-rose-600" />
+            </Button>
+          </Inline>
+        )}
+      />
 
       {/* Modal */}
       <Modal
@@ -301,6 +296,6 @@ export const CallBlockView: React.FC<CallBlockViewProps> = ({ token, user }) => 
           </Stack>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Users, Plus, Edit2, Trash2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -240,10 +240,10 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Call Queues"
       subtitle="Configure call distribution tiers, ring strategies, and multi-select agent extensions"
-      eyebrow="Automatic Call Distribution (ACD)"
+      eyebrow="AUTOMATIC CALL DISTRIBUTION (ACD)"
       actions={
         canManage ? (
           <Button variant="primary" onClick={handleOpenCreate} leftIcon={<Plus size={16} />}>
@@ -251,13 +251,14 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search queues..."
         />
+      }
+    >
 
         <DataTable
           columns={columns}
@@ -275,7 +276,6 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
             </Inline>
           ) : undefined}
         />
-      </Stack>
 
       {/* Create / Edit Modal */}
       <Modal
@@ -384,6 +384,6 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ token, user }) => {
           </FormField>
         </Stack>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

@@ -2,7 +2,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Network, Plus, ShieldCheck, Activity, CheckCircle2, Edit2, Trash2, Info, Building2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -12,7 +12,6 @@ import {
   Modal,
   Badge,
   Alert,
-  Card,
   Checkbox,
 } from './ui';
 import { DataTable, FilterBar, StatCard } from './patterns';
@@ -277,14 +276,14 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title={isReadOnly ? 'Assigned SIP Trunks & Gateways' : 'SIP Trunks & Gateways'}
       subtitle={
         isReadOnly 
           ? 'View active carrier SIP trunk connections and FreeSWITCH gateways allocated to your tenant.' 
           : 'Configure carrier SIP trunk connections, proxies, tenant allocations and gateway routes'
       }
-      eyebrow={isReadOnly ? 'Tenant Telephony' : 'Telephony Infrastructure'}
+      eyebrow={isReadOnly ? 'TENANT TELEPHONY' : 'TELEPHONY INFRASTRUCTURE'}
       actions={
         !isReadOnly ? (
           <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Plus size={16} />}>
@@ -292,51 +291,48 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
           </Button>
         ) : undefined
       }
+      alert={
+        <Stack gap="4">
+          <Grid cols={4} gap="4">
+            <StatCard title="Active Routes" value={trunks.length} icon={<Network size={20} />} />
+            <StatCard title="Registered" value={trunks.filter(t => t.register !== false).length} icon={<CheckCircle2 size={20} />} />
+            <StatCard title="Active Channels" value={trunks.filter(t => t.enabled !== false).length * 30} icon={<Activity size={20} />} />
+            <StatCard title="Security (SRTP)" value={`${trunks.filter(t => t.srtp).length} Enabled`} icon={<ShieldCheck size={20} />} />
+          </Grid>
+          {error && <Alert variant="danger" title="Error">{error}</Alert>}
+        </Stack>
+      }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search gateways by name, host or tenant..."
+        />
+      }
     >
-      <Stack gap="6">
-        <Grid cols={4} gap="4">
-          <StatCard title="Active Routes" value={trunks.length} icon={<Network size={20} />} />
-          <StatCard title="Registered" value={trunks.filter(t => t.register !== false).length} icon={<CheckCircle2 size={20} />} />
-          <StatCard title="Active Channels" value={trunks.filter(t => t.enabled !== false).length * 30} icon={<Activity size={20} />} />
-          <StatCard title="Security (SRTP)" value={`${trunks.filter(t => t.srtp).length} Enabled`} icon={<ShieldCheck size={20} />} />
-        </Grid>
-
-        {error && <Alert variant="danger" title="Error">{error}</Alert>}
-
-        <Card padding="sm">
-          <FilterBar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search gateways by name, host or tenant..."
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            isLoading={loading}
-            emptyTitle="No assigned gateways or SIP trunks found"
-            actions={(t: any) => (
-              <Inline gap="2" justify="center" wrap={false}>
-                <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} title="View Info">
-                  <Info size={14} />
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No assigned gateways or SIP trunks found"
+        actions={(t: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} title="View Info">
+              <Info size={14} />
+            </Button>
+            {!isReadOnly && (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} title="Edit">
+                  <Edit2 size={14} />
                 </Button>
-                {!isReadOnly && (
-                  <>
-                    <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} title="Edit">
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} title="Delete">
-                      <Trash2 size={14} />
-                    </Button>
-                  </>
-                )}
-              </Inline>
+                <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} title="Delete">
+                  <Trash2 size={14} />
+                </Button>
+              </>
             )}
-          />
-        </Card>
-      </Stack>
+          </Inline>
+        )}
+      />
 
       {/* VIEW INFO MODAL (READ ONLY) */}
       <Modal
@@ -545,6 +541,6 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
           Deleting this route will disable inbound/outbound call routing for numbers relying on this connection.
         </p>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

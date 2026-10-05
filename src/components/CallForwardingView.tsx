@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PhoneForwarded, RefreshCw, Edit2, Plus, Trash2, ArrowRight } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { User } from '../types';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -251,10 +251,10 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Call Forwarding & Follow-Me"
       subtitle="Configure unconditional forward, busy forward, and no-answer reroute policies"
-      eyebrow="Call Routing Rules"
+      eyebrow="CALL ROUTING RULES"
       actions={
         <Inline gap="3">
           <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
@@ -267,13 +267,14 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
           )}
         </Inline>
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search extensions..."
         />
+      }
+    >
 
         <DataTable
           columns={columns}
@@ -300,7 +301,6 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
             );
           } : undefined}
         />
-      </Stack>
 
       {/* Modal */}
       <Modal
@@ -406,6 +406,6 @@ export const CallForwardingView: React.FC<CallForwardingViewProps> = ({ token, u
           Incoming calls will directly ring this extension's registered device.
         </p>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

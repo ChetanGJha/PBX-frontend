@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Users2, Plus, Edit2, Trash2, Lock, Mic, CheckCircle2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -203,18 +203,16 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Conference Rooms"
       subtitle="Host HD multi-party audio conferences with PIN security, recording, and moderation."
-      eyebrow="Conferencing & Collaboration"
+      eyebrow="CONFERENCING & COLLABORATION"
       actions={
         <Button variant="primary" onClick={handleOpenCreate} leftIcon={<Plus size={16} />}>
           Create Conference Room
         </Button>
       }
-    >
-      <Stack gap="6">
-        {/* Stats */}
+      alert={
         <Grid cols={3} gap="4">
           <Card>
             <Inline gap="4" align="center">
@@ -252,40 +250,37 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
             </Inline>
           </Card>
         </Grid>
-
-        <Card padding="sm">
-          <FilterBar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search conference rooms or extension..."
-            actions={
-              <div className="text-xs text-[var(--pbx-text-muted)]">
-                Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> from any extension to join
-              </div>
-            }
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            isLoading={loading}
-            emptyTitle="No conference rooms configured"
-            emptyDescription='Click "Create Conference Room" to set up your first room.'
-            actions={(c: any) => (
-              <Inline gap="2" justify="center" wrap={false}>
-                <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
-                  <Edit2 size={14} />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)} title="Delete">
-                  <Trash2 size={14} className="text-rose-600" />
-                </Button>
-              </Inline>
-            )}
-          />
-        </Card>
-      </Stack>
+      }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search conference rooms or extension..."
+          actions={
+            <div className="text-xs text-[var(--pbx-text-muted)]">
+              Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> from any extension to join
+            </div>
+          }
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No conference rooms configured"
+        emptyDescription='Click "Create Conference Room" to set up your first room.'
+        actions={(c: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
+              <Edit2 size={14} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)} title="Delete">
+              <Trash2 size={14} className="text-rose-600" />
+            </Button>
+          </Inline>
+        )}
+      />
 
       {/* Modal */}
       <Modal
@@ -364,6 +359,6 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
           </Stack>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

@@ -3,7 +3,7 @@ import { Voicemail, RefreshCw, Edit2, Plus, Trash2 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import type { User } from '../types';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -240,10 +240,10 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Voicemail Management"
       subtitle="Configure extension voicemail boxes, PIN codes, audio greetings, and email notifications"
-      eyebrow="Unified Messaging"
+      eyebrow="UNIFIED MESSAGING"
       actions={
         <Inline gap="3">
           <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
@@ -256,13 +256,14 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
           )}
         </Inline>
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search voicemail boxes..."
         />
+      }
+    >
 
         <DataTable
           columns={columns}
@@ -282,7 +283,6 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
             </Inline>
           ) : undefined}
         />
-      </Stack>
 
       {/* Setup / Configure Modal */}
       <Modal
@@ -365,6 +365,6 @@ export const VoicemailView: React.FC<VoicemailViewProps> = ({ token, user }) => 
           </Stack>
         </Stack>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Link as LinkIcon } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Grid } from './layout/Stack';
 import {
   Button,
@@ -13,7 +13,7 @@ import {
   Modal,
   FormField
 } from './ui';
-import { DataTable } from './patterns';
+import { DataTable, FilterBar } from './patterns';
 
 interface GatewaysViewProps {
   token: string;
@@ -26,6 +26,7 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
   const [trunks, setTrunks] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignForm, setAssignForm] = useState({
     tenant_id: '',
@@ -77,9 +78,15 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
     ...gateways.map(g => ({ id: g.id, name: `${g.name} (${g.proxy}) [Sofia Gateway]` }))
   ];
 
+  const filtered = gateways.filter(g =>
+    (g.name && g.name.toLowerCase().includes(search.toLowerCase())) ||
+    (g.proxy && g.proxy.toLowerCase().includes(search.toLowerCase())) ||
+    (g.tenant_name && g.tenant_name.toLowerCase().includes(search.toLowerCase()))
+  );
+
   const columns = [
     { key: 'name', header: 'Gateway / Trunk Name', sortable: true, render: (g: any) => <strong className="text-[var(--pbx-text-primary)]">{g.name}</strong> },
-    { key: 'proxy', header: 'SIP Proxy / Host', render: (g: any) => <code className="code-box">{g.proxy}</code> },
+    { key: 'proxy', header: 'SIP Proxy / Host', render: (g: any) => <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">{g.proxy}</span> },
     { key: 'tenant_name', header: 'Assigned Tenant', render: (g: any) => g.tenant_name ? <Badge variant="warning">{g.tenant_name}</Badge> : <Badge variant="neutral">GLOBAL TRUNK</Badge> },
     { key: 'codecs', header: 'Codecs' },
     { key: 'register', header: 'Registration', render: (g: any) => g.register ? <Badge variant="success">REGISTERED</Badge> : <Badge variant="neutral">STATIC IP</Badge> },
@@ -87,10 +94,10 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="SIP Trunks & Gateway Assignments"
       subtitle="Assign carrier SIP trunks to tenants and specify inbound/outbound priority rules"
-      eyebrow="FreeSWITCH Sofia Core"
+      eyebrow="FREESWITCH SOFIA CORE"
       actions={
         user?.role === 'SUPER_ADMIN' ? (
           <Button variant="primary" onClick={() => setShowAssignModal(true)} leftIcon={<LinkIcon size={16} />}>
@@ -98,15 +105,20 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
-    >
-      <Stack gap="6">
-        <DataTable
-          columns={columns}
-          data={gateways}
-          isLoading={loading}
-          emptyTitle="No gateways configured"
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search gateways by name, proxy or tenant..."
         />
-      </Stack>
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No gateways configured"
+      />
 
       <Modal
         isOpen={showAssignModal}
@@ -169,6 +181,6 @@ export const GatewaysView: React.FC<GatewaysViewProps> = ({ token, user }) => {
           </Stack>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

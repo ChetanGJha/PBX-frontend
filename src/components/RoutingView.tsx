@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -12,7 +12,6 @@ import {
   FormField,
   Modal,
   Badge,
-  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -321,10 +320,10 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Call Routing Rules"
       subtitle="Configure tenant-wise inbound DID routing and outbound pattern matching"
-      eyebrow="Dialplan Engine"
+      eyebrow="DIALPLAN ENGINE"
       actions={
         canManage ? (
           <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Plus size={16} />}>
@@ -332,35 +331,30 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search routes..."
+        />
+      }
     >
-      <Stack gap="6">
-        <Card padding="sm">
-          <FilterBar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search routes..."
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            isLoading={loading}
-            emptyTitle="No routing rules configured yet"
-            actions={canManage ? (r: any) => (
-              <Inline gap="2" justify="flex-end">
-                <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(r)} leftIcon={<Edit2 size={12} />}>
-                  Edit
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => handleDelete(r.id)} leftIcon={<Trash2 size={12} />}>
-                  Delete
-                </Button>
-              </Inline>
-            ) : undefined}
-          />
-        </Card>
-      </Stack>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No routing rules configured yet"
+        actions={canManage ? (r: any) => (
+          <Inline gap="2" justify="flex-end">
+            <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(r)} leftIcon={<Edit2 size={12} />}>
+              Edit
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => handleDelete(r.id)} leftIcon={<Trash2 size={12} />}>
+              Delete
+            </Button>
+          </Inline>
+        ) : undefined}
+      />
 
       {/* CREATE MODAL */}
       <Modal
@@ -570,6 +564,6 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
           </FormField>
         </Stack>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

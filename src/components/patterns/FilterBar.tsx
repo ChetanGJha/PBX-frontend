@@ -26,16 +26,39 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         justifyContent: 'space-between',
         gap: '16px',
         flexWrap: 'wrap',
+        width: '100%',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flex: '1 1 auto',
+          flexWrap: 'wrap',
+          minWidth: 0,
+        }}
+      >
         {showSearch && (
-          <SearchInput value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} />
+          <div style={{ flex: '1 1 240px', maxWidth: '320px', minWidth: '200px' }}>
+            <SearchInput value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} />
+          </div>
         )}
-        {filters}
+        {filters && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            {filters}
+          </div>
+        )}
       </div>
 
-      {actions && <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>{actions}</div>}
+      {actions && <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>{actions}</div>}
     </div>
   );
 };

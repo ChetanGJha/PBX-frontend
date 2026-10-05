@@ -13,11 +13,10 @@ import {
   RotateCcw,
   Download,
 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
-import { Stack, Inline } from './layout/Stack';
+import { ListPageLayout } from './layout';
+import { Inline } from './layout/Stack';
 import {
   Button,
-  Card,
   Input,
   Select,
   Badge,
@@ -417,68 +416,66 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Reports & Call Detail Records"
       subtitle="Tenant-wise call logs, extension-to-extension summary, outbound analytics & voice recordings"
-      eyebrow="Analytics & Telemetry"
+      eyebrow="ANALYTICS & TELEMETRY"
       actions={
         <Button variant="primary" onClick={exportToCsv} leftIcon={<Download size={15} />}>
           Export CSV
         </Button>
       }
-    >
-      <Stack gap="6">
-        {/* Standard FilterBar inside Card */}
-        <Card padding="sm">
-          <FilterBar
-            filters={
-              <Inline gap="4" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
-                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-                  <Select
-                    value={selectedTenant}
-                    onChange={(e) => setSelectedTenant(e.target.value)}
-                    className="w-56 min-w-[200px]"
-                  >
-                    <option value="">-- All Tenants --</option>
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.domain})
-                      </option>
-                    ))}
-                  </Select>
-                )}
+      filterBar={
+        <FilterBar
+          filters={
+            <Inline gap="4" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
+              {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                <Select
+                  value={selectedTenant}
+                  onChange={(e) => setSelectedTenant(e.target.value)}
+                  className="w-56 min-w-[200px]"
+                >
+                  <option value="">-- All Tenants --</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.domain})
+                    </option>
+                  ))}
+                </Select>
+              )}
 
-                <Inline gap="2" align="center" wrap={false}>
-                  <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">From:</span>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                    className="w-40"
-                  />
-                  <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">To:</span>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    className="w-40"
-                  />
-                </Inline>
-
-                {hasActiveFilters && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleResetFilters}
-                    leftIcon={<RotateCcw size={14} />}
-                  >
-                    Reset
-                  </Button>
-                )}
+              <Inline gap="2" align="center" wrap={false}>
+                <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">From:</span>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="w-40"
+                />
+                <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">To:</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="w-40"
+                />
               </Inline>
-            }
-          />
-        </Card>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  leftIcon={<RotateCcw size={14} />}
+                >
+                  Reset
+                </Button>
+              )}
+            </Inline>
+          }
+        />
+      }
+    >
 
         {/* Audio Player Bar */}
         {playingRecordingId && activeRecordingInfo && (
@@ -568,8 +565,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
             )}
           />
         )}
-      </Stack>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
 

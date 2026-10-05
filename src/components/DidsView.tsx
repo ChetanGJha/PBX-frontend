@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Plus, Link2, Unlink, Edit2, Trash2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline } from './layout/Stack';
 import {
   Button,
@@ -12,7 +12,6 @@ import {
   FormField,
   Modal,
   Badge,
-  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -203,10 +202,10 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title={user?.role === 'SUPER_ADMIN' ? 'DID Number Inventory' : 'Assigned DIDs'}
       subtitle={user?.role === 'SUPER_ADMIN' ? 'Manage global DID phone numbers provider-wise and allocate free numbers to tenants' : 'Manage inbound routing and view allocated DID phone numbers for your organization'}
-      eyebrow="Telephony Inventory"
+      eyebrow="TELEPHONY INVENTORY"
       actions={
         user?.role === 'SUPER_ADMIN' ? (
           <Button variant="primary" onClick={() => setShowAddModal(true)} leftIcon={<Plus size={16} />}>
@@ -214,48 +213,43 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search DID numbers, host or tenant..."
+        />
+      }
     >
-      <Stack gap="6">
-        <Card padding="sm">
-          <FilterBar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Search DID numbers, host or tenant..."
-          />
-        </Card>
-
-        <Card padding="none">
-          <DataTable
-            columns={columns}
-            data={filtered}
-            isLoading={loading}
-            emptyTitle="No DIDs in inventory"
-            actions={(d: any) => (
-              user?.role === 'SUPER_ADMIN' ? (
-                <Inline gap="2" justify="center" wrap={false}>
-                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
-                    <Edit2 size={14} />
-                  </Button>
-                  {d.tenant_id ? (
-                    <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
-                      <Unlink size={14} />
-                    </Button>
-                  ) : (
-                    <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
-                      <Link2 size={14} />
-                    </Button>
-                  )}
-                  <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
-                    <Trash2 size={14} />
-                  </Button>
-                </Inline>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No DIDs in inventory"
+        actions={(d: any) => (
+          user?.role === 'SUPER_ADMIN' ? (
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
+                <Edit2 size={14} />
+              </Button>
+              {d.tenant_id ? (
+                <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
+                  <Unlink size={14} />
+                </Button>
               ) : (
-                <Badge variant="success">Provisioned</Badge>
-              )
-            )}
-          />
-        </Card>
-      </Stack>
+                <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
+                  <Link2 size={14} />
+                </Button>
+              )}
+              <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
+                <Trash2 size={14} />
+              </Button>
+            </Inline>
+          ) : (
+            <Badge variant="success">Provisioned</Badge>
+          )
+        )}
+      />
 
       {/* ADD DID MODAL */}
       <Modal
@@ -398,6 +392,6 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
           </Select>
         </FormField>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

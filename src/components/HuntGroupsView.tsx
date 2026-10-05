@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { PhoneForwarded, Plus, Edit2, Trash2 } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -238,10 +238,10 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Hunt Groups"
       subtitle="Configure sequential, simultaneous, and circular ring hunting groups"
-      eyebrow="mod_huntgroup"
+      eyebrow="MOD_HUNTGROUP"
       actions={
         canManage ? (
           <Button variant="primary" onClick={handleOpenCreate} leftIcon={<Plus size={16} />}>
@@ -249,13 +249,14 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
           </Button>
         ) : undefined
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search hunt groups..."
         />
+      }
+    >
 
         <DataTable
           columns={columns}
@@ -273,7 +274,6 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
             </Inline>
           ) : undefined}
         />
-      </Stack>
 
       {/* Modal */}
       <Modal
@@ -367,6 +367,6 @@ export const HuntGroupsView: React.FC<HuntGroupsViewProps> = ({ token, user }) =
           </FormField>
         </Stack>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

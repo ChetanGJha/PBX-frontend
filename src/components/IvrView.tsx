@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
 import { GitBranch, Plus, Volume2, Edit, Trash2, UploadCloud, Palette } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -14,7 +14,7 @@ import {
   Badge,
   Alert,
 } from './ui';
-import { DataTable } from './patterns';
+import { DataTable, FilterBar } from './patterns';
 
 interface IvrViewProps {
   token: string;
@@ -24,6 +24,7 @@ interface IvrViewProps {
 export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [ivrs, setIvrs] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [tenants, setTenants] = useState<any[]>([]);
   const [extensions, setExtensions] = useState<any[]>([]);
   const [queues, setQueues] = useState<any[]>([]);
@@ -344,11 +345,20 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     },
   ];
 
+  const filteredIvrs = ivrs.filter((ivr) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      ivr.name?.toLowerCase().includes(q) ||
+      ivr.greeting_audio?.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <PageContainer
+    <ListPageLayout
       title="Interactive Voice Response (IVR) Flows"
       subtitle="Configure inbound auto-attendants, voice greetings, and interactive keypress actions."
-      eyebrow="Auto-Attendant Engine"
+      eyebrow="AUTO-ATTENDANT ENGINE"
       actions={
         canManage ? (
           <Button variant="primary" onClick={openCreateModal} leftIcon={<Plus size={16} />}>
@@ -356,37 +366,43 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
-    >
-      <Stack gap="6">
+      alert={
         <Alert variant="info" title="Visual IVR Flow Builder & Audio Greetings">
           Click "Open Designer" on any IVR flow to open the interactive canvas where you can map keypress actions, upload audio greetings, and configure routing blocks.
         </Alert>
-
-        <DataTable
-          columns={columns}
-          data={ivrs}
-          isLoading={loading}
-          emptyTitle="No IVR Flows Configured"
-          emptyDescription={canManage ? 'Create your first auto-attendant flow to start routing incoming customer calls automatically.' : undefined}
-          actions={(ivr: any) => (
-            <Inline gap="2" justify="center" wrap={false}>
-              <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)} title="Open Designer">
-                <Palette size={14} />
-              </Button>
-              {canManage && (
-                <>
-                  <Button variant="secondary" size="sm" onClick={() => openEditModal(ivr)} title="Edit">
-                    <Edit size={14} />
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }} title="Delete">
-                    <Trash2 size={14} />
-                  </Button>
-                </>
-              )}
-            </Inline>
-          )}
+      }
+      filterBar={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search IVR flows..."
         />
-      </Stack>
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filteredIvrs}
+        isLoading={loading}
+        emptyTitle="No IVR Flows Configured"
+        emptyDescription={canManage ? 'Create your first auto-attendant flow to start routing incoming customer calls automatically.' : undefined}
+        actions={(ivr: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)} title="Open Designer">
+              <Palette size={14} />
+            </Button>
+            {canManage && (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => openEditModal(ivr)} title="Edit">
+                  <Edit size={14} />
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }} title="Delete">
+                  <Trash2 size={14} />
+                </Button>
+              </>
+            )}
+          </Inline>
+        )}
+      />
 
       {/* CREATE MODAL */}
       <Modal
@@ -689,6 +705,6 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
           Are you sure you want to delete <strong>{activeIvr?.name}</strong>? This action cannot be undone.
         </p>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
