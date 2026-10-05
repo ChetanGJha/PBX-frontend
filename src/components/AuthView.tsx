@@ -18,7 +18,7 @@ import {
 import { apiService } from '../services/api';
 import type { User as UserType } from '../types';
 import { PageContainer, PageHeader } from './layout/PageContainer';
-import { Stack, Grid } from './layout/Stack';
+import { Stack, Grid, Inline } from './layout/Stack';
 import { Card, Button, Input, FormField, Alert, Badge } from './ui';
 
 interface AuthViewProps {
@@ -27,10 +27,10 @@ interface AuthViewProps {
 }
 
 export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
-  // Seed form
-  const [seedUser, setSeedUser] = useState('superadmin2');
-  const [seedEmail, setSeedEmail] = useState('admin2@pbx.com');
-  const [seedPassword, setSeedPassword] = useState('SuperSecurePassword123!');
+  // Seed form state (cleared initial state)
+  const [seedUser, setSeedUser] = useState('');
+  const [seedEmail, setSeedEmail] = useState('');
+  const [seedPassword, setSeedPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -75,55 +75,55 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
         )}
 
         {/* Grid: Active Admin Profile & Platform Access Controls */}
-        <Grid cols={2} gap="6">
+        <Grid cols={2} gap="6" className="items-stretch">
           {/* Active Super Admin Profile Card */}
-          <Card className="flex flex-col justify-between">
+          <Card padding="lg" className="h-full flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] rounded-lg">
+              <div className="flex items-center justify-between gap-4 pb-4 border-b border-[var(--pbx-border-default)]">
+                <Inline gap="3" align="center" className="min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--pbx-color-primary-50)] text-[var(--pbx-action-primary)] flex items-center justify-center shrink-0">
                     <UserCheck size={20} />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900">Active Administrator Profile</h3>
-                    <p className="text-xs text-slate-500">Currently logged in system Super Admin account</p>
-                  </div>
-                </div>
-                <Badge variant="success">Active Session</Badge>
+                  <Stack gap="1" className="min-w-0">
+                    <h3 className="font-bold text-sm text-[var(--pbx-text-primary)] m-0">Active Administrator Profile</h3>
+                    <p className="text-xs text-[var(--pbx-text-muted)] m-0">Currently logged in system Super Admin account</p>
+                  </Stack>
+                </Inline>
+                <Badge variant="success" className="shrink-0">Active Session</Badge>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <User size={16} />
-                    <span>Username</span>
-                  </div>
-                  <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+              <div className="pt-2">
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <User size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">Username</span>
+                  </Inline>
+                  <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] font-semibold text-[var(--pbx-text-primary)]">
                     {user?.username || 'superadmin'}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Mail size={16} />
-                    <span>Email Address</span>
-                  </div>
-                  <span className="font-medium text-slate-900">{user?.email || 'admin@pbx.com'}</span>
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Mail size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">Email Address</span>
+                  </Inline>
+                  <span className="text-xs font-semibold text-[var(--pbx-text-primary)]">{user?.email || 'admin@pbx.com'}</span>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Shield size={16} />
-                    <span>Administrative Role</span>
-                  </div>
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Shield size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">Administrative Role</span>
+                  </Inline>
                   <Badge variant="primary">{user?.role || 'SUPER_ADMIN'}</Badge>
                 </div>
 
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Activity size={16} />
-                    <span>Session Status</span>
-                  </div>
+                <div className="min-h-[48px] py-3 flex items-center justify-between">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Activity size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">Session Status</span>
+                  </Inline>
                   <Badge variant="success">Active & Authenticated</Badge>
                 </div>
               </div>
@@ -131,51 +131,51 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
           </Card>
 
           {/* Platform Access Controls Card */}
-          <Card className="flex flex-col justify-between">
+          <Card padding="lg" className="h-full flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[var(--pbx-bg-subtle)] text-[var(--pbx-text-primary)] rounded-lg">
+              <div className="flex items-center justify-between gap-4 pb-4 border-b border-[var(--pbx-border-default)]">
+                <Inline gap="3" align="center" className="min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--pbx-color-primary-50)] text-[var(--pbx-action-primary)] flex items-center justify-center shrink-0">
                     <Lock size={20} />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900">Platform Access Controls</h3>
-                    <p className="text-xs text-slate-500">System capabilities granted to your administrator role</p>
-                  </div>
-                </div>
-                <Badge variant="neutral">RBAC Enforced</Badge>
+                  <Stack gap="1" className="min-w-0">
+                    <h3 className="font-bold text-sm text-[var(--pbx-text-primary)] m-0">Platform Access Controls</h3>
+                    <p className="text-xs text-[var(--pbx-text-muted)] m-0">System capabilities granted to your administrator role</p>
+                  </Stack>
+                </Inline>
+                <Badge variant="neutral" className="shrink-0">RBAC Enforced</Badge>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Server size={16} className="text-[var(--pbx-accent-primary)]" />
-                    <span>Multi-Tenant Isolation</span>
-                  </div>
+              <div className="pt-2">
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Server size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">Multi-Tenant Isolation</span>
+                  </Inline>
                   <Badge variant="success">100% Enforced</Badge>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Cpu size={16} className="text-[var(--pbx-accent-primary)]" />
-                    <span>FreeSWITCH Media Engine</span>
-                  </div>
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Cpu size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">FreeSWITCH Media Engine</span>
+                  </Inline>
                   <Badge variant="primary">Full Control</Badge>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <Database size={16} className="text-emerald-600" />
-                    <span>PostgreSQL & Redis DB</span>
-                  </div>
+                <div className="min-h-[48px] py-3 flex items-center justify-between border-b border-[var(--pbx-border-default)]">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <Database size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">PostgreSQL & Redis DB</span>
+                  </Inline>
                   <Badge variant="success">Connected</Badge>
                 </div>
 
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <ShieldCheck size={16} className="text-emerald-600" />
-                    <span>API Rate Limiting & Auth</span>
-                  </div>
+                <div className="min-h-[48px] py-3 flex items-center justify-between">
+                  <Inline gap="3" align="center" className="text-[var(--pbx-text-muted)]">
+                    <ShieldCheck size={18} />
+                    <span className="text-xs font-medium text-[var(--pbx-text-secondary)]">API Rate Limiting & Auth</span>
+                  </Inline>
                   <Badge variant="success">Active</Badge>
                 </div>
               </div>
@@ -184,15 +184,15 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
         </Grid>
 
         {/* Bootstrap Additional Admin Account Card */}
-        <Card>
-          <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-            <div className="p-2 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] rounded-lg">
+        <Card padding="lg">
+          <div className="flex items-center gap-3 pb-4 mb-6 border-b border-[var(--pbx-border-default)]">
+            <div className="w-10 h-10 rounded-xl bg-[var(--pbx-color-primary-50)] text-[var(--pbx-action-primary)] flex items-center justify-center shrink-0">
               <UserPlus size={20} />
             </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">Bootstrap Additional Platform Admin</h3>
-              <p className="text-xs text-slate-500">Seed a new platform Super Admin account (`POST /api/v1/auth/seed-superadmin`)</p>
-            </div>
+            <Stack gap="1">
+              <h3 className="font-bold text-base text-[var(--pbx-text-primary)] m-0">Bootstrap Additional Platform Admin</h3>
+              <p className="text-xs text-[var(--pbx-text-muted)] m-0">Seed a new platform Super Admin account with root configuration permissions.</p>
+            </Stack>
           </div>
 
           <form onSubmit={handleSeed}>
@@ -203,7 +203,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                     type="text"
                     value={seedUser}
                     onChange={(e) => setSeedUser(e.target.value)}
-                    placeholder="superadmin2"
+                    placeholder="e.g. superadmin2"
                     leftIcon={<User size={16} />}
                     required
                   />
@@ -214,7 +214,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                     type="email"
                     value={seedEmail}
                     onChange={(e) => setSeedEmail(e.target.value)}
-                    placeholder="admin2@pbx.com"
+                    placeholder="e.g. admin2@pbx.com"
                     leftIcon={<Mail size={16} />}
                     required
                   />
@@ -225,13 +225,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                     type={showPassword ? 'text' : 'password'}
                     value={seedPassword}
                     onChange={(e) => setSeedPassword(e.target.value)}
-                    placeholder="SuperSecurePassword123!"
+                    placeholder="Enter secure password"
                     leftIcon={<KeyRound size={16} />}
                     rightIcon={
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="bg-transparent border-0 cursor-pointer p-0"
+                        className="bg-transparent border-0 cursor-pointer p-0 text-[var(--pbx-text-muted)] flex items-center justify-center"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -241,11 +242,11 @@ export const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                 </FormField>
               </Grid>
 
-              <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <KeyRound size={16} className="text-[var(--pbx-accent-primary)]" />
+              <div className="pt-4 border-t border-[var(--pbx-border-default)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                <Inline gap="2" align="center" className="text-xs text-[var(--pbx-text-muted)]">
+                  <KeyRound size={16} className="text-[var(--pbx-action-primary)]" />
                   <span>Seeds a root platform administrator with global configuration permissions.</span>
-                </div>
+                </Inline>
                 <Button type="submit" isLoading={loading} variant="primary">
                   <UserPlus size={16} />
                   <span>Seed Super Admin Account</span>

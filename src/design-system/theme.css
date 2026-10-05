@@ -19,51 +19,51 @@
   --font-mono: var(--pbx-font-mono);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  min-height: 100%;
-  font-family: var(--font-sans);
-  color: var(--pbx-text-primary);
-  font-size: 13px;
-  background-color: var(--pbx-bg-canvas);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  html,
+  body {
+    min-height: 100%;
+    font-family: var(--font-sans);
+    color: var(--pbx-text-primary);
+    font-size: 13px;
+    background-color: var(--pbx-bg-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
-}
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
 
-/* Fix Chrome/Edge autofill background */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px var(--pbx-bg-surface) inset;
-  -webkit-text-fill-color: var(--pbx-text-primary);
-  transition: background-color 5000s ease-in-out 0s;
-}
+  /* Fix Chrome/Edge autofill background */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--pbx-bg-surface) inset;
+    -webkit-text-fill-color: var(--pbx-text-primary);
+    transition: background-color 5000s ease-in-out 0s;
+  }
 
-/* Select dropdown arrow override */
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 16px 16px;
-  padding-right: 38px;
-  cursor: pointer;
+  /* Select dropdown arrow override */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
+    padding-right: 38px;
+    cursor: pointer;
+  }
 }
 
 /* Buttons */

@@ -20,16 +20,16 @@ const CodeBlock: React.FC<{ code: string }> = ({ code }) => {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <div style={{ position: 'relative', backgroundColor: 'var(--pbx-color-neutral-900)', borderRadius: 'var(--pbx-radius-lg)', padding: '14px 16px', margin: '8px 0', color: '#FFFFFF' }}>
+    <div className="relative bg-[var(--pbx-color-neutral-900)] rounded-lg p-3.5 my-2 text-white">
       <Button
         variant="ghost"
         size="sm"
         onClick={copy}
-        style={{ position: 'absolute', top: '10px', right: '12px', fontSize: '11px', color: 'var(--pbx-color-neutral-300)', padding: '4px 8px' }}
+        className="absolute top-2.5 right-3 text-[11px] text-[var(--pbx-color-neutral-300)] px-2 py-1"
       >
         {copied ? <><CheckCircle size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
       </Button>
-      <pre style={{ margin: 0, color: 'var(--pbx-color-neutral-200)', fontSize: '12px', fontFamily: 'var(--pbx-font-mono)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>{code}</pre>
+      <pre className="m-0 text-[var(--pbx-color-neutral-200)] text-xs font-mono whitespace-pre-wrap break-all leading-relaxed">{code}</pre>
     </div>
   );
 };
@@ -37,32 +37,20 @@ const CodeBlock: React.FC<{ code: string }> = ({ code }) => {
 const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, icon, children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Card padding="none" style={{ marginBottom: '16px', overflow: 'hidden' }}>
+    <Card padding="none" className="mb-4 overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          padding: '16px 20px',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          outline: 'none',
-        }}
+        className="w-full text-left px-5 py-4 bg-transparent border-none cursor-pointer flex items-center justify-between gap-3 outline-none"
       >
         <Inline gap="3" align="center">
-          <span style={{ color: 'var(--pbx-action-primary)', display: 'flex' }}>{icon}</span>
-          <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--pbx-text-primary)' }}>{title}</span>
+          <span className="text-[var(--pbx-action-primary)] flex">{icon}</span>
+          <span className="font-bold text-sm text-[var(--pbx-text-primary)]">{title}</span>
         </Inline>
-        {open ? <ChevronDown size={16} style={{ color: 'var(--pbx-text-muted)' }} /> : <ChevronRight size={16} style={{ color: 'var(--pbx-text-muted)' }} />}
+        {open ? <ChevronDown size={16} className="text-[var(--pbx-text-muted)]" /> : <ChevronRight size={16} className="text-[var(--pbx-text-muted)]" />}
       </button>
       {open && (
-        <div style={{ padding: '0 20px 20px 20px', borderTop: '1px solid var(--pbx-border-default)', paddingTop: '16px' }}>
+        <div className="px-5 pb-5 pt-4 border-t border-[var(--pbx-border-default)]">
           {children}
         </div>
       )}
@@ -71,49 +59,27 @@ const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.
 };
 
 const Step: React.FC<{ n: number; title: string; children?: React.ReactNode }> = ({ n, title, children }) => (
-  <Inline gap="3" align="flex-start" style={{ marginTop: '12px' }}>
-    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--pbx-action-primary)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0, marginTop: '2px' }}>
+  <Inline gap="3" align="flex-start" className="mt-3">
+    <div className="w-7 h-7 rounded-full bg-[var(--pbx-action-primary)] text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
       {n}
     </div>
-    <div style={{ flex: 1 }}>
-      <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--pbx-text-primary)', marginBottom: '4px' }}>{title}</div>
-      <div style={{ fontSize: '12px', color: 'var(--pbx-text-secondary)', lineHeight: 1.5 }}>{children}</div>
+    <div className="flex-1">
+      <div className="font-bold text-xs text-[var(--pbx-text-primary)] mb-1">{title}</div>
+      <div className="text-xs text-[var(--pbx-text-secondary)] leading-relaxed">{children}</div>
     </div>
   </Inline>
 );
 
 const Field: React.FC<{ label: string; value: string; note?: string }> = ({ label, value, note }) => (
-  <div
-    style={{
-      padding: '10px 0',
-      borderBottom: '1px solid var(--pbx-border-default)',
-      display: 'grid',
-      gridTemplateColumns: '160px 1fr',
-      alignItems: 'center',
-      gap: '12px',
-    }}
-  >
-    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--pbx-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+  <div className="py-2.5 border-b border-[var(--pbx-border-default)] grid grid-cols-[160px_1fr] items-center gap-3">
+    <div className="text-[11px] font-bold text-[var(--pbx-text-secondary)] uppercase tracking-wider">
       {label}
     </div>
     <div>
-      <code
-        style={{
-          fontFamily: 'var(--pbx-font-mono)',
-          fontSize: '12px',
-          padding: '4px 10px',
-          borderRadius: 'var(--pbx-radius-md)',
-          backgroundColor: 'var(--pbx-bg-subtle)',
-          border: '1px solid var(--pbx-border-default)',
-          color: 'var(--pbx-text-primary)',
-          fontWeight: 500,
-          display: 'inline-block',
-          wordBreak: 'break-all',
-        }}
-      >
+      <code className="font-mono text-xs px-2.5 py-1 rounded-md bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium inline-block break-all">
         {value}
       </code>
-      {note && <div style={{ fontSize: '11px', color: 'var(--pbx-text-muted)', marginTop: '4px' }}>{note}</div>}
+      {note && <div className="text-[11px] text-[var(--pbx-text-muted)] mt-1">{note}</div>}
     </div>
   </div>
 );
@@ -133,10 +99,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
     >
       <Stack gap="6">
         {/* Info Banner */}
-        <Card padding="md" style={{ backgroundColor: 'var(--pbx-color-primary-50)', borderColor: 'var(--pbx-action-primary)' }}>
+        <Card padding="md" className="bg-[var(--pbx-color-primary-50)] border-[var(--pbx-action-primary)]">
           <Stack gap="2">
-            <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--pbx-action-primary)' }}>Your SIP Server Details</div>
-            <Grid cols={2} gap="3" style={{ fontSize: '12px', color: 'var(--pbx-text-primary)' }}>
+            <div className="font-bold text-sm text-[var(--pbx-action-primary)]">Your SIP Server Details</div>
+            <Grid cols={2} gap="3" className="text-xs text-[var(--pbx-text-primary)]">
               <div>SIP Domain: <strong>{sipDomain}</strong></div>
               <div>Server IP: <strong>{serverIP}</strong></div>
               <div>SIP Port: <strong>5060 (UDP/TCP)</strong></div>
@@ -171,7 +137,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
           <Stack gap="4">
             <Alert variant="warning">
               <strong>Zoiper 5</strong> is recommended — free for basic SIP calls, available for Windows, Mac, iOS, and Android.{' '}
-              <a href="https://www.zoiper.com/en/voip-softphone/download/current" target="_blank" rel="noreferrer" style={{ marginLeft: '8px', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <a href="https://www.zoiper.com/en/voip-softphone/download/current" target="_blank" rel="noreferrer" className="ml-2 font-bold underline inline-flex items-center gap-1">
                 Download Zoiper 5 <ExternalLink size={12} />
               </a>
             </Alert>
@@ -212,7 +178,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
           <Stack gap="4">
             <Alert variant="success">
               <strong>X-Lite</strong> (free) and <strong>Bria</strong> (paid) are both from CounterPath.{' '}
-              <a href="https://www.counterpath.com/x-lite/" target="_blank" rel="noreferrer" style={{ marginLeft: '8px', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <a href="https://www.counterpath.com/x-lite/" target="_blank" rel="noreferrer" className="ml-2 font-bold underline inline-flex items-center gap-1">
                 Download X-Lite <ExternalLink size={12} />
               </a>
             </Alert>
@@ -233,7 +199,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
           <Stack gap="4">
             <Alert variant="info">
               <strong>Linphone</strong> is a free, open-source softphone for desktop and mobile.{' '}
-              <a href="https://www.linphone.org/technical-corner/linphone" target="_blank" rel="noreferrer" style={{ marginLeft: '8px', fontWeight: 700, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <a href="https://www.linphone.org/technical-corner/linphone" target="_blank" rel="noreferrer" className="ml-2 font-bold underline inline-flex items-center gap-1">
                 Download Linphone <ExternalLink size={12} />
               </a>
             </Alert>
@@ -263,7 +229,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
             </Section>
 
             <Section title="FreeSWITCH Console Commands Reference" icon={<Settings size={18} />}>
-              <Grid cols={2} gap="3" style={{ marginTop: '12px' }}>
+              <Grid cols={2} gap="3" className="mt-3">
                 {[
                   { cmd: 'status', desc: 'Check FS uptime and sessions' },
                   { cmd: 'show registrations', desc: 'List all registered SIP phones' },
@@ -271,9 +237,9 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
                   { cmd: 'sofia status', desc: 'SIP gateway/profile status' },
                   { cmd: 'reloadxml', desc: 'Reload dialplan XML config' },
                 ].map(({ cmd, desc }) => (
-                  <Card key={cmd} padding="sm" style={{ backgroundColor: 'var(--pbx-bg-subtle)' }}>
-                    <code style={{ fontSize: '12px', fontFamily: 'var(--pbx-font-mono)', fontWeight: 700, color: 'var(--pbx-action-primary)', display: 'block', marginBottom: '4px' }}>{cmd}</code>
-                    <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)' }}>{desc}</div>
+                  <Card key={cmd} padding="sm" className="bg-[var(--pbx-bg-subtle)]">
+                    <code className="text-xs font-mono font-bold text-[var(--pbx-action-primary)] block mb-1">{cmd}</code>
+                    <div className="text-xs text-[var(--pbx-text-muted)]">{desc}</div>
                   </Card>
                 ))}
               </Grid>
@@ -302,10 +268,10 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
               },
             ].map(({ problem, solutions }) => (
               <Section key={problem} title={problem} icon={<AlertTriangle size={16} />}>
-                <Stack gap="2" style={{ marginTop: '8px' }}>
+                <Stack gap="2" className="mt-2">
                   {solutions.map((s, i) => (
-                    <Inline key={i} gap="2" align="center" style={{ fontSize: '12px', color: 'var(--pbx-text-secondary)' }}>
-                      <span style={{ color: 'var(--pbx-action-primary)', fontWeight: 700 }}>&rarr;</span>
+                    <Inline key={i} gap="2" align="center" className="text-xs text-[var(--pbx-text-secondary)]">
+                      <span className="text-[var(--pbx-action-primary)] font-bold">&rarr;</span>
                       <span>{s}</span>
                     </Inline>
                   ))}
@@ -316,11 +282,11 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
         )}
 
         {/* Quick Reference */}
-        <Card padding="md" style={{ backgroundColor: 'var(--pbx-color-neutral-900)', borderColor: 'var(--pbx-color-neutral-800)', color: '#FFFFFF' }}>
+        <Card padding="md" className="bg-[var(--pbx-color-neutral-900)] border-[var(--pbx-color-neutral-800)] text-white">
           <Stack gap="4">
             <Inline gap="2" align="center">
-              <BookOpen size={16} style={{ color: 'var(--pbx-action-primary)' }} />
-              <span style={{ fontWeight: 700, fontSize: '14px', color: '#FFFFFF' }}>Quick SIP Credentials Reference</span>
+              <BookOpen size={16} className="text-[var(--pbx-action-primary)]" />
+              <span className="font-bold text-sm text-white">Quick SIP Credentials Reference</span>
             </Inline>
 
             <Grid cols={2} gap="3">
@@ -332,9 +298,9 @@ export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
                 ['Codec Priority', 'PCMA, PCMU, G.722'],
                 ['Registration Expiry', '300 seconds'],
               ].map(([k, v]) => (
-                <div key={k} style={{ padding: '12px 14px', borderRadius: 'var(--pbx-radius-md)', backgroundColor: 'var(--pbx-color-neutral-800)', border: '1px solid var(--pbx-color-neutral-700)' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--pbx-color-neutral-400)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>{k}</div>
-                  <div style={{ fontSize: '13px', fontFamily: 'var(--pbx-font-mono)', fontWeight: 600, color: '#FFFFFF' }}>{v}</div>
+                <div key={k} className="p-3.5 rounded-md bg-[var(--pbx-color-neutral-800)] border border-[var(--pbx-color-neutral-700)]">
+                  <div className="text-[10px] font-bold text-[var(--pbx-color-neutral-400)] uppercase tracking-wider mb-1">{k}</div>
+                  <div className="text-xs font-mono font-semibold text-white">{v}</div>
                 </div>
               ))}
             </Grid>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, AlertTriangle } from 'lucide-react';
-import { Input, Button, Modal, Heading, Text, Badge } from '../ui';
+import { Input, Button, Modal, Heading, Text, Badge, IconTile } from '../ui';
 
 export interface SearchInputProps {
   value: string;
@@ -20,7 +20,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       leftIcon={<Search size={16} />}
-      style={{ maxWidth: '320px' }}
+      className="max-w-[320px]"
     />
   );
 };
@@ -64,25 +64,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </>
       }
     >
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+      <div className="flex gap-4 items-start">
         <div
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            backgroundColor: variant === 'danger' ? 'var(--pbx-color-danger-50)' : 'var(--pbx-color-warning-50)',
-            color: variant === 'danger' ? 'var(--pbx-color-danger-600)' : 'var(--pbx-color-warning-600)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
+          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+            variant === 'danger'
+              ? 'bg-[var(--pbx-color-danger-50)] text-[var(--pbx-color-danger-600)]'
+              : 'bg-[var(--pbx-color-warning-50)] text-[var(--pbx-color-warning-600)]'
+          }`}
         >
           <AlertTriangle size={20} />
         </div>
         <div>
           <Heading level={3}>{title}</Heading>
-          <Text variant="secondary" style={{ marginTop: '6px' }}>
+          <Text variant="secondary" className="mt-1.5">
             {message}
           </Text>
         </div>
@@ -106,58 +100,30 @@ export const StatCard: React.FC<StatCardProps> = ({
   value,
   icon,
   trend,
-  style,
   className = '',
 }) => {
   return (
     <div
-      style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--pbx-radius-xl)',
-        border: '1px solid var(--pbx-border-default)',
-        padding: '20px 24px',
-        boxShadow: 'var(--pbx-shadow-sm)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: '100%',
-        ...style,
-      }}
-      className={className}
+      className={`bg-[var(--pbx-bg-surface)] rounded-xl border border-[var(--pbx-border-default)] p-5 shadow-sm flex items-start justify-between h-full ${className}`}
     >
-      <div>
-        <Text size="xs" variant="secondary" weight="bold" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <div className="flex flex-col items-start gap-1 flex-1 min-w-0 pr-3">
+        <Text size="xs" variant="secondary" weight="bold" className="uppercase tracking-wider">
           {title}
         </Text>
-        <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--pbx-text-primary)', marginTop: '4px' }}>
+        <div className="text-2xl font-extrabold text-[var(--pbx-text-primary)] mt-1">
           {value}
         </div>
         {trend && (
-          <Text size="xs" variant="muted" style={{ marginTop: '4px' }}>
+          <Text size="xs" variant="muted" className="mt-1 leading-normal break-words">
             {trend}
           </Text>
         )}
       </div>
-      {icon && (
-        <div
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: 'var(--pbx-radius-lg)',
-            backgroundColor: 'var(--pbx-color-primary-50)',
-            color: 'var(--pbx-action-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-      )}
+      {icon && <IconTile icon={icon} />}
     </div>
   );
 };
+
 
 export interface StatusPillProps {
   status: boolean | string;

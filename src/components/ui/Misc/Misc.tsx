@@ -1,4 +1,6 @@
 import React from 'react';
+export * from './IconTile';
+
 
 export interface AvatarProps {
   name?: string;

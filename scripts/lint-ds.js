@@ -11,6 +11,8 @@ const srcDir = path.resolve(__dirname, '../src');
 const MIGRATED_VIEWS = [
   'src/components/BusinessHoursView.tsx',
   'src/components/HelpView.tsx',
+  'src/components/AuthView.tsx',
+  'src/components/DashboardView.tsx',
   'src/components/XmlCurlConsole.tsx',
   'src/components/XmlCurlTester.tsx',
   'src/components/TrunksView.tsx',
@@ -49,19 +51,23 @@ files.forEach((file) => {
 
   lines.forEach((line, index) => {
     const lineNum = index + 1;
-    // 1. Non-generating arbitrary bracket classes (e.g. w-[20px], border-[var(...)], text-[var(...)])
-    if (/className=.*?\b\w+-\[.*?\]/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'Non-generating Arbitrary Utility Class', text: line.trim() });
+    // 1. Inline style object style={{
+    if (/style=\{\{/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Inline Style {{...}}', text: line.trim() });
     }
-    // 2. Non-standard spacing utility classes with no CSS rules (py-3.5, gap-1.5, pr-8)
-    if (/className=.*?\b(py-3\.5|gap-1\.5|pr-8|px-5)\b/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'Unmapped Utility Class Token', text: line.trim() });
+    // 2. Raw hex colors (e.g. #020617, #FFFFFF)
+    if (/#([0-9A-Fa-f]{3,8})\b/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Raw Hex Color', text: line.trim() });
     }
-    // 3. Invalid CSS Variable Tokens
+    // 3. Raw px spacing
+    if (/\b(padding|margin|gap|borderRadius|border-radius)\b.*?\b\d+px\b/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Raw px spacing', text: line.trim() });
+    }
+    // 4. Invalid CSS Variable Tokens
     if (/var\(--pbx-accent-(primary|light)\)/.test(line)) {
       violations.push({ file: relPath, line: lineNum, rule: 'Invalid CSS Variable Token', text: line.trim() });
     }
-    // 4. !important override
+    // 5. !important override
     if (/!important/.test(line)) {
       violations.push({ file: relPath, line: lineNum, rule: '!important', text: line.trim() });
     }

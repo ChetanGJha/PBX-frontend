@@ -79,11 +79,11 @@ export const XmlCurlTester: React.FC = () => {
                 Execute mod_xml_curl Lookup
               </Button>
 
-              <Card padding="sm" style={{ backgroundColor: 'var(--pbx-bg-subtle)' }}>
-                <Stack gap="1" style={{ fontFamily: 'var(--pbx-font-mono)', fontSize: '12px' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--pbx-text-primary)', fontFamily: 'var(--pbx-font-sans)' }}>FreeSWITCH Request Format:</div>
-                  <div style={{ color: 'var(--pbx-action-primary)', fontWeight: 700 }}>POST /freeswitch/xml</div>
-                  <div style={{ color: 'var(--pbx-text-muted)' }}>Content-Type: application/x-www-form-urlencoded</div>
+              <Card padding="sm" className="bg-[var(--pbx-bg-subtle)]">
+                <Stack gap="1" className="font-mono text-xs">
+                  <div className="font-bold text-[var(--pbx-text-primary)] font-sans">FreeSWITCH Request Format:</div>
+                  <div className="text-[var(--pbx-action-primary)] font-bold">POST /freeswitch/xml</div>
+                  <div className="text-[var(--pbx-text-muted)]">Content-Type: application/x-www-form-urlencoded</div>
                   <code className="code-box break-all">section=directory&domain={domain}&user={user}</code>
                 </Stack>
               </Card>
@@ -92,24 +92,24 @@ export const XmlCurlTester: React.FC = () => {
         </Card>
 
         {/* XML Output Console */}
-        <div style={{ gridColumn: 'span 2' }}>
+        <div className="col-span-2">
           <Card
             title="Generated FreeSWITCH XML Response"
             actions={
               xmlResult ? (
-                <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copied ? <Check size={14} style={{ color: '#059669' }} /> : <Copy size={14} />}>
+                <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copied ? <Check size={14} className="text-[var(--pbx-color-success-600)]" /> : <Copy size={14} />}>
                   {copied ? 'Copied' : 'Copy XML'}
                 </Button>
               ) : undefined
             }
           >
             {xmlResult ? (
-              <pre style={{ maxHeight: '420px', overflowY: 'auto', whiteSpace: 'pre-wrap', backgroundColor: '#020617', color: '#34D399', padding: '16px', borderRadius: 'var(--pbx-radius-xl)', border: '1px solid #1E293B', fontFamily: 'var(--pbx-font-mono)', fontSize: '12px', lineHeight: 1.6 }}>
+              <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap bg-slate-950 text-emerald-400 p-4 rounded-xl border border-slate-800 font-mono text-xs leading-relaxed">
                 {xmlResult}
               </pre>
             ) : (
-              <div style={{ height: '320px', border: '1px dashed var(--pbx-border-default)', borderRadius: 'var(--pbx-radius-xl)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--pbx-text-muted)', fontSize: '12px' }}>
-                <FileCode size={32} style={{ marginBottom: '8px', opacity: 0.4, color: 'var(--pbx-action-primary)' }} />
+              <div className="h-[320px] border border-dashed border-[var(--pbx-border-default)] rounded-xl flex flex-col items-center justify-center text-[var(--pbx-text-muted)] text-xs">
+                <FileCode size={32} className="mb-2 opacity-40 text-[var(--pbx-action-primary)]" />
                 <span>Click "Execute mod_xml_curl Lookup" to test dynamic XML generation.</span>
               </div>
             )}

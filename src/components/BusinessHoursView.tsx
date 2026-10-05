@@ -269,30 +269,28 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
         <Grid cols={4} gap="4">
           <Card padding="md">
             <Inline gap="4" align="center">
-              <div style={{ width: '44px', height: '44px', borderRadius: 'var(--pbx-radius-xl)', backgroundColor: 'var(--pbx-color-primary-50)', color: 'var(--pbx-action-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="w-11 h-11 rounded-xl bg-[var(--pbx-color-primary-50)] text-[var(--pbx-action-primary)] flex items-center justify-center shrink-0">
                 <Clock size={22} />
               </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--pbx-text-primary)' }}>{schedules.length}</div>
-                <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', fontWeight: 500 }}>Configured Profiles</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-2xl font-extrabold text-[var(--pbx-text-primary)]">{schedules.length}</div>
+                <div className="text-xs text-[var(--pbx-text-muted)] font-medium">Configured Profiles</div>
               </div>
             </Inline>
           </Card>
 
           <Card padding="md">
             <Inline gap="4" align="center">
-              <div style={{
-                width: '44px', height: '44px', borderRadius: 'var(--pbx-radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                backgroundColor: isHoliday ? '#FEF3C7' : isOpen ? '#D1FAE5' : '#FEE2E2',
-                color: isHoliday ? '#D97706' : isOpen ? '#059669' : '#DC2626'
-              }}>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${isHoliday ? 'bg-amber-100 text-amber-600' :
+                isOpen ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                }`}>
                 {isOpen ? <Sun size={22} /> : <Moon size={22} />}
               </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="min-w-0 flex-1">
                 <Badge variant={isHoliday ? 'warning' : isOpen ? 'success' : 'danger'}>
                   {live?.status || (selectedSchedule ? 'CLOSED' : 'NO PROFILE')}
                 </Badge>
-                <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="text-xs text-[var(--pbx-text-muted)] mt-1 truncate">
                   {selectedSchedule ? `Profile: ${selectedSchedule.name}` : 'Select a profile'}
                 </div>
               </div>
@@ -301,14 +299,14 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
 
           <Card padding="md">
             <Inline gap="4" align="center">
-              <div style={{ width: '44px', height: '44px', borderRadius: 'var(--pbx-radius-xl)', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                 <Globe size={22} />
               </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--pbx-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-extrabold text-[var(--pbx-text-primary)] truncate">
                   {live?.current_time || 'Synchronized'}
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="text-xs text-[var(--pbx-text-muted)] truncate">
                   {selectedSchedule?.timezone || 'System Timezone'}
                 </div>
               </div>
@@ -317,14 +315,14 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
 
           <Card padding="md">
             <Inline gap="4" align="center">
-              <div style={{ width: '44px', height: '44px', borderRadius: 'var(--pbx-radius-xl)', backgroundColor: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
                 <Calendar size={22} />
               </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--pbx-text-primary)' }}>
+              <div className="min-w-0 flex-1">
+                <div className="text-2xl font-extrabold text-[var(--pbx-text-primary)]">
                   {selectedSchedule?.holidays?.length || 0}
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', fontWeight: 500 }}>Holiday Exceptions</div>
+                <div className="text-xs text-[var(--pbx-text-muted)] font-medium">Holiday Exceptions</div>
               </div>
             </Inline>
           </Card>
@@ -333,7 +331,7 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
         {/* Main Layout */}
         <Grid cols={12} gap="6">
           {/* Left Column: Profiles List */}
-          <div style={{ gridColumn: 'span 4' }}>
+          <div className="col-span-4">
             <Card title="Operating Profiles" padding="md">
               <Stack gap="3">
                 {schedules.map((s) => {
@@ -344,32 +342,19 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                       type="button"
                       key={s.id}
                       onClick={() => handleSelectSchedule(s.id)}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '12px 16px',
-                        borderRadius: 'var(--pbx-radius-xl)',
-                        border: active ? '1px solid var(--pbx-action-primary)' : '1px solid var(--pbx-border-default)',
-                        backgroundColor: active ? 'var(--pbx-color-primary-50)' : 'var(--pbx-bg-surface)',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        boxShadow: 'none',
-                      }}
-                      onFocus={(e) => { e.currentTarget.style.boxShadow = 'var(--pbx-focus-ring)'; }}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                      className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between outline-none cursor-pointer ${active
+                        ? 'border-[var(--pbx-action-primary)] bg-[var(--pbx-color-primary-50)]'
+                        : 'border-[var(--pbx-border-default)] bg-[var(--pbx-bg-surface)] hover:border-[var(--pbx-text-secondary)]'
+                        } focus-visible:ring-2 focus-visible:ring-[var(--pbx-action-primary)]`}
                     >
-                      <Stack gap="1" style={{ minWidth: 0, flex: 1, paddingRight: '12px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--pbx-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Stack gap="1" className="min-w-0 flex-1 pr-3">
+                        <div className="font-semibold text-sm text-[var(--pbx-text-primary)] truncate">{s.name}</div>
+                        <div className="text-xs text-[var(--pbx-text-muted)] flex items-center gap-1.5 truncate">
                           <Globe size={12} /> {s.timezone}
                         </div>
                       </Stack>
 
-                      <Inline gap="2" align="center" wrap={false} style={{ flexShrink: 0 }}>
+                      <Inline gap="2" align="center" wrap={false} className="shrink-0">
                         <Badge variant={sOpen ? 'success' : 'neutral'}>
                           {sOpen ? 'Open' : 'Closed'}
                         </Badge>
@@ -381,23 +366,23 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                             handleDirectDelete(s.id, s.name);
                           }}
                         >
-                          <Trash2 size={13} style={{ color: 'var(--pbx-color-danger-600)' }} />
+                          <Trash2 size={13} className="text-[var(--pbx-color-danger-600)]" />
                         </Button>
-                        <ChevronRight size={16} style={{ color: active ? 'var(--pbx-action-primary)' : 'var(--pbx-text-muted)' }} />
+                        <ChevronRight size={16} className={active ? 'text-[var(--pbx-action-primary)]' : 'text-[var(--pbx-text-muted)]'} />
                       </Inline>
                     </button>
                   );
                 })}
 
                 {schedules.length === 0 && !loading && (
-                  <div style={{ padding: '32px 16px', textAlign: 'center', border: '1px dashed var(--pbx-border-default)', borderRadius: 'var(--pbx-radius-xl)', backgroundColor: 'var(--pbx-bg-subtle)' }}>
+                  <div className="p-8 text-center border border-dashed border-[var(--pbx-border-default)] rounded-xl bg-[var(--pbx-bg-subtle)]">
                     <Stack gap="4" align="center">
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--pbx-bg-surface)', border: '1px solid var(--pbx-border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pbx-text-muted)', margin: '0 auto' }}>
+                      <div className="w-12 h-12 rounded-full bg-[var(--pbx-bg-surface)] border border-[var(--pbx-border-default)] flex items-center justify-center text-[var(--pbx-text-muted)] mx-auto">
                         <Clock size={22} />
                       </div>
                       <Stack gap="1">
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--pbx-text-primary)' }}>No Schedules Yet</div>
-                        <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)' }}>Create your first operating profile</div>
+                        <div className="text-sm font-semibold text-[var(--pbx-text-primary)]">No Schedules Yet</div>
+                        <div className="text-xs text-[var(--pbx-text-muted)]">Create your first operating profile</div>
                       </Stack>
                       <Button variant="primary" size="sm" onClick={() => setShowCreateModal(true)}>
                         Create Schedule
@@ -410,22 +395,22 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
           </div>
 
           {/* Right Column: Schedule Details */}
-          <div style={{ gridColumn: 'span 8' }}>
+          <div className="col-span-8">
             {selectedSchedule ? (
               <Stack gap="6">
                 <Card padding="md">
                   <Stack gap="5">
-                    <div style={{ paddingBottom: '12px', marginBottom: '8px', borderBottom: '1px solid var(--pbx-border-default)' }}>
+                    <div className="pb-3 mb-2 border-b border-[var(--pbx-border-default)]">
                       <Inline justify="between" align="center">
                         <Stack gap="2">
                           <Inline gap="3" align="center">
-                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--pbx-text-primary)', margin: 0 }}>{selectedSchedule.name}</h2>
+                            <h2 className="text-lg font-bold text-[var(--pbx-text-primary)] m-0">{selectedSchedule.name}</h2>
                             <Badge variant={isHoliday ? 'warning' : isOpen ? 'success' : 'danger'}>
                               {live?.status || 'CLOSED'}
                             </Badge>
                           </Inline>
-                          <p style={{ fontSize: '12px', color: 'var(--pbx-text-muted)', margin: 0 }}>
-                            Active Route: <strong style={{ color: 'var(--pbx-text-primary)' }}>{live?.active_destination?.type || 'extension'}</strong> &rarr; <code style={{ fontFamily: 'var(--pbx-font-mono)', fontSize: '12px', padding: '2px 8px', borderRadius: 'var(--pbx-radius-sm)', backgroundColor: 'var(--pbx-bg-subtle)', border: '1px solid var(--pbx-border-default)', color: 'var(--pbx-text-primary)', fontWeight: 500 }}>{live?.active_destination?.target || '1001'}</code>
+                          <p className="text-xs text-[var(--pbx-text-muted)] m-0">
+                            Active Route: <strong className="text-[var(--pbx-text-primary)]">{live?.active_destination?.type || 'extension'}</strong> &rarr; <code className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">{live?.active_destination?.target || '1001'}</code>
                           </p>
                         </Stack>
 
@@ -464,32 +449,24 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
 
                 {/* Weekly Schedule */}
                 <Card title="Weekly Operating Hours" padding="md">
-                  <div style={{ borderRadius: 'var(--pbx-radius-xl)', border: '1px solid var(--pbx-border-default)', overflow: 'hidden' }}>
+                  <div className="rounded-xl border border-[var(--pbx-border-default)] overflow-hidden">
                     {/* Shared 4-Column Grid Layout for Header & Day Rows */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 32px 140px', alignItems: 'center', gap: '16px', padding: '12px 16px', backgroundColor: 'var(--pbx-bg-subtle)', borderBottom: '1px solid var(--pbx-border-default)', fontSize: '11px', fontWeight: 700, color: 'var(--pbx-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <div className="grid grid-cols-[1fr_9rem_2rem_9rem] items-center gap-4 px-4 py-3 bg-[var(--pbx-bg-subtle)] border-b border-[var(--pbx-border-default)] text-xs font-bold text-[var(--pbx-text-muted)] uppercase tracking-wider">
                       <span>Day</span>
-                      <span style={{ textAlign: 'center' }}>Open Time</span>
+                      <span className="text-center">Open Time</span>
                       <span></span>
-                      <span style={{ textAlign: 'center' }}>Close Time</span>
+                      <span className="text-center">Close Time</span>
                     </div>
 
                     {/* Day Rows */}
-                    <div style={{ backgroundColor: 'var(--pbx-bg-surface)' }}>
+                    <div className="bg-[var(--pbx-bg-surface)]">
                       {DAYS.map(({ key, label }, idx) => {
                         const conf = selectedSchedule.schedule?.[key] || { enabled: false, open: '09:00', close: '18:00' };
                         const isLast = idx === DAYS.length - 1;
                         return (
                           <div
                             key={key}
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 140px 32px 140px',
-                              alignItems: 'center',
-                              gap: '16px',
-                              padding: '12px 16px',
-                              minHeight: '52px',
-                              borderBottom: isLast ? 'none' : '1px solid var(--pbx-border-default)',
-                            }}
+                            className={`grid grid-cols-[1fr_9rem_2rem_9rem] items-center gap-4 px-4 py-3 min-h-13 ${isLast ? '' : 'border-b border-[var(--pbx-border-default)]'}`}
                           >
                             <Checkbox
                               label={label}
@@ -503,18 +480,18 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                                   type="time"
                                   value={conf.open}
                                   onChange={(e) => handleDayChange(key, 'open', e.target.value)}
-                                  style={{ height: '36px', textAlign: 'center' }}
+                                  className="h-9 text-center"
                                 />
-                                <span style={{ textAlign: 'center', fontSize: '12px', color: 'var(--pbx-text-muted)', fontWeight: 600 }}>to</span>
+                                <span className="text-center text-xs text-[var(--pbx-text-muted)] font-semibold">to</span>
                                 <Input
                                   type="time"
                                   value={conf.close}
                                   onChange={(e) => handleDayChange(key, 'close', e.target.value)}
-                                  style={{ height: '36px', textAlign: 'center' }}
+                                  className="h-9 text-center"
                                 />
                               </>
                             ) : (
-                              <div style={{ gridColumn: '2 / 5', display: 'flex', justifyContent: 'flex-end' }}>
+                              <div className="col-span-3 flex justify-end">
                                 <Badge variant="neutral">Closed All Day</Badge>
                               </div>
                             )}
@@ -528,9 +505,9 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                 {/* Call Routing Destinations */}
                 <Card title="Call Routing Destinations" padding="md">
                   <Grid cols={3} gap="4">
-                    <Card padding="md" style={{ backgroundColor: 'rgba(236, 253, 245, 0.5)', border: '1px solid #A7F3D0' }}>
+                    <Card padding="md" className="bg-emerald-50/50 border-emerald-200">
                       <Stack gap="4">
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#065F46', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '4px' }}>
+                        <div className="text-[11px] font-bold text-emerald-800 uppercase flex items-center gap-1.5 pb-1">
                           <Sun size={14} /> Open Hours Route
                         </div>
                         <FormField label="Type">
@@ -554,9 +531,9 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                       </Stack>
                     </Card>
 
-                    <Card padding="md" style={{ backgroundColor: 'rgba(255, 241, 242, 0.5)', border: '1px solid #FECDD3' }}>
+                    <Card padding="md" className="bg-rose-50/50 border-rose-200">
                       <Stack gap="4">
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#9F1239', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '4px' }}>
+                        <div className="text-[11px] font-bold text-rose-800 uppercase flex items-center gap-1.5 pb-1">
                           <Moon size={14} /> After-Hours Route
                         </div>
                         <FormField label="Type">
@@ -579,9 +556,9 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                       </Stack>
                     </Card>
 
-                    <Card padding="md" style={{ backgroundColor: 'rgba(254, 243, 199, 0.5)', border: '1px solid #FDE68A' }}>
+                    <Card padding="md" className="bg-amber-50/50 border-amber-200">
                       <Stack gap="4">
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#92400E', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '4px' }}>
+                        <div className="text-[11px] font-bold text-amber-800 uppercase flex items-center gap-1.5 pb-1">
                           <Calendar size={14} /> Holiday Route
                         </div>
                         <FormField label="Type">
@@ -621,18 +598,18 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                         <Card key={h.id} padding="md">
                           <Inline justify="between" align="center">
                             <Stack gap="1">
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--pbx-text-primary)' }}>{h.name}</div>
-                              <div style={{ fontSize: '12px', fontFamily: 'var(--pbx-font-mono)', color: '#7E22CE', fontWeight: 600 }}>{h.holiday_date}</div>
+                              <div className="text-xs font-bold text-[var(--pbx-text-primary)]">{h.name}</div>
+                              <div className="text-xs font-mono text-purple-700 font-semibold">{h.holiday_date}</div>
                             </Stack>
                             <Button variant="ghost" size="sm" onClick={() => handleDeleteHoliday(h.id)}>
-                              <Trash2 size={13} style={{ color: 'var(--pbx-color-danger-600)' }} />
+                              <Trash2 size={13} className="text-[var(--pbx-color-danger-600)]" />
                             </Button>
                           </Inline>
                         </Card>
                       ))}
                     </Grid>
                   ) : (
-                    <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--pbx-text-muted)' }}>
+                    <div className="p-8 text-center text-xs text-[var(--pbx-text-muted)]">
                       No company holidays added yet.
                     </div>
                   )}
@@ -640,14 +617,14 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
               </Stack>
             ) : (
               <Card padding="lg">
-                <div style={{ padding: '48px 0', textAlign: 'center' }}>
+                <div className="py-12 text-center">
                   <Stack gap="3" align="center">
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--pbx-bg-subtle)', border: '1px solid var(--pbx-border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--pbx-text-muted)', margin: '0 auto' }}>
+                    <div className="w-12 h-12 rounded-full bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] flex items-center justify-center text-[var(--pbx-text-muted)] mx-auto">
                       <Clock size={24} />
                     </div>
                     <Stack gap="1">
-                      <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--pbx-text-primary)' }}>No Schedule Profile Selected</div>
-                      <div style={{ fontSize: '12px', color: 'var(--pbx-text-muted)' }}>Select a schedule profile from the left column to view or edit details.</div>
+                      <div className="text-base font-semibold text-[var(--pbx-text-primary)]">No Schedule Profile Selected</div>
+                      <div className="text-xs text-[var(--pbx-text-muted)]">Select a schedule profile from the left column to view or edit details.</div>
                     </Stack>
                   </Stack>
                 </div>
@@ -663,12 +640,6 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
         onClose={() => setShowCreateModal(false)}
         title="Create Business Hours Profile"
         subtitle="Define weekly business hours and time condition rules."
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleCreateSchedule} isLoading={saving}>Create Profile</Button>
-          </>
-        }
       >
         <form onSubmit={handleCreateSchedule}>
           <Stack gap="4">
@@ -691,6 +662,11 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                 ))}
               </Select>
             </FormField>
+
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-[var(--pbx-border-default)]">
+              <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+              <Button type="submit" variant="primary" isLoading={saving}>Create Profile</Button>
+            </div>
           </Stack>
         </form>
       </Modal>
@@ -701,12 +677,6 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
         onClose={() => setShowHolidayModal(false)}
         title="Add Holiday Exception"
         subtitle="Override normal hours on specific dates."
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowHolidayModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleAddHoliday}>Add Holiday</Button>
-          </>
-        }
       >
         <form onSubmit={handleAddHoliday}>
           <Stack gap="4">
@@ -727,6 +697,11 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                 onChange={(e) => setHolidayDate(e.target.value)}
               />
             </FormField>
+
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-[var(--pbx-border-default)]">
+              <Button type="button" variant="secondary" onClick={() => setShowHolidayModal(false)}>Cancel</Button>
+              <Button type="submit" variant="primary">Add Holiday</Button>
+            </div>
           </Stack>
         </form>
       </Modal>

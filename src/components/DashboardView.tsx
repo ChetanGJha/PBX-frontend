@@ -18,7 +18,8 @@ import {
 
 import { PageContainer, PageHeader } from './layout/PageContainer';
 import { Stack, Grid } from './layout/Stack';
-import { Card, StatCard, Heading, Text, Button, Badge } from './ui';
+import { Card, StatCard, Heading, Text, Button, Badge, IconTile } from './ui';
+
 
 interface DashboardViewProps {
   token: string;
@@ -187,9 +188,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
           <>
             <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
-                <div className="p-3 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] w-fit rounded-lg mb-3">
-                  <Building2 size={24} />
-                </div>
+                <IconTile icon={<Building2 size={20} />} className="mb-3" />
                 <Heading level={3}>Tenants Registry</Heading>
                 <Text size="sm" variant="secondary" className="mt-1">
                   Provision client tenant domains, extension quotas, and domain bindings.
@@ -202,9 +201,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
             <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
-                <div className="p-3 bg-[var(--pbx-color-success-50)] text-[var(--pbx-color-success-700)] w-fit rounded-lg mb-3">
-                  <Users size={24} />
-                </div>
+                <IconTile icon={<Users size={20} />} className="mb-3" />
                 <Heading level={3}>Global Users</Heading>
                 <Text size="sm" variant="secondary" className="mt-1">
                   Manage platform RBAC users, super admins, and tenant administrators.
@@ -217,9 +214,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
             <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
-                <div className="p-3 bg-[var(--pbx-color-info-50)] text-[var(--pbx-color-info-700)] w-fit rounded-lg mb-3">
-                  <Hash size={24} />
-                </div>
+                <IconTile icon={<Hash size={20} />} className="mb-3" />
                 <Heading level={3}>DID Inventory</Heading>
                 <Text size="sm" variant="secondary" className="mt-1">
                   Manage pool of telephone numbers and allocate them to tenant domains.
@@ -232,9 +227,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
             <Card className="flex flex-col justify-between gap-4 h-full">
               <div>
-                <div className="p-3 bg-[var(--pbx-color-indigo-50)] text-[var(--pbx-color-indigo-700)] w-fit rounded-lg mb-3">
-                  <ArrowLeftRight size={24} />
-                </div>
+                <IconTile icon={<ArrowLeftRight size={20} />} className="mb-3" />
                 <Heading level={3}>SIP Trunks & Gateways</Heading>
                 <Text size="sm" variant="secondary" className="mt-1">
                   Configure upstream carrier Sofia gateways, outbound proxies, and codecs.
@@ -248,11 +241,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
         ) : (
           <>
             {canAccessTab('extensions') && (
-              <Card className="flex flex-col justify-between gap-4">
+              <Card className="flex flex-col justify-between gap-4 h-full">
                 <div>
-                  <div className="p-3 bg-[var(--pbx-color-primary-100)] text-[var(--pbx-action-primary)] w-fit rounded-lg mb-3">
-                    <Phone size={24} />
-                  </div>
+                  <IconTile icon={<Phone size={20} />} className="mb-3" />
                   <Heading level={3}>Extension Management</Heading>
                   <Text size="sm" variant="secondary" className="mt-1">
                     View and manage SIP & WebRTC softphone credentials and extension status.
@@ -265,11 +256,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             )}
 
             {(canAccessTab('ivr') || canAccessTab('call-routing')) && (
-              <Card className="flex flex-col justify-between gap-4">
+              <Card className="flex flex-col justify-between gap-4 h-full">
                 <div>
-                  <div className="p-3 bg-[var(--pbx-color-info-50)] text-[var(--pbx-color-info-700)] w-fit rounded-lg mb-3">
-                    <GitBranch size={24} />
-                  </div>
+                  <IconTile icon={<GitBranch size={20} />} className="mb-3" />
                   <Heading level={3}>Call Routing & IVR</Heading>
                   <Text size="sm" variant="secondary" className="mt-1">
                     Design visual drag-and-drop auto-attendants and map inbound DIDs to departments.
@@ -282,11 +271,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             )}
 
             {(canAccessTab('queues') || canAccessTab('hunt-groups')) && (
-              <Card className="flex flex-col justify-between gap-4">
+              <Card className="flex flex-col justify-between gap-4 h-full">
                 <div>
-                  <div className="p-3 bg-[var(--pbx-color-success-50)] text-[var(--pbx-color-success-700)] w-fit rounded-lg mb-3">
-                    <List size={24} />
-                  </div>
+                  <IconTile icon={<List size={20} />} className="mb-3" />
                   <Heading level={3}>Call Queues & Hunt Groups</Heading>
                   <Text size="sm" variant="secondary" className="mt-1">
                     Manage agent queues, ring groups, and call distribution strategies.
@@ -299,11 +286,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             )}
 
             {canAccessTab('reports') && (
-              <Card className="flex flex-col justify-between gap-4">
+              <Card className="flex flex-col justify-between gap-4 h-full">
                 <div>
-                  <div className="p-3 bg-[var(--pbx-color-warning-50)] text-[var(--pbx-color-warning-700)] w-fit rounded-lg mb-3">
-                    <BarChart2 size={24} />
-                  </div>
+                  <IconTile icon={<BarChart2 size={20} />} className="mb-3" />
                   <Heading level={3}>CDR & Analytics</Heading>
                   <Text size="sm" variant="secondary" className="mt-1">
                     View call detail records, call logs, and performance analytics.
@@ -316,11 +301,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
             )}
 
             {(canAccessTab('voicemail') || canAccessTab('call-forwarding')) && (
-              <Card className="flex flex-col justify-between gap-4">
+              <Card className="flex flex-col justify-between gap-4 h-full">
                 <div>
-                  <div className="p-3 bg-[var(--pbx-color-indigo-50)] text-[var(--pbx-color-indigo-700)] w-fit rounded-lg mb-3">
-                    <Voicemail size={24} />
-                  </div>
+                  <IconTile icon={<Voicemail size={20} />} className="mb-3" />
                   <Heading level={3}>Voicemail & Forwarding</Heading>
                   <Text size="sm" variant="secondary" className="mt-1">
                     Manage extension voicemail boxes, PINs, and call forwarding rules.
