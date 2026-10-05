@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Send, Copy, Check, FileCode, Cpu } from 'lucide-react';
-
+import { Send, Copy, Check, FileCode } from 'lucide-react';
 import { apiService } from '../services/api';
+import { PageContainer } from './layout/PageContainer';
+import { Stack, Grid } from './layout/Stack';
+import { Button, Card, Input, FormField } from './ui';
 
 export const XmlCurlConsole: React.FC = () => {
   const [domain, setDomain] = useState('acme.local');
@@ -33,100 +35,87 @@ export const XmlCurlConsole: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Telephony Engine API</div>
-          <h1 className="page-title">FreeSWITCH mod_xml_curl Console</h1>
-          <p className="page-sub">Test live HTTP POST requests (`/freeswitch/xml`) sent dynamically by FreeSWITCH during registration and call routing.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <PageContainer
+      title="FreeSWITCH mod_xml_curl Console"
+      subtitle="Test live HTTP POST requests (`/freeswitch/xml`) sent dynamically by FreeSWITCH during registration and call routing."
+      eyebrow="Telephony Engine API"
+    >
+      <Grid cols={3} gap="6">
         {/* Request Form */}
-        <div className="card p-6 space-y-4">
-          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-            <Cpu className="w-4 h-4 text-[#FF5430]" />
-            <span>Simulate FreeSWITCH Request</span>
-          </div>
+        <Card title="Simulate FreeSWITCH Request">
+          <form onSubmit={handleTest}>
+            <Stack gap="4">
+              <FormField label="Section">
+                <Input value="directory" disabled className="bg-slate-50 font-mono" />
+              </FormField>
 
-          <form onSubmit={handleTest} className="space-y-4">
-            <div className="form-group">
-              <label className="form-label">Section</label>
-              <input type="text" value="directory" disabled className="form-control bg-slate-50 font-mono text-slate-500" />
-            </div>
+              <FormField label="SIP Domain (`domain` / `key_value`)" required>
+                <Input
+                  required
+                  placeholder="acme.local"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  className="font-mono"
+                />
+              </FormField>
 
-            <div className="form-group">
-              <label className="form-label">SIP Domain (`domain` / `key_value`)</label>
-              <input
-                type="text"
-                placeholder="acme.local"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                className="form-control font-mono"
-                required
-              />
-            </div>
+              <FormField label="SIP User / Extension (`user`)" required>
+                <Input
+                  required
+                  placeholder="1001"
+                  value={user}
+                  onChange={(e) => setUser(e.target.value)}
+                  className="font-mono"
+                />
+              </FormField>
 
-            <div className="form-group">
-              <label className="form-label">SIP User / Extension (`user`)</label>
-              <input
-                type="text"
-                placeholder="1001"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                className="form-control font-mono"
-                required
-              />
-            </div>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={loading}
+                leftIcon={<Send size={14} />}
+                className="w-full justify-center"
+              >
+                Execute mod_xml_curl Lookup
+              </Button>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center">
-              <Send className="w-4 h-4" />
-              <span>{loading ? 'Fetching XML...' : 'Execute mod_xml_curl Lookup'}</span>
-            </button>
+              <Card padding="sm" className="bg-[var(--pbx-bg-subtle)]">
+                <Stack gap="1" className="font-mono text-xs">
+                  <div className="font-bold text-[var(--pbx-text-primary)] font-sans">FreeSWITCH Request Signature:</div>
+                  <div className="text-[var(--pbx-action-primary)] font-bold">POST /freeswitch/xml</div>
+                  <div className="text-[var(--pbx-text-muted)]">Content-Type: application/x-www-form-urlencoded</div>
+                  <code className="code-box break-all">section=directory&domain={domain}&user={user}</code>
+                </Stack>
+              </Card>
+            </Stack>
           </form>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5 font-mono">
-            <div className="font-bold text-slate-800 font-sans">FreeSWITCH Request Signature:</div>
-            <div className="text-[#FF5430] font-bold">POST /freeswitch/xml</div>
-            <div className="text-slate-500">Content-Type: application/x-www-form-urlencoded</div>
-            <div className="text-slate-700 bg-white p-2 rounded border border-slate-200 break-all">section=directory&domain={domain}&user={user}</div>
-          </div>
-        </div>
+        </Card>
 
         {/* XML Output Console */}
-        <div className="lg:col-span-2 card p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-                <FileCode className="w-4 h-4 text-[#FF5430]" />
-                <span>Generated Dynamic FreeSWITCH XML Output</span>
-              </div>
-              {xmlResult && (
-                <button
-                  onClick={handleCopy}
-                  className="text-xs text-slate-500 hover:text-[#FF5430] flex items-center gap-1 transition-colors border-0 bg-transparent cursor-pointer font-semibold"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied XML' : 'Copy XML'}</span>
-                </button>
-              )}
-            </div>
-
+        <div className="col-span-2">
+          <Card
+            title="Generated Dynamic FreeSWITCH XML Output"
+            actions={
+              xmlResult ? (
+                <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={copied ? <Check size={14} className="text-[var(--pbx-color-success-600)]" /> : <Copy size={14} />}>
+                  {copied ? 'Copied XML' : 'Copy XML'}
+                </Button>
+              ) : undefined
+            }
+          >
             {xmlResult ? (
-              <pre className="code-box max-h-[420px] overflow-y-auto whitespace-pre-wrap bg-slate-950 text-emerald-400 p-4 rounded-xl border border-slate-800 font-mono text-xs leading-relaxed">
+              <pre className="max-h-[420px] overflow-y-auto whitespace-pre-wrap bg-slate-950 text-emerald-400 p-4 rounded-xl border border-slate-800 font-mono text-xs leading-relaxed">
                 {xmlResult}
               </pre>
             ) : (
-              <div className="h-[340px] border border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 text-xs">
-                <FileCode className="w-10 h-10 mb-2 opacity-30 text-[#FF5430]" />
+              <div className="h-[340px] border border-dashed border-[var(--pbx-border-default)] rounded-xl flex flex-col items-center justify-center text-[var(--pbx-text-muted)] text-xs">
+                <FileCode size={40} className="mb-2 opacity-30 text-[var(--pbx-action-primary)]" />
                 <span>Click "Execute mod_xml_curl Lookup" to inspect dynamic FreeSWITCH XML generation.</span>
               </div>
             )}
-          </div>
+          </Card>
         </div>
-      </div>
-    </div>
+      </Grid>
+    </PageContainer>
   );
 };

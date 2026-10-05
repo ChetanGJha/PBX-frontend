@@ -1,46 +1,57 @@
-import { useToast } from './ToastProvider';
-import React, { useState, useEffect } from 'react';
-import {
-  Users, UserPlus, RefreshCw, Trash2, Search, X, AlertCircle, ShieldCheck, ShieldAlert, Settings,
-  Phone, Hash, PhoneCall, PhoneForwarded, GitBranch, Music, Voicemail, ArrowLeftRight, BarChart2, Mail
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import type { User as UserType, Tenant } from '../types';
-import { CustomSelect } from './CustomSelect';
+import type { User as UserType } from '../types';
+import { UserPlus, RefreshCw, Trash2, Settings } from 'lucide-react';
+
+// Design System imports
+import { ListPageLayout } from './layout';
+import { Stack, Inline, Grid } from './layout/Stack';
+import { Button, Badge, Alert, Modal, FormField, Input, Select, Checkbox } from './ui';
+import { DataTable, FilterBar } from './patterns';
+import type { Column } from './patterns';
+
+const AVAILABLE_MODULES = [
+  { id: 'dashboard', label: 'Dashboard Overview', icon: 'LayoutDashboard', desc: 'System status & KPI widgets' },
+  { id: 'tenants', label: 'Tenants Registry', icon: 'Building2', desc: 'Tenant provisioning' },
+  { id: 'users', label: 'User Administration', icon: 'Users', desc: 'RBAC user management' },
+  { id: 'extensions', label: 'Extensions & SIP', icon: 'Phone', desc: 'Extension provisioning' },
+  { id: 'trunks', label: 'SIP Trunks & Gateways', icon: 'Server', desc: 'Upstream trunk routing' },
+  { id: 'dids', label: 'Inbound DIDs', icon: 'PhoneIncoming', desc: 'Phone number assignment' },
+  { id: 'routing', label: 'Dialplan & Outbound', icon: 'GitMerge', desc: 'Call routing logic' },
+  { id: 'queues', label: 'Call Queues & ACD', icon: 'Users2', desc: 'Call distribution' },
+  { id: 'huntgroups', label: 'Ring / Hunt Groups', icon: 'PhoneCall', desc: 'Multi-extension ringing' },
+  { id: 'ivrs', label: 'IVR Auto-Attendants', icon: 'GitFork', desc: 'Interactive voice response' },
+  { id: 'voicemail', label: 'Voicemail & Recording', icon: 'Voicemail', desc: 'Voicemail boxes' },
+  { id: 'callforwarding', label: 'Call Forwarding', icon: 'PhoneForwarded', desc: 'Forwarding rules' },
+  { id: 'audio', label: 'Audio Prompts Library', icon: 'Music', desc: 'Audio prompt assets' },
+  { id: 'businesshours', label: 'Business Hours & Time', icon: 'Clock', desc: 'Schedule-based routing' },
+  { id: 'conferences', label: 'Conference Bridges', icon: 'Users', desc: 'Multi-party conferencing' },
+  { id: 'callblock', label: 'Call Blocking / Blacklist', icon: 'ShieldAlert', desc: 'Inbound spam block' },
+  { id: 'contacts', label: 'Phonebook Contacts', icon: 'BookOpen', desc: 'Tenant contacts' },
+  { id: 'emailsettings', label: 'SMTP & Notification', icon: 'Mail', desc: 'Email alerts' },
+  { id: 'reports', label: 'CDR & Analytics', icon: 'BarChart2', desc: 'Call detail records' },
+  { id: 'xmlcurlconsole', label: 'xml_curl Console', icon: 'Code', desc: 'FreeSWITCH XML Debugger' },
+  { id: 'xmlcurltester', label: 'xml_curl Route Tester', icon: 'Terminal', desc: 'Dialplan Simulator' },
+];
 
 interface UsersViewProps {
-  token: string | null;
-  currentUser: UserType | null;
+  token: string;
+  currentUser?: UserType | null;
   tenantScoped?: boolean;
 }
 
-const AVAILABLE_MODULES = [
-  { id: 'extensions',      label: 'SIP Extensions',    desc: 'Create, modify, and delete extensions', icon: Phone },
-  { id: 'tenant-dids',     label: 'Assigned DIDs',     desc: 'View tenant inbound phone numbers',     icon: Hash },
-  { id: 'call-routing',    label: 'Call Routing',      desc: 'Inbound and outbound route rules',       icon: PhoneCall },
-  { id: 'queues',          label: 'Call Queues',       desc: 'Queue management and ACD agents',        icon: Users },
-  { id: 'hunt-groups',     label: 'Hunt Groups',       desc: 'Sequential and simultaneous ring lists', icon: PhoneForwarded },
-  { id: 'ivr',             label: 'IVR Flows',         desc: 'Visual IVR menu and DTMF designer',      icon: GitBranch },
-  { id: 'audio-prompts',   label: 'Audio Prompts',     desc: 'Upload audio files & sound library',     icon: Music },
-  { id: 'voicemail',       label: 'Voicemail',         desc: 'Voicemail boxes and email routing',      icon: Voicemail },
-  { id: 'call-forwarding', label: 'Call Forwarding',   desc: 'Forward-always, busy, & follow-me',      icon: ArrowLeftRight },
-  { id: 'email-settings',   label: 'SMTP & Email',     desc: 'Outbound mail server & voicemail alerts',icon: Mail },
-  { id: 'reports',         label: 'CDR & Reports',     desc: 'Call detail records & analytics',        icon: BarChart2 },
-];
-
 export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenantScoped = false }) => {
-  const { showSuccessModal, showErrorModal } = useToast();
-  const [usersList, setUsersList] = useState<UserType[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Search & Filter
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [tenantFilter, setTenantFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [tenantFilter, setTenantFilter] = useState<string>('');
 
-  // Create Modal State
+  // Create User Form
   const [showModal, setShowModal] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -48,140 +59,133 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [role, setRole] = useState(tenantScoped ? 'SUB_ADMIN' : 'TENANT_ADMIN');
-  const [tenantId, setTenantId] = useState('');
-  const [selectedModules, setSelectedModules] = useState<string[]>(['extensions', 'reports']);
+  const [targetTenantId, setTargetTenantId] = useState('');
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
 
-  // Edit Permissions Modal
+  // Permissions Modal
   const [permModalUser, setPermModalUser] = useState<UserType | null>(null);
   const [editModules, setEditModules] = useState<string[]>([]);
   const [savingPerms, setSavingPerms] = useState(false);
 
   const fetchData = async () => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
     try {
-      const tenantFilter = (tenantScoped && currentUser?.tenant_id && currentUser.tenant_id !== 'undefined' && currentUser.tenant_id !== 'null')
-        ? currentUser.tenant_id
-        : undefined;
+      setLoading(true);
+      setError(null);
       const [uRes, tRes] = await Promise.allSettled([
-        apiService.getUsers(token, tenantFilter),
-        currentUser?.role === 'SUPER_ADMIN' ? apiService.getTenants(token) : Promise.resolve([]),
+        apiService.getUsers(token),
+        currentUser?.role === 'SUPER_ADMIN' ? apiService.getTenants(token) : Promise.resolve([])
       ]);
-
-      if (uRes.status === 'fulfilled') {
-        setUsersList(uRes.value);
-      } else {
-        setError(uRes.reason?.message || 'Failed to fetch users');
-      }
-
-      if (tRes.status === 'fulfilled') {
-        setTenants(tRes.value);
-        if (tenantScoped && currentUser?.tenant_id) {
-          setTenantId(currentUser.tenant_id);
-        } else if (tRes.value.length > 0 && !tenantId) {
-          setTenantId(tRes.value[0].id);
-        }
-      }
+      if (uRes.status === 'fulfilled') setUsers(uRes.value);
+      if (tRes.status === 'fulfilled') setTenants(tRes.value);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load user accounts');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token) fetchData();
+    fetchData();
   }, [token]);
-
-  const toggleModule = (modId: string) => {
-    setSelectedModules(prev =>
-      prev.includes(modId) ? prev.filter(m => m !== modId) : [...prev, modId]
-    );
-  };
-
-  const toggleEditModule = (modId: string) => {
-    setEditModules(prev =>
-      prev.includes(modId) ? prev.filter(m => m !== modId) : [...prev, modId]
-    );
-  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
-    setLoading(true);
     try {
-      await apiService.createUser(token, {
-        tenant_id: tenantId || (currentUser?.tenant_id ?? undefined),
+      setLoading(true);
+      setError(null);
+
+      if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && !targetTenantId) {
+        throw new Error('Please select an assigned tenant for this user account.');
+      }
+
+      const payload: any = {
         username,
         email,
         password,
-        first_name: firstName || undefined,
-        last_name: lastName || undefined,
+        first_name: firstName,
+        last_name: lastName,
         role,
-        allowed_modules: role === 'SUB_ADMIN' ? selectedModules : [],
-      });
+      };
+
+      if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && targetTenantId) {
+        payload.tenant_id = targetTenantId;
+      } else if (tenantScoped && currentUser?.tenant_id) {
+        payload.tenant_id = currentUser.tenant_id;
+      }
+
+      if (role === 'SUB_ADMIN') {
+        payload.allowed_modules = selectedModules;
+      }
+
+      await apiService.createUser(token, payload);
       setShowModal(false);
-      showSuccessModal(
-        'User Account Provisioned',
-        `User account "${username}" (${email}) has been successfully created with role ${role}.`
-      );
-      setUsername('');
-      setEmail('');
-      setPassword('');
-      setFirstName('');
-      setLastName('');
-      setSelectedModules(['extensions', 'reports']);
+      resetForm();
       fetchData();
     } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
-      setError(msg);
-      showErrorModal('Failed to Create User', msg);
-    } finally {
+      setError(err.message || 'Failed to create user account');
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setFirstName('');
+    setLastName('');
+    setRole(tenantScoped ? 'SUB_ADMIN' : 'TENANT_ADMIN');
+    setTargetTenantId('');
+    setSelectedModules([]);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to deactivate/delete this user?')) return;
+    try {
+      setLoading(true);
+      await apiService.deleteUser(token, id);
+      fetchData();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete user');
+      setLoading(false);
+    }
+  };
+
+  const openPermModal = (user: UserType) => {
+    setPermModalUser(user);
+    setEditModules(user.allowed_modules || []);
+  };
+
   const handleSavePermissions = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !permModalUser) return;
+    if (!permModalUser) return;
     setSavingPerms(true);
     try {
       await apiService.updateUserPermissions(token, permModalUser.id, editModules);
-      showSuccessModal(
-        'Sub-Admin Permissions Saved',
-        `Module permissions for ${permModalUser.username} have been updated successfully.`
-      );
       setPermModalUser(null);
       fetchData();
     } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
-      setError(msg);
-      showErrorModal('Failed to Update Permissions', msg);
+      setError(err.message || 'Failed to update permissions');
     } finally {
       setSavingPerms(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!token || !confirm('Are you sure you want to deactivate/delete this user?')) return;
-    try {
-      await apiService.deleteUser(token, id);
-      showSuccessModal('User Deactivated', 'The user account has been deactivated successfully.');
-      fetchData();
-    } catch (err: any) {
-      const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
-      setError(msg);
-      showErrorModal('Failed to Deactivate User', msg);
+  const toggleModule = (id: string) => {
+    setSelectedModules(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  const toggleEditModule = (id: string) => {
+    setEditModules(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  const filteredUsers = users.filter((u) => {
+    if (tenantScoped && currentUser?.tenant_id && u.tenant_id !== currentUser.tenant_id) {
+      return false;
     }
-  };
-
-  const openPermModal = (u: UserType) => {
-    setPermModalUser(u);
-    setEditModules(u.allowed_modules || []);
-  };
-
-  const filteredUsers = usersList.filter((u) => {
     const matchesSearch =
       u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -196,781 +200,212 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
 
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'TENANT_ADMIN';
 
+  const columns: Column<UserType>[] = [
+    { key: 'username', header: 'Username', sortable: true, render: (u: UserType) => <span className="font-bold">{u.username}</span> },
+    { key: 'email', header: 'Email' },
+    { key: 'role', header: 'Role', render: (u: UserType) => <Badge variant="primary">{u.role}</Badge> },
+    { key: 'tenant_domain', header: 'Tenant Domain', render: (u: UserType) => <span className="font-mono">{u.tenant_domain || 'Global'}</span> },
+    { key: 'status', header: 'Status', render: () => <Badge variant="success">Active</Badge> },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">{tenantScoped ? 'Tenant Governance' : 'Identity & Access Control'}</div>
-          <h1 className="page-title">{tenantScoped ? 'Tenant Admins & Sub-Admins' : 'Global Users & Administrators'}</h1>
-          <p className="page-sub">
-            {tenantScoped
-              ? 'Manage tenant administrators and create sub-admins with modular access (e.g. extensions-only, reporting-only).'
-              : 'Provision Platform Super Administrators, Tenant Master Admins, Sub-Admins, and Staff across all tenants.'}
-          </p>
-        </div>
+      <ListPageLayout
+        title={tenantScoped ? 'Tenant Admins & Sub-Admins' : 'Global Users & Administrators'}
+        subtitle={
+          tenantScoped
+            ? 'Manage tenant administrators and create sub-admins with modular access (e.g. extensions-only, reporting-only).'
+            : 'Provision Platform Super Administrators, Tenant Master Admins, Sub-Admins, and Staff across all tenants.'
+        }
+        eyebrow={tenantScoped ? 'TENANT MANAGEMENT' : 'SYSTEM'}
+        actions={
+          <Inline gap="3">
+            <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
+              Refresh
+            </Button>
+            {canManage && (
+              <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<UserPlus size={16} />}>
+                {tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin'}
+              </Button>
+            )}
+          </Inline>
+        }
+        alert={error ? <Alert variant="danger">{error}</Alert> : undefined}
+        filterBar={
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search username or email..."
+            filters={
+              <Inline gap="3" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
+                <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
+                  <option value="">All Roles</option>
+                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                  <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+                  <option value="SUB_ADMIN">SUB_ADMIN</option>
+                  <option value="SUPERVISOR">SUPERVISOR</option>
+                  <option value="AGENT">AGENT</option>
+                </Select>
 
-        <div className="flex items-center gap-3">
-          <button onClick={fetchData} className="btn-secondary">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
-          {canManage && (
-            <button onClick={() => setShowModal(true)} className="btn-primary">
-              <UserPlus className="w-4 h-4" />
-              <span>{tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin'}</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Filter and Search Bar */}
-      <div className="card p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-2xl">
-          <div className="search-input-wrap flex-1">
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search username or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control text-xs"
-            />
-          </div>
-
-          {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
-            <div className="w-48 shrink-0">
-              <CustomSelect
-                options={[
-                  { value: '', label: 'All Tenants' },
-                  { value: 'global', label: 'Global (Platform)' },
-                  ...tenants.map((t) => ({ value: t.id, label: t.name }))
-                ]}
-                value={tenantFilter}
-                onChange={(val) => setTenantFilter(val)}
-              />
-            </div>
-          )}
-
-          <div className="w-44 shrink-0">
-            <CustomSelect
-              options={[
-                { value: '', label: 'All Roles' },
-                ...(!tenantScoped ? [{ value: 'SUPER_ADMIN', label: 'SUPER_ADMIN' }] : []),
-                { value: 'TENANT_ADMIN', label: 'TENANT_ADMIN' },
-                { value: 'SUB_ADMIN', label: 'SUB_ADMIN' },
-                { value: 'SUPERVISOR', label: 'SUPERVISOR' },
-                { value: 'AGENT', label: 'AGENT' },
-              ]}
-              value={roleFilter}
-              onChange={(val) => setRoleFilter(val)}
-            />
-          </div>
-        </div>
-
-        <div className="text-xs text-slate-500 font-semibold">
-          Total Users: <span className="text-slate-900">{filteredUsers.length}</span>
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="card overflow-hidden">
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email Address</th>
-                <th>Full Name</th>
-                <th>Assigned Tenant</th>
-                <th>Role</th>
-                <th>Module Permissions</th>
-                {canManage && <th className="text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((u: UserType) => (
-                <tr key={u.id}>
-                  <td className="font-bold text-slate-900">{u.username}</td>
-                  <td className="font-mono text-slate-600 text-xs">{u.email}</td>
-                  <td className="text-slate-700">
-                    {u.first_name || u.last_name ? `${u.first_name || ''} ${u.last_name || ''}` : '—'}
-                  </td>
-                  <td className="font-mono text-xs text-slate-600">
-                    {u.tenant_domain ? u.tenant_domain : 'Global (Platform)'}
-                  </td>
-                  <td>
-                    <span
-                      className={`terrix-badge ${
-                        u.role === 'SUPER_ADMIN'
-                          ? 'orange'
-                          : u.role === 'TENANT_ADMIN'
-                          ? 'green'
-                          : u.role === 'SUB_ADMIN'
-                          ? 'blue'
-                          : 'grey'
-                      }`}
-                    >
-                      {u.role}
-                    </span>
-                  </td>
-                  <td>
-                    {u.role === 'SUPER_ADMIN' ? (
-                      <span className="text-xs text-amber-600 font-semibold">All Platform Modules (Full)</span>
-                    ) : u.role === 'TENANT_ADMIN' ? (
-                      <span className="text-xs text-emerald-600 font-semibold">All Tenant Modules (Master)</span>
-                    ) : u.role === 'SUB_ADMIN' ? (
-                      <div className="flex flex-wrap gap-1 items-center">
-                        {(u.allowed_modules && u.allowed_modules.length > 0) ? (
-                          u.allowed_modules.map((m: string) => (
-                            <span key={m} className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] border border-blue-200">
-                              {m}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400">None assigned</span>
-                        )}
-                        {canManage && (
-                          <button
-                            onClick={() => openPermModal(u)}
-                            className="ml-1 p-1 text-slate-400 hover:text-blue-600 rounded"
-                            title="Edit Sub-Admin Module Permissions"
-                          >
-                            <Settings className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">Standard role access</span>
-                    )}
-                  </td>
-                  {canManage && (
-                    <td className="text-right">
-                      {u.role === 'SUB_ADMIN' && (
-                        <button
-                          onClick={() => openPermModal(u)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer mr-1"
-                          title="Configure Module Access"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(u.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border-0 bg-transparent cursor-pointer"
-                        title="Deactivate User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
-                <tr>
-                  <td colSpan={canManage ? 7 : 6} className="text-center py-12 text-slate-400 text-xs">
-                    No users found.{canManage ? ' Click "Provision User" to create administrative accounts.' : ''}
-                  </td>
-                </tr>
+                {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
+                  <Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} className="w-48">
+                    <option value="">All Tenants</option>
+                    <option value="global">Global / System</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.domain})
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Inline>
+            }
+            actions={
+              <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
+                Total Users: <span className="text-[var(--pbx-text-primary)]">{filteredUsers.length}</span>
+              </div>
+            }
+          />
+        }
+      >
+        <DataTable
+          columns={columns}
+          data={filteredUsers}
+          isLoading={loading}
+          emptyTitle="No users found"
+          emptyDescription="Provision a new user account to get started."
+          actions={(u: UserType) => (
+            <Inline gap="1" justify="center" wrap={false}>
+              {u.role === 'SUB_ADMIN' && (
+                <Button variant="ghost" size="sm" onClick={() => openPermModal(u)} title="Configure Permissions">
+                  <Settings size={14} />
+                </Button>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              {canManage && (
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(u.id)} title="Deactivate User">
+                  <Trash2 size={14} className="text-rose-600" />
+                </Button>
+              )}
+            </Inline>
+          )}
+        />
 
-      {/* ── Provision User Modal (Clean, Modern, Intuitive) ───────────────────── */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '640px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
-            {/* Modal Header */}
-            <div style={{
-              height: '68px',
-              padding: '0 24px',
-              borderBottom: '1px solid #F1F5F9',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              background: '#FFFFFF'
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: '#FFF0EC',
-                color: '#FF5430',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <UserPlus size={20} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                  Provision Administrative Account
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
-                  Create an administrator or sub-admin with role-based permissions
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#F8FAFC',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s ease'
-                }}
-              >
-                <X size={16} />
-              </button>
+      {/* Create User Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin Account'}
+        subtitle="Create credentials and assign domain role & permissions"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleCreate} isLoading={loading}>
+              Create User Account
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreate}>
+          <Stack gap="4">
+            <Grid cols={2} gap="4">
+              <FormField label="First Name">
+                <Input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" />
+              </FormField>
+              <FormField label="Last Name">
+                <Input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
+              </FormField>
+            </Grid>
+
+            <FormField label="Username" required>
+              <Input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="johndoe" required />
+            </FormField>
+
+            <FormField label="Email Address" required>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@company.com" required />
+            </FormField>
+
+            <FormField label="Password" required>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="SecretPassword123!" required />
+            </FormField>
+
+            <FormField label="Role" required>
+              <Select value={role} onChange={(e) => setRole(e.target.value)}>
+                {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
+                <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+                <option value="SUB_ADMIN">SUB_ADMIN (Custom Modules)</option>
+                <option value="SUPERVISOR">SUPERVISOR</option>
+                <option value="AGENT">AGENT</option>
+              </Select>
+            </FormField>
+
+            {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && (
+              <FormField label="Assign to Tenant" required hint="Select which tenant organization this account belongs to">
+                <Select
+                  value={targetTenantId}
+                  onChange={(e) => setTargetTenantId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select Target Tenant --</option>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.domain})
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
+
+            {role === 'SUB_ADMIN' && (
+              <FormField label="Allowed Modules">
+                <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto">
+                  {AVAILABLE_MODULES.map((m) => (
+                    <Checkbox
+                      key={m.id}
+                      label={m.label}
+                      checked={selectedModules.includes(m.id)}
+                      onChange={() => toggleModule(m.id)}
+                    />
+                  ))}
+                </div>
+              </FormField>
+            )}
+          </Stack>
+        </form>
+      </Modal>
+
+      {/* Edit Permissions Modal */}
+      <Modal
+        isOpen={!!permModalUser}
+        onClose={() => setPermModalUser(null)}
+        title={`Configure Sub-Admin Permissions: ${permModalUser?.username}`}
+        subtitle="Select accessible modules for this sub-admin"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPermModalUser(null)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSavePermissions} isLoading={savingPerms}>
+              Save Permissions
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleSavePermissions}>
+          <Stack gap="3">
+            <div className="grid grid-cols-2 gap-2">
+              {AVAILABLE_MODULES.map((m) => (
+                <Checkbox
+                  key={m.id}
+                  label={m.label}
+                  checked={editModules.includes(m.id)}
+                  onChange={() => toggleEditModule(m.id)}
+                />
+              ))}
             </div>
-
-            <form onSubmit={handleCreate}>
-              <div style={{ padding: '20px 24px', maxHeight: 'calc(85vh - 132px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {currentUser?.role === 'SUPER_ADMIN' && tenants.length > 0 && !tenantScoped && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      Assign to Tenant Domain <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Global (Super Admin only) --' },
-                        ...tenants.map((t) => ({
-                          value: t.id,
-                          label: `${t.name} (${t.domain})`
-                        }))
-                      ]}
-                      value={tenantId}
-                      onChange={(val) => setTenantId(val)}
-                    />
-                  </div>
-                )}
-
-                {/* Row 1: Username & Email */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      Username <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. jdoe_admin"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      Email Address <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="jdoe@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Row 2: First Name & Last Name */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="John"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Doe"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 3: Password & Role */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      Password <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Minimum 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="form-control"
-                      style={{ height: '38px', borderRadius: '8px', fontSize: '13px', padding: '0 12px' }}
-                      required
-                      minLength={8}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
-                      User Role <span style={{ color: '#EF4444' }}>*</span>
-                    </label>
-                    <CustomSelect
-                      options={[
-                        ...(!tenantScoped && currentUser?.role === 'SUPER_ADMIN' ? [{ value: 'SUPER_ADMIN', label: 'SUPER_ADMIN (Platform Master)' }] : []),
-                        { value: 'TENANT_ADMIN', label: 'TENANT_ADMIN (Tenant Master)' },
-                        { value: 'SUB_ADMIN', label: 'SUB_ADMIN (Granular Modules)' },
-                        { value: 'SUPERVISOR', label: 'SUPERVISOR (Call Center)' },
-                        { value: 'AGENT', label: 'AGENT (Extension User)' }
-                      ]}
-                      value={role}
-                      onChange={(val) => setRole(val)}
-                    />
-                  </div>
-                </div>
-
-                {/* ── Sub-Admin Module Selector (Modern Tiles & Clear Hierarchy) ── */}
-                {role === 'SUB_ADMIN' && (
-                  <div style={{
-                    marginTop: '4px',
-                    background: '#FAFAFA',
-                    borderRadius: '12px',
-                    border: '1px solid #E2E8F0',
-                    padding: '16px'
-                  }}>
-                    {/* Section Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '7px',
-                          background: '#FFF0EC',
-                          color: '#FF5430',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          <ShieldCheck size={15} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
-                            Module Access Permissions
-                          </span>
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            background: selectedModules.length > 0 ? '#FFF0EC' : '#F1F5F9',
-                            color: selectedModules.length > 0 ? '#FF5430' : '#64748B',
-                            padding: '2px 8px',
-                            borderRadius: '12px'
-                          }}>
-                            {selectedModules.length} of {AVAILABLE_MODULES.length} Selected
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Quick Select All / Clear All */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedModules(AVAILABLE_MODULES.map(m => m.id))}
-                          style={{ background: 'none', border: 'none', color: '#FF5430', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                        >
-                          Select All
-                        </button>
-                        <span style={{ color: '#CBD5E1' }}>•</span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedModules([])}
-                          style={{ background: 'none', border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-
-                    <p style={{ fontSize: '11.5px', color: '#64748B', margin: '0 0 12px 0' }}>
-                      Check which PBX management sections this sub-administrator is permitted to view and manage.
-                    </p>
-
-                    {/* Module Cards Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                      {AVAILABLE_MODULES.map((mod) => {
-                        const checked = selectedModules.includes(mod.id);
-                        const IconComponent = mod.icon;
-                        return (
-                          <div
-                            key={mod.id}
-                            onClick={() => toggleModule(mod.id)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              padding: '9px 12px',
-                              borderRadius: '9px',
-                              cursor: 'pointer',
-                              background: checked ? '#FFF9F7' : '#FFFFFF',
-                              border: `1px solid ${checked ? '#FF8A65' : '#E2E8F0'}`,
-                              boxShadow: checked ? '0 1px 3px rgba(255, 84, 48, 0.08)' : '0 1px 2px rgba(0,0,0,0.02)',
-                              transition: 'all 0.15s ease',
-                              userSelect: 'none'
-                            }}
-                          >
-                            {/* Module Icon Badge */}
-                            <div style={{
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '7px',
-                              background: checked ? '#FF5430' : '#F1F5F9',
-                              color: checked ? '#FFFFFF' : '#64748B',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              transition: 'all 0.15s ease'
-                            }}>
-                              <IconComponent size={15} />
-                            </div>
-
-                            {/* Label & Description */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                color: checked ? '#0F172A' : '#334155',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}>
-                                {mod.label}
-                              </div>
-                              <div style={{
-                                fontSize: '10.5px',
-                                color: '#64748B',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                marginTop: '1px'
-                              }}>
-                                {mod.desc}
-                              </div>
-                            </div>
-
-                            {/* Checkbox indicator */}
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {}}
-                              style={{
-                                accentColor: '#FF5430',
-                                width: '15px',
-                                height: '15px',
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                                pointerEvents: 'none'
-                              }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div style={{
-                height: '64px',
-                padding: '0 24px',
-                borderTop: '1px solid #F1F5F9',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '12px',
-                background: '#FFFFFF'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="btn-secondary"
-                  style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-primary"
-                  style={{
-                    background: '#FF5430',
-                    padding: '9px 22px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 6px rgba(255, 84, 48, 0.25)'
-                  }}
-                >
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Edit Permissions Modal for Sub-Admin ────────────────────────────── */}
-      {permModalUser && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '640px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
-            <div style={{
-              height: '68px',
-              padding: '0 24px',
-              borderBottom: '1px solid #F1F5F9',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '14px',
-              background: '#FFFFFF'
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: '#FFF0EC',
-                color: '#FF5430',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <ShieldAlert size={20} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                  Edit Sub-Admin Permissions
-                </h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
-                  User: <strong>{permModalUser.username}</strong> ({permModalUser.email})
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPermModalUser(null)}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#F8FAFC',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSavePermissions}>
-              <div style={{ padding: '20px 24px', maxHeight: 'calc(85vh - 132px)', overflowY: 'auto' }}>
-                <div style={{
-                  background: '#FAFAFA',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E8F0',
-                  padding: '16px'
-                }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
-                        Module Access Permissions
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        background: editModules.length > 0 ? '#FFF0EC' : '#F1F5F9',
-                        color: editModules.length > 0 ? '#FF5430' : '#64748B',
-                        padding: '2px 8px',
-                        borderRadius: '12px'
-                      }}>
-                        {editModules.length} of {AVAILABLE_MODULES.length} Selected
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setEditModules(AVAILABLE_MODULES.map(m => m.id))}
-                        style={{ background: 'none', border: 'none', color: '#FF5430', fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                      >
-                        Select All
-                      </button>
-                      <span style={{ color: '#CBD5E1' }}>•</span>
-                      <button
-                        type="button"
-                        onClick={() => setEditModules([])}
-                        style={{ background: 'none', border: 'none', color: '#64748B', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-
-                  <p style={{ fontSize: '11.5px', color: '#64748B', margin: '0 0 12px 0' }}>
-                    Configure the management modules visible to this sub-admin. They will only see selected tabs in their navigation.
-                  </p>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                    {AVAILABLE_MODULES.map((mod) => {
-                      const checked = editModules.includes(mod.id);
-                      const IconComponent = mod.icon;
-                      return (
-                        <div
-                          key={mod.id}
-                          onClick={() => toggleEditModule(mod.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '9px 12px',
-                            borderRadius: '9px',
-                            cursor: 'pointer',
-                            background: checked ? '#FFF9F7' : '#FFFFFF',
-                            border: `1px solid ${checked ? '#FF8A65' : '#E2E8F0'}`,
-                            boxShadow: checked ? '0 1px 3px rgba(255, 84, 48, 0.08)' : '0 1px 2px rgba(0,0,0,0.02)',
-                            transition: 'all 0.15s ease',
-                            userSelect: 'none'
-                          }}
-                        >
-                          <div style={{
-                            width: '30px',
-                            height: '30px',
-                            borderRadius: '7px',
-                            background: checked ? '#FF5430' : '#F1F5F9',
-                            color: checked ? '#FFFFFF' : '#64748B',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            transition: 'all 0.15s ease'
-                          }}>
-                            <IconComponent size={15} />
-                          </div>
-
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              color: checked ? '#0F172A' : '#334155',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}>
-                              {mod.label}
-                            </div>
-                            <div style={{
-                              fontSize: '10.5px',
-                              color: '#64748B',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              marginTop: '1px'
-                            }}>
-                              {mod.desc}
-                            </div>
-                          </div>
-
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {}}
-                            style={{
-                              accentColor: '#FF5430',
-                              width: '15px',
-                              height: '15px',
-                              cursor: 'pointer',
-                              flexShrink: 0,
-                              pointerEvents: 'none'
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{
-                height: '64px',
-                padding: '0 24px',
-                borderTop: '1px solid #F1F5F9',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: '12px',
-                background: '#FFFFFF'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => setPermModalUser(null)}
-                  className="btn-secondary"
-                  style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '8px' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingPerms}
-                  className="btn-primary"
-                  style={{
-                    background: '#FF5430',
-                    padding: '9px 22px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 6px rgba(255, 84, 48, 0.25)'
-                  }}
-                >
-                  {savingPerms ? 'Saving Permissions...' : 'Update Permissions'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+          </Stack>
+        </form>
+      </Modal>
+    </ListPageLayout>
   );
 };

@@ -2,8 +2,18 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import { Hash, Plus, Link2, Unlink, Search, CheckCircle2, Edit2, Trash2 } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Plus, Link2, Unlink, Edit2, Trash2 } from 'lucide-react';
+import { ListPageLayout } from './layout';
+import { Stack, Inline } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface DidsViewProps {
   token: string;
@@ -156,271 +166,232 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
     (d.trunk_name && d.trunk_name.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const columns = [
+    {
+      key: 'did_number',
+      header: 'DID Number',
+      sortable: true,
+      render: (d: any) => <strong>{d.did_number}</strong>,
+    },
+    {
+      key: 'trunk_name',
+      header: 'Provider SIP Trunk / Gateway',
+      render: (d: any) => <Badge variant="neutral">{d.trunk_name || 'Global Provider'}</Badge>,
+    },
+    {
+      key: 'tenant_name',
+      header: 'Assigned Tenant',
+      render: (d: any) => (
+        d.tenant_name ? (
+          <Badge variant="warning">{d.tenant_name} ({d.tenant_domain})</Badge>
+        ) : (
+          <Badge variant="success">FREE / UNALLOCATED</Badge>
+        )
+      ),
+    },
+    {
+      key: 'destination',
+      header: 'Destination Target',
+      render: (d: any) => `${d.destination_type}: ${d.destination || 'Default Route'}`,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: () => <Badge variant="success">ACTIVE</Badge>,
+    },
+  ];
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Telephony Inventory</div>
-          <h1 className="page-title">{user?.role === 'SUPER_ADMIN' ? 'DID Number Inventory' : 'Assigned DIDs'}</h1>
-          <p className="page-sub">{user?.role === 'SUPER_ADMIN' ? 'Manage global DID phone numbers provider-wise and allocate free numbers to tenants' : 'Manage inbound routing and view allocated DID phone numbers for your organization'}</p>
-        </div>
-        <div>
-          {user?.role === 'SUPER_ADMIN' && (
-            <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-              <Plus size={16} /> Add DID to Inventory
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px' }}>
-          <div className="search-input-wrap" style={{ width: '280px' }}>
-            <Search size={16} className="search-icon" />
-            <input
-              className="form-control"
-              style={{ height: '38px', fontSize: '12px' }}
-              placeholder="Search DID numbers, host or tenant..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>DID Number</th>
-                <th>Provider SIP Trunk / Gateway</th>
-                <th>Assigned Tenant</th>
-                <th>Destination Target</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={6} className="text-center py-4">Loading DIDs...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">No DIDs in inventory</td></tr>
+    <ListPageLayout
+      title={user?.role === 'SUPER_ADMIN' ? 'DID Number Inventory' : 'Assigned DIDs'}
+      subtitle={user?.role === 'SUPER_ADMIN' ? 'Manage global DID phone numbers provider-wise and allocate free numbers to tenants' : 'Manage inbound routing and view allocated DID phone numbers for your organization'}
+      eyebrow="TELEPHONY INVENTORY"
+      actions={
+        user?.role === 'SUPER_ADMIN' ? (
+          <Button variant="primary" onClick={() => setShowAddModal(true)} leftIcon={<Plus size={16} />}>
+            Add DID to Inventory
+          </Button>
+        ) : undefined
+      }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search DID numbers, host or tenant..."
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No DIDs in inventory"
+        actions={(d: any) => (
+          user?.role === 'SUPER_ADMIN' ? (
+            <Inline gap="2" justify="center" wrap={false}>
+              <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
+                <Edit2 size={14} />
+              </Button>
+              {d.tenant_id ? (
+                <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
+                  <Unlink size={14} />
+                </Button>
               ) : (
-                filtered.map(d => (
-                  <tr key={d.id}>
-                    <td><strong style={{ fontSize: '13px', color: '#111827' }}>{d.did_number}</strong></td>
-                    <td><span className="terrix-badge grey">{d.trunk_name || 'Global Provider'}</span></td>
-                    <td>
-                      {d.tenant_name ? (
-                        <span className="terrix-badge orange">{d.tenant_name} ({d.tenant_domain})</span>
-                      ) : (
-                        <span className="terrix-badge green"><CheckCircle2 size={10} style={{ marginRight: '4px' }} /> FREE / UNALLOCATED</span>
-                      )}
-                    </td>
-                    <td>{d.destination_type}: {d.destination || 'Default Route'}</td>
-                    <td><span className="terrix-badge green">ACTIVE</span></td>
-                    <td className="text-right">
-                      {user?.role === 'SUPER_ADMIN' ? (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                          <button
-                            onClick={() => handleEditClick(d)}
-                            className="btn-secondary !h-8 !px-2.5 text-xs"
-                            title="Edit DID & Host Gateway"
-                          >
-                            <Edit2 size={13} className="text-slate-600" />
-                            <span>Edit</span>
-                          </button>
-                          {d.tenant_id ? (
-                            <button className="btn-secondary text-amber-600 !h-8 !px-2.5 text-xs" onClick={() => handleUnassignDid(d.id)} title="Unassign Tenant">
-                              <Unlink size={13} style={{ marginRight: '2px' }} /> Unassign
-                            </button>
-                          ) : (
-                            <button className="btn-primary !h-8 !px-2.5 text-xs" onClick={() => setDidToAssign(d)} title="Assign to Tenant">
-                              <Link2 size={13} style={{ marginRight: '2px' }} /> Assign
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setDeleteDidId(d.id)}
-                            className="btn-secondary !h-8 !px-2.5 text-xs text-rose-600 hover:bg-rose-50"
-                            title="Delete DID"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="terrix-badge green">Provisioned</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
+                  <Link2 size={14} />
+                </Button>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
+                <Trash2 size={14} />
+              </Button>
+            </Inline>
+          ) : (
+            <Badge variant="success">Provisioned</Badge>
+          )
+        )}
+      />
 
       {/* ADD DID MODAL */}
-      {showAddModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon"><Hash size={20} /></div>
-              <div>
-                <h3>Add DID Number to Inventory</h3>
-                <p>Import DID from carrier SIP trunk into global pool</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleAddDid}>
-              <div className="modal-body space-y-3">
-                <div className="form-group">
-                  <label className="form-label">DID Phone Number</label>
-                  <input required className="form-control" value={addForm.did_number} onChange={e => setAddForm({...addForm, did_number: e.target.value})} placeholder="e.g. +18005550199" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Provider SIP Trunk / Gateway</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: '-- Select Host SIP Trunk --' },
-                      ...trunks.map(t => ({ value: t.id, label: `${t.name} (${t.host})` }))
-                    ]}
-                    value={addForm.trunk_id}
-                    onChange={(val) => setAddForm({ ...addForm, trunk_id: val })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Assign to Tenant (Optional)</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: '-- Free / Unallocated --' },
-                      ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                    ]}
-                    value={addForm.tenant_id}
-                    onChange={(val) => setAddForm({ ...addForm, tenant_id: val })}
-                  />
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Add DID</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add DID Number to Inventory"
+        subtitle="Import DID from carrier SIP trunk into global pool"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleAddDid}>Add DID</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="DID Phone Number" required>
+            <Input
+              value={addForm.did_number}
+              onChange={e => setAddForm({...addForm, did_number: e.target.value})}
+              placeholder="e.g. +18005550199"
+            />
+          </FormField>
+          <FormField label="Provider SIP Trunk / Gateway">
+            <Select
+              value={addForm.trunk_id}
+              onChange={e => setAddForm({ ...addForm, trunk_id: e.target.value })}
+            >
+              <option value="">-- Select Host SIP Trunk --</option>
+              {trunks.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Assign to Tenant (Optional)">
+            <Select
+              value={addForm.tenant_id}
+              onChange={e => setAddForm({ ...addForm, tenant_id: e.target.value })}
+            >
+              <option value="">-- Free / Unallocated --</option>
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+              ))}
+            </Select>
+          </FormField>
+        </Stack>
+      </Modal>
 
       {/* EDIT DID MODAL */}
-      {editDid && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal">
-            <div className="modal-head">
-              <div className="modal-icon orange"><Edit2 size={20} /></div>
-              <div>
-                <h3>Edit DID & Provider Gateway</h3>
-                <p>Modify DID properties, change host gateway or tenant allocation</p>
-              </div>
-              <button className="modal-close" onClick={() => setEditDid(null)}>×</button>
-            </div>
-            <form onSubmit={handleEditSubmit}>
-              <div className="modal-body space-y-3">
-                <div className="form-group">
-                  <label className="form-label">DID Phone Number</label>
-                  <input required className="form-control" value={editForm.did_number} onChange={e => setEditForm({...editForm, did_number: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Provider SIP Trunk / Gateway</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: '-- Select Host SIP Trunk --' },
-                      ...trunks.map(t => ({ value: t.id, label: `${t.name} (${t.host})` }))
-                    ]}
-                    value={editForm.trunk_id}
-                    onChange={(val) => setEditForm({ ...editForm, trunk_id: val })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Assign to Tenant (Optional)</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: '-- Free / Unallocated --' },
-                      ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                    ]}
-                    value={editForm.tenant_id}
-                    onChange={(val) => setEditForm({ ...editForm, tenant_id: val })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Inbound Destination Target</label>
-                  <input className="form-control" placeholder="e.g. 1001 or Main IVR" value={editForm.destination} onChange={e => setEditForm({...editForm, destination: e.target.value})} />
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setEditDid(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Update DID</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!editDid}
+        onClose={() => setEditDid(null)}
+        title="Edit DID & Provider Gateway"
+        subtitle="Modify DID properties, change host gateway or tenant allocation"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditDid(null)}>Cancel</Button>
+            <Button variant="primary" onClick={handleEditSubmit}>Update DID</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="DID Phone Number" required>
+            <Input
+              value={editForm.did_number}
+              onChange={e => setEditForm({...editForm, did_number: e.target.value})}
+            />
+          </FormField>
+          <FormField label="Provider SIP Trunk / Gateway">
+            <Select
+              value={editForm.trunk_id}
+              onChange={e => setEditForm({ ...editForm, trunk_id: e.target.value })}
+            >
+              <option value="">-- Select Host SIP Trunk --</option>
+              {trunks.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Assign to Tenant (Optional)">
+            <Select
+              value={editForm.tenant_id}
+              onChange={e => setEditForm({ ...editForm, tenant_id: e.target.value })}
+            >
+              <option value="">-- Free / Unallocated --</option>
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Inbound Destination Target">
+            <Input
+              placeholder="e.g. 1001 or Main IVR"
+              value={editForm.destination}
+              onChange={e => setEditForm({...editForm, destination: e.target.value})}
+            />
+          </FormField>
+        </Stack>
+      </Modal>
 
       {/* DELETE DID MODAL */}
-      {deleteDidId && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '420px' }}>
-            <div className="modal-head">
-              <div className="modal-icon red"><Trash2 size={20} /></div>
-              <div>
-                <h3>Delete DID Number</h3>
-                <p>Are you sure you want to delete this DID from inventory?</p>
-              </div>
-              <button className="modal-close" onClick={() => setDeleteDidId(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <p className="text-sm text-slate-600">
-                Removing this DID will revoke incoming call routing for this number across all tenants.
-              </p>
-            </div>
-            <div className="modal-foot">
-              <button type="button" className="btn-secondary" onClick={() => setDeleteDidId(null)}>Cancel</button>
-              <button type="button" className="btn-danger" onClick={handleDeleteConfirm}>Delete DID</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={!!deleteDidId}
+        onClose={() => setDeleteDidId(null)}
+        title="Delete DID Number"
+        subtitle="Are you sure you want to delete this DID from inventory?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteDidId(null)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteConfirm}>Delete DID</Button>
+          </>
+        }
+      >
+        <p>
+          Removing this DID will revoke incoming call routing for this number across all tenants.
+        </p>
+      </Modal>
 
       {/* ASSIGN DID MODAL */}
-      {didToAssign && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '440px' }}>
-            <div className="modal-head">
-              <div className="modal-icon"><Link2 size={20} /></div>
-              <div>
-                <h3>Assign DID to Tenant</h3>
-                <p>Assign DID <strong>{didToAssign.did_number}</strong> to a customer domain</p>
-              </div>
-              <button className="modal-close" onClick={() => setDidToAssign(null)}>×</button>
-            </div>
-            <form onSubmit={handleAssignDid}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Target Tenant</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: '-- Select Tenant --' },
-                      ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                    ]}
-                    value={selectedTenantId}
-                    onChange={(val) => setSelectedTenantId(val)}
-                  />
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setDidToAssign(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Assign Number</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        isOpen={!!didToAssign}
+        onClose={() => setDidToAssign(null)}
+        title="Assign DID to Tenant"
+        subtitle={`Assign DID ${didToAssign?.did_number || ''} to a customer domain`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDidToAssign(null)}>Cancel</Button>
+            <Button variant="primary" onClick={handleAssignDid}>Assign Number</Button>
+          </>
+        }
+      >
+        <FormField label="Target Tenant">
+          <Select
+            value={selectedTenantId}
+            onChange={e => setSelectedTenantId(e.target.value)}
+          >
+            <option value="">-- Select Tenant --</option>
+            {tenants.map(t => (
+              <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+            ))}
+          </Select>
+        </FormField>
+      </Modal>
+    </ListPageLayout>
   );
 };

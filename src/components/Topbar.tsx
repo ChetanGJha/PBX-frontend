@@ -1,6 +1,7 @@
 import React from 'react';
 import { Menu, ChevronLeft, LogOut, ShieldCheck } from 'lucide-react';
 import type { SystemStatus, User as UserType } from '../types';
+import { Avatar, Badge } from './ui';
 
 interface TopbarProps {
   collapsed: boolean;
@@ -25,27 +26,21 @@ export const Topbar: React.FC<TopbarProps> = ({
           {collapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
         </button>
 
-        <div className="status-pill">
-          <span className="relative flex h-2 w-2">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${status.healthy ? 'bg-emerald-400' : 'bg-rose-400'} opacity-75`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${status.healthy ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
-          </span>
-          <span className="font-semibold text-xs">API: {status.healthy ? 'Online' : 'Offline'}</span>
-        </div>
+        <Badge variant={status.healthy ? 'success' : 'danger'}>
+          API: {status.healthy ? 'Online' : 'Offline'}
+        </Badge>
       </div>
 
       {/* Right Section: User Info & Logout Action */}
       <div className="top-right">
         {user ? (
           <div className="flex items-center gap-3.5">
-            <span className="role-pill">{user.role}</span>
-            
+            <Badge variant="primary">{user.role}</Badge>
+
             <div className="h-5 w-px bg-slate-200" />
 
             <div className="flex items-center gap-2.5">
-              <div className="avatar">
-                {user.username ? user.username.charAt(0).toUpperCase() : 'A'}
-              </div>
+              <Avatar name={user.username} size="sm" />
               <div className="text-left hidden sm:block">
                 <div className="font-bold text-slate-900 text-xs leading-tight">{user.username}</div>
                 <div className="text-[10px] text-slate-500 font-medium leading-tight">{user.email}</div>
@@ -70,4 +65,3 @@ export const Topbar: React.FC<TopbarProps> = ({
     </div>
   );
 };
-

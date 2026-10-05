@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { useToast } from './ToastProvider';
-import { CustomSelect } from './CustomSelect';
-import { GitBranch, Plus, Volume2, Edit, Trash2, ArrowRight, PhoneCall, Layers, Move, Users, PhoneForwarded, Voicemail, PhoneOff, X, UploadCloud, Info } from 'lucide-react';
+import { GitBranch, Plus, Volume2, Edit, Trash2, UploadCloud, Palette } from 'lucide-react';
+import { ListPageLayout } from './layout';
+import { Stack, Inline, Grid } from './layout/Stack';
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+  Alert,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface IvrViewProps {
   token: string;
@@ -12,6 +24,7 @@ interface IvrViewProps {
 export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
   const [ivrs, setIvrs] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [tenants, setTenants] = useState<any[]>([]);
   const [extensions, setExtensions] = useState<any[]>([]);
   const [queues, setQueues] = useState<any[]>([]);
@@ -23,12 +36,11 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDesignerModal, setShowDesignerModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   // Designer & State
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const [activeIvr, setActiveIvr] = useState<any>(null);
   const [activeNodes, setActiveNodes] = useState<any[]>([]);
-  const [draggedActionType, setDraggedActionType] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -65,12 +77,13 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     loadData();
   }, [token]);
 
+  // Helper for uploading audio files
   const uploadAudioFile = async (file: File, category: string = 'ivr_greeting', tenantId?: string) => {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('category', category);
     if (tenantId) fd.append('tenant_id', tenantId);
-    
+
     const res = await apiService.uploadAudioFile(token, fd);
     try {
       const updatedAudios = await apiService.getAudioFiles(token);
@@ -127,6 +140,11 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     } finally {
       setUploadingTarget(null);
     }
+  };
+
+  const handleCardDrop = async (dtmf_key: string, actionType: string) => {
+    if (!activeIvr) return;
+    await handleCardActionChange(dtmf_key, actionType);
   };
 
   const handleModalAudioUpload = async (targetField: 'create' | 'edit', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -253,11 +271,6 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     }
   };
 
-  const handleCardDrop = async (dtmf_key: string, actionType: string) => {
-    if (!activeIvr) return;
-    await handleCardActionChange(dtmf_key, actionType);
-  };
-
   const handleDeleteNode = async (nodeId: string) => {
     if (!activeIvr) return;
     try {
@@ -290,531 +303,408 @@ export const IvrView: React.FC<IvrViewProps> = ({ token, user }) => {
     return tenant ? tenant.name : 'Global Platform';
   };
 
+  const columns = [
+    {
+      key: 'name',
+      header: 'IVR Name',
+      sortable: true,
+      render: (ivr: any) => (
+        <Inline gap="2">
+          <GitBranch size={16} />
+          <strong>{ivr.name}</strong>
+        </Inline>
+      ),
+    },
+    {
+      key: 'tenant_id',
+      header: 'Tenant',
+      render: (ivr: any) => getTenantName(ivr.tenant_id),
+    },
+    {
+      key: 'greeting_audio',
+      header: 'Voice Greeting',
+      render: (ivr: any) => (
+        <Badge variant="neutral">
+          <Volume2 size={12} /> {ivr.greeting_audio || 'welcome_prompt.wav'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'direct_extension_dial',
+      header: 'Direct Ext Dial',
+      render: (ivr: any) => (
+        <Badge variant={ivr.direct_extension_dial ? 'success' : 'danger'}>
+          {ivr.direct_extension_dial ? 'Enabled' : 'Disabled'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'timeout',
+      header: 'Timeout',
+      render: (ivr: any) => `${ivr.timeout || 10}s`,
+    },
+  ];
+
+  const filteredIvrs = ivrs.filter((ivr) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      ivr.name?.toLowerCase().includes(q) ||
+      ivr.greeting_audio?.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <GitBranch style={{ color: '#FF5722' }} size={28} /> Interactive Voice Response (IVR) Flows
-          </h1>
-          <p style={{ color: '#64748B', fontSize: '14px', marginTop: '4px' }}>
-            Configure inbound auto-attendants, voice greetings, and interactive keypress actions.
-          </p>
-        </div>
-        {canManage && (
-          <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722', border: 'none' }}>
-            <Plus size={18} /> Create IVR Flow
-          </button>
+    <ListPageLayout
+      title="Interactive Voice Response (IVR) Flows"
+      subtitle="Configure inbound auto-attendants, voice greetings, and interactive keypress actions."
+      eyebrow="AUTO-ATTENDANT ENGINE"
+      actions={
+        canManage ? (
+          <Button variant="primary" onClick={openCreateModal} leftIcon={<Plus size={16} />}>
+            Create IVR Flow
+          </Button>
+        ) : undefined
+      }
+      alert={
+        <Alert variant="info" title="Visual IVR Flow Builder & Audio Greetings">
+          Click "Open Designer" on any IVR flow to open the interactive canvas where you can map keypress actions, upload audio greetings, and configure routing blocks.
+        </Alert>
+      }
+      filterBar={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search IVR flows..."
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filteredIvrs}
+        isLoading={loading}
+        emptyTitle="No IVR Flows Configured"
+        emptyDescription={canManage ? 'Create your first auto-attendant flow to start routing incoming customer calls automatically.' : undefined}
+        actions={(ivr: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="secondary" size="sm" onClick={() => openDesignerModal(ivr)} title="Open Designer">
+              <Palette size={14} />
+            </Button>
+            {canManage && (
+              <>
+                <Button variant="secondary" size="sm" onClick={() => openEditModal(ivr)} title="Edit">
+                  <Edit size={14} />
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }} title="Delete">
+                  <Trash2 size={14} />
+                </Button>
+              </>
+            )}
+          </Inline>
         )}
-      </div>
-
-      {/* Quick Help Card */}
-      <div style={{ background: 'linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%)', border: '1px solid #FFCC80', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ background: '#FF5722', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Info size={20} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#D84315' }}>How to Design IVR & Upload Audio Greetings:</h4>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#5D4037' }}>
-            Click <strong>"🎨 Open Designer"</strong> on any IVR flow below. You can select actions directly from dropdowns on each keypad card, upload custom audio greetings directly in Step 2 of the designer canvas, or drag routing blocks onto keypad cards!
-          </p>
-        </div>
-      </div>
-
-      {/* IVR List Table */}
-      {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>Loading IVR flows...</div>
-      ) : ivrs.length === 0 ? (
-        <div style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-          <GitBranch size={48} style={{ color: '#CBD5E1', marginBottom: '16px' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1E293B' }}>No IVR Flows Configured</h3>
-          <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '20px' }}>
-            Create your first auto-attendant flow to start routing incoming customer calls automatically.
-          </p>
-          {canManage && (
-            <button className="btn-primary" onClick={openCreateModal} style={{ background: '#FF5722' }}>
-              <Plus size={16} /> Create First IVR
-            </button>
-          )}
-        </div>
-      ) : (
-        <div style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '12px', fontWeight: 700, color: '#475569' }}>
-                <th style={{ padding: '14px 20px' }}>IVR NAME</th>
-                <th style={{ padding: '14px 20px' }}>TENANT</th>
-                <th style={{ padding: '14px 20px' }}>VOICE GREETING</th>
-                <th style={{ padding: '14px 20px' }}>DIRECT EXT DIAL</th>
-                <th style={{ padding: '14px 20px' }}>TIMEOUT</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ivrs.map(ivr => (
-                <tr key={ivr.id} style={{ borderBottom: '1px solid #F1F5F9', fontSize: '14px' }}>
-                  <td style={{ padding: '16px 20px', fontWeight: 700, color: '#0F172A' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <GitBranch size={16} style={{ color: '#FF5722' }} />
-                      {ivr.name}
-                    </div>
-                  </td>
-                  <td style={{ padding: '16px 20px', color: '#475569' }}>{getTenantName(ivr.tenant_id)}</td>
-                  <td style={{ padding: '16px 20px' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#F1F5F9', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>
-                      <Volume2 size={14} style={{ color: '#FF5722' }} /> {ivr.greeting_audio || 'welcome_prompt.wav'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    {ivr.direct_extension_dial ? (
-                      <span style={{ color: '#166534', background: '#DCFCE7', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Enabled</span>
-                    ) : (
-                      <span style={{ color: '#991B1B', background: '#FEE2E2', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>Disabled</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '16px 20px', color: '#64748B' }}>{ivr.timeout || 10}s</td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '8px' }}>
-                      <button className="btn-secondary sm" onClick={() => openDesignerModal(ivr)} style={{ background: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100', fontWeight: 700 }}>
-                        🎨 Open Designer
-                      </button>
-                      {canManage && (
-                        <>
-                          <button className="btn-secondary sm" onClick={() => openEditModal(ivr)}>
-                            <Edit size={14} />
-                          </button>
-                          <button className="btn-danger sm" onClick={() => { setActiveIvr(ivr); setShowDeleteModal(true); }}>
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      />
 
       {/* CREATE MODAL */}
-      {showCreateModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '520px' }}>
-            <div className="modal-head">
-              <div className="modal-icon orange"><GitBranch size={20} /></div>
-              <div>
-                <h3>Create New IVR Flow</h3>
-                <p>Configure auto-attendant greeting and properties</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowCreateModal(false)}>✕</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label className="form-label required">IVR Menu Name</label>
-                  <input className="form-control" required placeholder="e.g. Main Company Directory" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                </div>
-                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-                  <div>
-                    <label className="form-label">Assign to Tenant</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Global / System Default --' },
-                        ...tenants.map(t => ({ value: t.id, label: t.name }))
-                      ]}
-                      value={formData.tenant_id}
-                      onChange={val => setFormData({ ...formData, tenant_id: val })}
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="form-label">Audio Greeting File</label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <select className="form-control" value={formData.greeting_audio} onChange={e => setFormData({ ...formData, greeting_audio: e.target.value })} style={{ flex: 1 }}>
-                      {audioFiles.map(a => (<option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>))}
-                      {audioFiles.length === 0 && <option value="welcome_prompt.wav">welcome_prompt.wav</option>}
-                    </select>
-                    <label className="btn-secondary" style={{ cursor: 'pointer', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', background: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', fontWeight: 600, fontSize: '13px' }}>
-                      <UploadCloud size={16} /> {uploadingTarget === 'modal_create' ? 'Uploading...' : 'Upload File'}
-                      <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleModalAudioUpload('create', e)} />
-                    </label>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label">Timeout (seconds)</label>
-                    <input type="number" className="form-control" min="3" max="60" value={formData.timeout} onChange={e => setFormData({ ...formData, timeout: parseInt(e.target.value) || 10 })} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                      <input type="checkbox" checked={formData.direct_extension_dial} onChange={e => setFormData({ ...formData, direct_extension_dial: e.target.checked })} />
-                      Allow Direct Ext Dial
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" style={{ background: '#FF5722' }}>Create IVR</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New IVR Flow"
+        subtitle="Configure auto-attendant greeting and properties"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreate}>Create IVR</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="IVR Menu Name" required>
+            <Input
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Main Company Directory"
+            />
+          </FormField>
+
+          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+            <FormField label="Assign to Tenant">
+              <Select
+                value={formData.tenant_id}
+                onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
+              >
+                <option value="">-- Global / System Default --</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+
+          <FormField label="Audio Greeting File">
+            <Inline gap="2">
+              <Select
+                value={formData.greeting_audio}
+                onChange={e => setFormData({ ...formData, greeting_audio: e.target.value })}
+              >
+                {audioFiles.map(a => (
+                  <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                ))}
+                {audioFiles.length === 0 && <option value="welcome_prompt.wav">welcome_prompt.wav</option>}
+              </Select>
+              <label>
+                <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
+                  {uploadingTarget === 'modal_create' ? 'Uploading...' : 'Upload File'}
+                </Button>
+                <input type="file" accept="audio/*" className="hidden" onChange={e => handleModalAudioUpload('create', e)} />
+              </label>
+            </Inline>
+          </FormField>
+
+          <Grid cols={2} gap="4">
+            <FormField label="Timeout (seconds)">
+              <Input
+                type="number"
+                value={String(formData.timeout)}
+                onChange={e => setFormData({ ...formData, timeout: parseInt(e.target.value) || 10 })}
+              />
+            </FormField>
+            <FormField label="Direct Ext Dial">
+              <Select
+                value={formData.direct_extension_dial ? 'true' : 'false'}
+                onChange={e => setFormData({ ...formData, direct_extension_dial: e.target.value === 'true' })}
+              >
+                <option value="true">Enabled</option>
+                <option value="false">Disabled</option>
+              </Select>
+            </FormField>
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* EDIT MODAL */}
-      {showEditModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '520px' }}>
-            <div className="modal-head">
-              <div className="modal-icon orange"><Edit size={20} /></div>
-              <div>
-                <h3>Edit IVR Settings</h3>
-                <p>Modify flow name and default greeting audio</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}>✕</button>
-            </div>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label className="form-label required">IVR Menu Name</label>
-                  <input className="form-control" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                </div>
-                {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-                  <div>
-                    <label className="form-label">Tenant Assignment</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: '-- Global / System Default --' },
-                        ...tenants.map(t => ({ value: t.id, label: t.name }))
-                      ]}
-                      value={formData.tenant_id}
-                      onChange={val => setFormData({ ...formData, tenant_id: val })}
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="form-label">Audio Greeting File</label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <select className="form-control" value={formData.greeting_audio} onChange={e => setFormData({ ...formData, greeting_audio: e.target.value })} style={{ flex: 1 }}>
-                      {audioFiles.map(a => (<option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>))}
-                      {audioFiles.length === 0 && <option value="welcome_prompt.wav">welcome_prompt.wav</option>}
-                    </select>
-                    <label className="btn-secondary" style={{ cursor: 'pointer', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', background: '#FFF3E0', color: '#E65100', border: '1px solid #FFB74D', fontWeight: 600, fontSize: '13px' }}>
-                      <UploadCloud size={16} /> {uploadingTarget === 'modal_edit' ? 'Uploading...' : 'Upload Audio'}
-                      <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleModalAudioUpload('edit', e)} />
-                    </label>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label className="form-label">Timeout (seconds)</label>
-                    <input type="number" className="form-control" min="3" max="60" value={formData.timeout} onChange={e => setFormData({ ...formData, timeout: parseInt(e.target.value) || 10 })} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-                      <input type="checkbox" checked={formData.direct_extension_dial} onChange={e => setFormData({ ...formData, direct_extension_dial: e.target.checked })} />
-                      Allow Direct Ext Dial
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" style={{ background: '#FF5722' }}>Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit IVR Settings"
+        subtitle="Modify flow name and default greeting audio"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleUpdate}>Save Changes</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <FormField label="IVR Menu Name" required>
+            <Input
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+          </FormField>
+
+          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+            <FormField label="Tenant Assignment">
+              <Select
+                value={formData.tenant_id}
+                onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
+              >
+                <option value="">-- Global / System Default --</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+
+          <FormField label="Audio Greeting File">
+            <Inline gap="2">
+              <Select
+                value={formData.greeting_audio}
+                onChange={e => setFormData({ ...formData, greeting_audio: e.target.value })}
+              >
+                {audioFiles.map(a => (
+                  <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                ))}
+                {audioFiles.length === 0 && <option value="welcome_prompt.wav">welcome_prompt.wav</option>}
+              </Select>
+              <label>
+                <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
+                  {uploadingTarget === 'modal_edit' ? 'Uploading...' : 'Upload Audio'}
+                </Button>
+                <input type="file" accept="audio/*" className="hidden" onChange={e => handleModalAudioUpload('edit', e)} />
+              </label>
+            </Inline>
+          </FormField>
+
+          <Grid cols={2} gap="4">
+            <FormField label="Timeout (seconds)">
+              <Input
+                type="number"
+                value={String(formData.timeout)}
+                onChange={e => setFormData({ ...formData, timeout: parseInt(e.target.value) || 10 })}
+              />
+            </FormField>
+            <FormField label="Direct Ext Dial">
+              <Select
+                value={formData.direct_extension_dial ? 'true' : 'false'}
+                onChange={e => setFormData({ ...formData, direct_extension_dial: e.target.value === 'true' })}
+              >
+                <option value="true">Enabled</option>
+                <option value="false">Disabled</option>
+              </Select>
+            </FormField>
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* DESIGNER MODAL */}
-      {showDesignerModal && activeIvr && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '980px', width: '95vw' }}>
-            <div className="modal-head">
-              <div className="modal-icon orange"><GitBranch size={22} /></div>
+      <Modal
+        isOpen={showDesignerModal && !!activeIvr}
+        onClose={() => setShowDesignerModal(false)}
+        title={`Visual Flow Builder: ${activeIvr?.name || ''}`}
+        subtitle="Configure DTMF keypad actions and greeting prompts"
+        maxWidth="lg"
+        footer={<Button variant="secondary" onClick={() => setShowDesignerModal(false)}>Close Designer</Button>}
+      >
+        <Stack gap="4">
+          <Alert variant="info" title="Interactive Keypad Mapping">
+            Select a keypad digit below to assign call routing targets (extensions, queues, voicemail, or audio playback).
+          </Alert>
+
+          <Card padding="sm" className="bg-slate-50">
+            <Inline justify="between" align="center">
               <div>
-                <h3>Visual Drag & Drop Flow Builder: {activeIvr.name}</h3>
-                <p>Drag routing blocks onto keypad slots or select DTMF actions directly below</p>
+                <div className="text-xs font-bold text-slate-900">IVR Entry Greeting Audio</div>
+                <div className="text-[11px] text-slate-500">Active prompt played when caller enters this IVR menu</div>
               </div>
-              <button className="modal-close" onClick={() => setShowDesignerModal(false)}>✕</button>
-            </div>
-            
-            <div className="modal-body" style={{ padding: '20px' }}>
-              
-              {/* Call Tree Header Banner */}
-              <div style={{ background: '#0F172A', borderRadius: '12px', padding: '16px 20px', color: '#FFF', marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Layers size={14} /> LIVE VISUAL CALL TREE CANVAS
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  
-                  {/* Step 1 */}
-                  <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <PhoneCall size={18} style={{ color: '#38BDF8' }} />
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700 }}>STEP 1: CALL INBOUND</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#F8FAFC' }}>Caller Dials DID</div>
-                    </div>
-                  </div>
+              <Inline gap="2" align="center">
+                <Select
+                  value={activeIvr?.greeting_audio || ''}
+                  onChange={e => handleCanvasGreetingChange(e.target.value)}
+                  className="w-56"
+                >
+                  {audioFiles.map(a => (
+                    <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                  ))}
+                </Select>
+                <label className="cursor-pointer">
+                  <Button variant="secondary" size="sm" leftIcon={<UploadCloud size={14} />}>
+                    {uploadingTarget === 'canvas_greeting' ? 'Uploading...' : 'Upload Prompt'}
+                  </Button>
+                  <input type="file" accept="audio/*" className="hidden" onChange={handleCanvasGreetingUpload} />
+                </label>
+              </Inline>
+            </Inline>
+          </Card>
 
-                  <ArrowRight size={16} style={{ color: '#64748B' }} />
+          <Grid cols={3} gap="4">
+            {dtmfKeys.map(key => {
+              const node = activeNodes.find(n => n.dtmf_key === key);
+              return (
+                <div
+                  key={key}
+                  onDragOver={(e: React.DragEvent) => e.preventDefault()}
+                  onDrop={() => handleCardDrop(key, 'extension')}
+                >
+                  <Stack gap="2">
+                  <Inline gap="2">
+                    <Badge variant={node ? 'primary' : 'neutral'}>Key {key}</Badge>
+                    {node && (
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteNode(node.id)}>Remove</Button>
+                    )}
+                  </Inline>
 
-                  {/* Step 2 Greeting */}
-                  <div style={{ background: '#1E293B', border: '1px solid #38BDF8', borderRadius: '8px', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Volume2 size={18} style={{ color: '#38BDF8' }} />
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#38BDF8', fontWeight: 700 }}>STEP 2: AUDIO GREETING</div>
-                        <div style={{ minWidth: '220px' }}>
-                          <CustomSelect
-                            options={
-                              audioFiles.length > 0
-                                ? audioFiles.map(a => ({ value: a.file_name, label: `${a.name} (${a.file_name})` }))
-                                : [{ value: 'welcome_prompt.wav', label: 'welcome_prompt.wav' }]
-                            }
-                            value={activeIvr.greeting_audio || ''}
-                            onChange={val => handleCanvasGreetingChange(val)}
-                          />
-                        </div>
-                        <label style={{ background: '#38BDF8', color: '#0F172A', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <UploadCloud size={12} /> {uploadingTarget === 'canvas_greeting' ? 'Uploading...' : 'Upload Audio'}
-                          <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleCanvasGreetingUpload} />
-                        </label>
-                      </div>
-                    </div>
+                  <Select
+                    value={node ? node.action_type : ''}
+                    onChange={e => handleCardActionChange(key, e.target.value)}
+                  >
+                    <option value="">-- Select Action --</option>
+                    <option value="extension">➔ Transfer Extension</option>
+                    <option value="queue">➔ Transfer Call Queue</option>
+                    <option value="play_audio">➔ Play Audio Prompt</option>
+                    <option value="voicemail">➔ Send to Voicemail</option>
+                    <option value="hangup">➔ Hangup Call</option>
+                  </Select>
 
-                  <ArrowRight size={16} style={{ color: '#64748B' }} />
-
-                  {/* Step 3 Keypad */}
-                  <div style={{ background: '#FF5722', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <GitBranch size={18} style={{ color: '#FFF' }} />
-                    <div>
-                      <div style={{ fontSize: '10px', color: '#FFE0B2', fontWeight: 700 }}>STEP 3: KEYPAD INPUT</div>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#FFF' }}>{activeNodes.length} Keypress Actions Mapped</div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Main Builder Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '16px' }}>
-                
-                {/* Left Panel: Draggable Action Blocks */}
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Move size={14} /> Drag Routing Blocks
-                  </div>
-                  <p style={{ fontSize: '11px', color: '#64748B', marginBottom: '12px' }}>
-                    Drag any block onto a keypad slot on the right:
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div
-                      draggable
-                      onDragStart={() => setDraggedActionType('extension')}
-                      style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '10px 12px', cursor: 'grab', fontSize: '12px', fontWeight: 600, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <PhoneForwarded size={14} /> Transfer Extension
-                    </div>
-                    <div
-                      draggable
-                      onDragStart={() => setDraggedActionType('queue')}
-                      style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 12px', cursor: 'grab', fontSize: '12px', fontWeight: 600, color: '#15803D', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <Users size={14} /> Transfer Call Queue
-                    </div>
-                    <div
-                      draggable
-                      onDragStart={() => setDraggedActionType('play_audio')}
-                      style={{ background: '#FEFCE8', border: '1px solid #FEF08A', borderRadius: '8px', padding: '10px 12px', cursor: 'grab', fontSize: '12px', fontWeight: 600, color: '#A16207', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <Volume2 size={14} /> Play Audio File
-                    </div>
-                    <div
-                      draggable
-                      onDragStart={() => setDraggedActionType('voicemail')}
-                      style={{ background: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '8px', padding: '10px 12px', cursor: 'grab', fontSize: '12px', fontWeight: 600, color: '#7E22CE', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <Voicemail size={14} /> Send to Voicemail
-                    </div>
-                    <div
-                      draggable
-                      onDragStart={() => setDraggedActionType('hangup')}
-                      style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '10px 12px', cursor: 'grab', fontSize: '12px', fontWeight: 600, color: '#B91C1C', display: 'flex', alignItems: 'center', gap: '8px' }}
-                    >
-                      <PhoneOff size={14} /> Hangup Call
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Panel: Keypad Grid */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B' }}>Keypad Slots & Drop Targets</div>
-                    <span style={{ fontSize: '11px', color: '#64748B' }}>Drag blocks from left or select action directly below</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                    {dtmfKeys.map(key => {
-                      const node = activeNodes.find(n => n.dtmf_key === key);
-                      const isUploading = uploadingTarget === 'keypad_' + key;
-
-                      return (
-                        <div
-                          key={key}
-                          onDragOver={e => e.preventDefault()}
-                          onDrop={e => {
-                            e.preventDefault();
-                            if (draggedActionType) {
-                              handleCardDrop(key, draggedActionType);
-                              setDraggedActionType(null);
-                            }
-                          }}
-                          style={{
-                            background: node ? '#FFFFFF' : '#F8FAFC',
-                            border: node ? '2px solid #FF5722' : '2px dashed #CBD5E1',
-                            borderRadius: '10px',
-                            padding: '12px',
-                            minHeight: '120px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between'
-                          }}
+                  {node && (
+                    <>
+                      {node.action_type === 'extension' && (
+                        <Select
+                          value={node.action_target}
+                          onChange={e => handleCardTargetChange(key, 'extension', e.target.value)}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <div style={{ background: node ? '#FF5722' : '#0F172A', color: '#FFF', width: '28px', height: '28px', borderRadius: '7px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
-                              {key}
-                            </div>
-                            {node && (
-                              <button type="button" className="btn-danger sm" onClick={() => handleDeleteNode(node.id)} style={{ padding: '3px 6px', fontSize: '11px' }}>
-                                <X size={12} />
-                              </button>
-                            )}
-                          </div>
+                          {extensions.map(ext => (
+                            <option key={ext.id || ext.extension_number} value={ext.extension_number}>
+                              Ext {ext.extension_number} ({ext.display_name || 'User'})
+                            </option>
+                          ))}
+                        </Select>
+                      )}
 
-                          <div style={{ marginBottom: '8px' }}>
-                            <CustomSelect
-                              options={[
-                                { value: '', label: '-- Select Action or Drop Block --' },
-                                { value: 'extension', label: '➔ Transfer Extension' },
-                                { value: 'queue', label: '➔ Transfer Call Queue' },
-                                { value: 'play_audio', label: '➔ Play Audio Prompt' },
-                                { value: 'voicemail', label: '➔ Send to Voicemail' },
-                                { value: 'hangup', label: '➔ Hangup Call' }
-                              ]}
-                              value={node ? node.action_type : ''}
-                              onChange={val => handleCardActionChange(key, val)}
-                            />
-                          </div>
+                      {node.action_type === 'queue' && (
+                        <Select
+                          value={node.action_target}
+                          onChange={e => handleCardTargetChange(key, 'queue', e.target.value)}
+                        >
+                          {queues.map(q => (
+                            <option key={q.id || q.name} value={q.name}>
+                              Queue: {q.name}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
 
-                          {node && (
-                            <div>
-                              {node.action_type === 'extension' && (
-                                <CustomSelect
-                                  options={
-                                    extensions.length === 0
-                                      ? [{ value: '1001', label: 'Ext 1001' }]
-                                      : extensions.map(ext => ({
-                                          value: ext.extension_number,
-                                          label: `Ext ${ext.extension_number} (${ext.first_name || 'User'})`
-                                        }))
-                                  }
-                                  value={node.action_target}
-                                  onChange={val => handleCardTargetChange(key, 'extension', val)}
-                                />
-                              )}
+                      {node.action_type === 'play_audio' && (
+                        <Stack gap="1">
+                          <Select
+                            value={node.action_target}
+                            onChange={e => handleCardTargetChange(key, 'play_audio', e.target.value)}
+                          >
+                            {audioFiles.map(a => (
+                              <option key={a.id} value={a.file_name}>{a.name} ({a.file_name})</option>
+                            ))}
+                          </Select>
+                          <label className="text-[10px] text-[var(--pbx-action-primary)] font-bold cursor-pointer inline-flex items-center gap-1 bg-amber-50 px-2 py-1 rounded border border-amber-200 justify-center">
+                            <UploadCloud size={12} /> {uploadingTarget === 'keypad_' + key ? 'Uploading...' : 'Upload New Audio'}
+                            <input type="file" accept="audio/*" className="hidden" onChange={e => handleCardAudioUpload(key, e)} />
+                          </label>
+                        </Stack>
+                      )}
 
-                              {node.action_type === 'queue' && (
-                                <CustomSelect
-                                  options={
-                                    queues.length === 0
-                                      ? [{ value: 'Support', label: 'Support Queue' }]
-                                      : queues.map(q => ({
-                                          value: q.name,
-                                          label: `Queue: ${q.name}`
-                                        }))
-                                  }
-                                  value={node.action_target}
-                                  onChange={val => handleCardTargetChange(key, 'queue', val)}
-                                />
-                              )}
-
-                              {node.action_type === 'play_audio' && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <CustomSelect
-                                    options={audioFiles.map(a => ({
-                                      value: a.file_name,
-                                      label: `${a.name} (${a.file_name})`
-                                    }))}
-                                    value={node.action_target}
-                                    onChange={val => handleCardTargetChange(key, 'play_audio', val)}
-                                  />
-                                  <label style={{ fontSize: '10px', color: '#FF5722', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', background: '#FFF3E0', padding: '4px 6px', borderRadius: '5px', border: '1px dashed #FFB74D' }}>
-                                    <UploadCloud size={12} /> {isUploading ? 'Uploading...' : 'Upload New Audio'}
-                                    <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={e => handleCardAudioUpload(key, e)} />
-                                  </label>
-                                </div>
-                              )}
-
-                              {node.action_type === 'voicemail' && (
-                                <input
-                                  style={{ width: '100%', fontSize: '11px', padding: '4px 6px', borderRadius: '6px', border: '1px solid #E2E8F0' }}
-                                  placeholder="Ext number"
-                                  value={node.action_target}
-                                  onChange={e => handleCardTargetChange(key, 'voicemail', e.target.value)}
-                                />
-                              )}
-
-                              {node.action_type === 'hangup' && (
-                                <div style={{ fontSize: '11px', color: '#EF4444', fontWeight: 600 }}>Hangup (NORMAL_CLEARING)</div>
-                              )}
-                            </div>
-                          )}
-
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
+                      {node.action_type === 'voicemail' && (
+                        <Input
+                          value={node.action_target}
+                          onChange={e => handleCardTargetChange(key, 'voicemail', e.target.value)}
+                          placeholder="Ext number..."
+                        />
+                      )}
+                    </>
+                  )}
+                </Stack>
               </div>
-
-            </div>
-            <div className="modal-foot">
-              <button type="button" className="btn-secondary" onClick={() => setShowDesignerModal(false)}>Close Designer</button>
-            </div>
-          </div>
-        </div>
-      )}
+            );
+          })}
+          </Grid>
+        </Stack>
+      </Modal>
 
       {/* DELETE MODAL */}
-      {showDeleteModal && activeIvr && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '440px' }}>
-            <div className="modal-head">
-              <div className="modal-icon red"><Trash2 size={20} /></div>
-              <div>
-                <h3>Delete IVR Menu</h3>
-                <p>Are you sure?</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: '14px', color: '#475569' }}>
-                Are you sure you want to delete <strong>{activeIvr.name}</strong>?
-              </p>
-            </div>
-            <div className="modal-foot">
-              <button type="button" className="btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-              <button type="button" className="btn-danger" onClick={handleDeleteIvr}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-    </div>
+      <Modal
+        isOpen={showDeleteModal && !!activeIvr}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete IVR Menu"
+        subtitle="Are you sure you want to delete this IVR flow?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteIvr}>Delete</Button>
+          </>
+        }
+      >
+        <p>
+          Are you sure you want to delete <strong>{activeIvr?.name}</strong>? This action cannot be undone.
+        </p>
+      </Modal>
+    </ListPageLayout>
   );
 };

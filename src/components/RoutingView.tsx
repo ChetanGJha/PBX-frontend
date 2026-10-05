@@ -2,8 +2,18 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../services/api';
-import { Route as RouteIcon, Plus, Search, Trash2, Edit2 } from 'lucide-react';
-import { CustomSelect } from './CustomSelect';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { ListPageLayout } from './layout';
+import { Stack, Inline, Grid } from './layout/Stack';
+import {
+  Button,
+  Input,
+  Select,
+  FormField,
+  Modal,
+  Badge,
+} from './ui';
+import { DataTable, FilterBar } from './patterns';
 
 interface RoutingViewProps {
   token: string;
@@ -75,13 +85,11 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     loadData();
   }, [token]);
 
-  // Assigned DIDs for the tenant
   const assignedDids = useMemo(() => {
     if (user?.role === 'SUPER_ADMIN') return dids;
     return dids.filter((d: any) => d.tenant_id === user?.tenant_id || !d.tenant_id);
   }, [dids, user]);
 
-  // Destination options based on chosen destination type
   const destinationOptions = useMemo(() => {
     switch (formData.destination_type) {
       case 'extension':
@@ -268,390 +276,294 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
   const canManage = user?.role === 'SUPER_ADMIN' || user?.role === 'TENANT_ADMIN';
 
+  const columns = [
+    {
+      key: 'name',
+      header: 'Route Name',
+      sortable: true,
+      render: (r: any) => <strong>{r.name}</strong>,
+    },
+    {
+      key: 'did_number',
+      header: 'DID / Pattern',
+      render: (r: any) => <code>{r.did_number || r.regex_pattern || '*'}</code>,
+    },
+    {
+      key: 'route_type',
+      header: 'Type',
+      render: (r: any) => (
+        <Badge variant={r.route_type === 'inbound_did' ? 'success' : 'warning'}>
+          {r.route_type === 'inbound_did' ? 'INBOUND' : 'OUTBOUND'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'destination_type',
+      header: 'Destination Type',
+      render: (r: any) => <Badge variant="neutral">{r.destination_type ? r.destination_type.toUpperCase() : 'ROUTE'}</Badge>,
+    },
+    {
+      key: 'destination',
+      header: 'Target Destination',
+      render: (r: any) => <strong>{r.destination}</strong>,
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      render: (r: any) => <strong>P{r.priority}</strong>,
+    },
+    ...(user?.role === 'SUPER_ADMIN' ? [{
+      key: 'tenant_name',
+      header: 'Tenant',
+      render: (r: any) => <Badge variant="warning">{r.tenant_name || 'Global'}</Badge>,
+    }] : []),
+  ];
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Dialplan Engine</div>
-          <h1 className="page-title">Call Routing Rules</h1>
-          <p className="page-sub">Configure tenant-wise inbound DID routing and outbound pattern matching</p>
-        </div>
-        {canManage && (
-          <div>
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
-              <Plus size={16} /> Add Routing Rule
-            </button>
-          </div>
-        )}
-      </div>
+    <ListPageLayout
+      title="Call Routing Rules"
+      subtitle="Configure tenant-wise inbound DID routing and outbound pattern matching"
+      eyebrow="DIALPLAN ENGINE"
+      actions={
+        canManage ? (
+          <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Plus size={16} />}>
+            Add Routing Rule
+          </Button>
+        ) : undefined
+      }
+      filterBar={
+        <FilterBar
+          searchValue={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search routes..."
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filtered}
+        isLoading={loading}
+        emptyTitle="No routing rules configured yet"
+        actions={canManage ? (r: any) => (
+          <Inline gap="2" justify="flex-end">
+            <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(r)} leftIcon={<Edit2 size={12} />}>
+              Edit
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => handleDelete(r.id)} leftIcon={<Trash2 size={12} />}>
+              Delete
+            </Button>
+          </Inline>
+        ) : undefined}
+      />
 
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="search-input-wrap" style={{ width: '280px' }}>
-            <Search size={16} className="search-icon" />
-            <input
-              className="form-control"
-              style={{ height: '38px', fontSize: '12px' }}
-              placeholder="Search routes..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B7280' }}>
-            Total <strong>{filtered.length}</strong> routing rule{filtered.length !== 1 ? 's' : ''}
-          </div>
-        </div>
+      {/* CREATE MODAL */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Create Routing Rule"
+        subtitle="Add tenant-wise inbound DID or outbound dialplan rule"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleCreate}>Save Routing Rule</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <Grid cols={2} gap="4">
+            <FormField label="Route Name" required>
+              <Input
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Sales DID Inbound"
+              />
+            </FormField>
 
-        <div className="data-table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Route Name</th>
-                <th>DID / Pattern</th>
-                <th>Type</th>
-                <th>Destination Type</th>
-                <th>Target Destination</th>
-                <th>Priority</th>
-                {user?.role === 'SUPER_ADMIN' && <th>Tenant</th>}
-                {canManage && <th className="text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 7 : 6) + (canManage ? 1 : 0)} className="text-center py-4">Loading routing rules...</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={(user?.role === 'SUPER_ADMIN' ? 7 : 6) + (canManage ? 1 : 0)} className="text-center py-4 text-muted">No routing rules configured yet</td></tr>
+            <FormField label="Route Type">
+              <Select
+                value={formData.route_type}
+                onChange={e => setFormData({ ...formData, route_type: e.target.value })}
+              >
+                <option value="inbound_did">Inbound DID Route</option>
+                <option value="outbound">Outbound Dialplan Rule</option>
+              </Select>
+            </FormField>
+
+            <FormField label={formData.route_type === 'inbound_did' ? 'Assigned DID Number' : 'Regex / Match Pattern'} required>
+              {formData.route_type === 'inbound_did' ? (
+                <Select
+                  value={formData.did_number}
+                  onChange={e => setFormData({ ...formData, did_number: e.target.value })}
+                >
+                  <option value="">-- Select Assigned DID --</option>
+                  {assignedDids.map((d: any) => (
+                    <option key={d.id} value={d.did_number}>
+                      {d.did_number} {d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}
+                    </option>
+                  ))}
+                </Select>
               ) : (
-                filtered.map(r => (
-                  <tr key={r.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#111827' }}>{r.name}</div>
-                    </td>
-                    <td>
-                      <code className="code-box" style={{ padding: '4px 8px', fontSize: '11px' }}>
-                        {r.did_number || r.regex_pattern || '*'}
-                      </code>
-                    </td>
-                    <td>
-                      {r.route_type === 'inbound_did' ? (
-                        <span className="terrix-badge green">INBOUND</span>
-                      ) : (
-                        <span className="terrix-badge orange">OUTBOUND</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className="terrix-badge grey">{r.destination_type ? r.destination_type.toUpperCase() : 'ROUTE'}</span>
-                    </td>
-                    <td>
-                      <strong style={{ color: '#111827' }}>{r.destination}</strong>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 700 }}>P{r.priority}</span>
-                    </td>
-                    {user?.role === 'SUPER_ADMIN' && (
-                      <td>
-                        <span className="terrix-badge orange">{r.tenant_name || 'Global'}</span>
-                      </td>
-                    )}
-                    {canManage && (
-                      <td className="text-right">
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '11px' }}
-                            onClick={() => handleOpenEdit(r)}
-                            title="Edit Route"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-secondary text-rose-600"
-                            style={{ padding: '4px 8px', fontSize: '11px' }}
-                            onClick={() => handleDelete(r.id)}
-                            title="Delete Route"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
+                <Input
+                  value={formData.did_number}
+                  onChange={e => setFormData({ ...formData, did_number: e.target.value })}
+                  placeholder="e.g. ^91\d{10}$"
+                />
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </FormField>
 
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '580px' }}>
-            <div className="modal-head">
-              <div className="modal-icon"><RouteIcon size={20} /></div>
-              <div>
-                <h3>Create Routing Rule</h3>
-                <p>Add tenant-wise inbound DID or outbound dialplan rule</p>
-              </div>
-              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label required">Route Name</label>
-                    <input
-                      required
-                      className="form-control"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Sales DID Inbound"
-                    />
-                  </div>
+            <FormField label="Destination Type">
+              <Select
+                value={formData.destination_type}
+                onChange={e => handleDestTypeChange(e.target.value)}
+              >
+                <option value="queue">Call Queue</option>
+                <option value="extension">Extension</option>
+                <option value="ivr">IVR Menu Flow</option>
+                <option value="voicemail">Voicemail Box</option>
+              </Select>
+            </FormField>
+          </Grid>
 
-                  <div className="form-group">
-                    <label className="form-label">Route Type</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'inbound_did', label: 'Inbound DID Route' },
-                        { value: 'outbound', label: 'Outbound Dialplan Rule' }
-                      ]}
-                      value={formData.route_type}
-                      onChange={val => setFormData({ ...formData, route_type: val })}
-                    />
-                  </div>
+          <FormField label="Destination Target" required hint={`(${formData.destination_type === 'queue' ? queues.length + ' queue(s)' : formData.destination_type === 'ivr' ? ivrs.length + ' IVR flow(s)' : extensions.length + ' extension(s)'} available)`}>
+            {destinationOptions.length > 0 ? (
+              <Select
+                value={formData.destination}
+                onChange={e => setFormData({ ...formData, destination: e.target.value })}
+              >
+                <option value="">-- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                {destinationOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={formData.destination}
+                onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                placeholder="e.g. 7001 or 1001"
+              />
+            )}
+          </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label required">
-                      {formData.route_type === 'inbound_did' ? 'Assigned DID Number' : 'Regex / Match Pattern'}
-                    </label>
-                    {formData.route_type === 'inbound_did' ? (
-                      <CustomSelect
-                        options={[
-                          { value: '', label: '-- Select Assigned DID --' },
-                          ...assignedDids.map((d: any) => ({
-                            value: d.did_number,
-                            label: `${d.did_number} ${d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}`
-                          }))
-                        ]}
-                        value={formData.did_number}
-                        onChange={val => setFormData({ ...formData, did_number: val })}
-                      />
-                    ) : (
-                      <input
-                        required
-                        className="form-control"
-                        value={formData.did_number}
-                        onChange={e => setFormData({ ...formData, did_number: e.target.value })}
-                        placeholder="e.g. ^91\\d{10}$"
-                      />
-                    )}
-                  </div>
+          {user?.role === 'SUPER_ADMIN' && (
+            <FormField label="Target Tenant (Optional)">
+              <Select
+                value={formData.tenant_id}
+                onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
+              >
+                <option value="">-- Global / Select Tenant --</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                ))}
+              </Select>
+            </FormField>
+          )}
+        </Stack>
+      </Modal>
 
-                  <div className="form-group">
-                    <label className="form-label">Destination Type</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'queue', label: 'Call Queue' },
-                        { value: 'extension', label: 'Extension' },
-                        { value: 'ivr', label: 'IVR Menu Flow' },
-                        { value: 'voicemail', label: 'Voicemail Box' }
-                      ]}
-                      value={formData.destination_type}
-                      onChange={handleDestTypeChange}
-                    />
-                  </div>
+      {/* EDIT MODAL */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => { setShowEditModal(false); setEditingRouteId(null); }}
+        title="Edit Routing Rule"
+        subtitle="Modify route destination, type, pattern or priority"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowEditModal(false); setEditingRouteId(null); }}>Cancel</Button>
+            <Button variant="primary" onClick={handleUpdate}>Update Routing Rule</Button>
+          </>
+        }
+      >
+        <Stack gap="4">
+          <Grid cols={2} gap="4">
+            <FormField label="Route Name" required>
+              <Input
+                value={editFormData.name}
+                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
+              />
+            </FormField>
 
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label required">
-                      Destination Target
-                      <small style={{ color: '#6B7280', fontWeight: 400, marginLeft: '8px' }}>
-                        ({formData.destination_type === 'queue' ? queues.length + ' queue(s)' : formData.destination_type === 'ivr' ? ivrs.length + ' IVR flow(s)' : extensions.length + ' extension(s)'} available)
-                      </small>
-                    </label>
-                    {destinationOptions.length > 0 ? (
-                      <CustomSelect
-                        options={[
-                          { value: '', label: `-- Select ${formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --` },
-                          ...destinationOptions
-                        ]}
-                        value={formData.destination}
-                        onChange={val => setFormData({ ...formData, destination: val })}
-                      />
-                    ) : (
-                      <input
-                        required
-                        className="form-control"
-                        value={formData.destination}
-                        onChange={e => setFormData({ ...formData, destination: e.target.value })}
-                        placeholder="e.g. 7001 or 1001"
-                      />
-                    )}
-                  </div>
+            <FormField label="Route Type">
+              <Select
+                value={editFormData.route_type}
+                onChange={e => setEditFormData({ ...editFormData, route_type: e.target.value })}
+              >
+                <option value="inbound_did">Inbound DID Route</option>
+                <option value="outbound">Outbound Dialplan Rule</option>
+              </Select>
+            </FormField>
 
-                  {user?.role === 'SUPER_ADMIN' && (
-                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                      <label className="form-label">Target Tenant (Optional)</label>
-                      <CustomSelect
-                        options={[
-                          { value: '', label: '-- Global / Select Tenant --' },
-                          ...tenants.map(t => ({ value: t.id, label: `${t.name} (${t.domain})` }))
-                        ]}
-                        value={formData.tenant_id}
-                        onChange={val => setFormData({ ...formData, tenant_id: val })}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Routing Rule</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <FormField label={editFormData.route_type === 'inbound_did' ? 'Assigned DID Number' : 'Regex / Match Pattern'} required>
+              {editFormData.route_type === 'inbound_did' ? (
+                <Select
+                  value={editFormData.did_number}
+                  onChange={e => setEditFormData({ ...editFormData, did_number: e.target.value })}
+                >
+                  <option value="">-- Select Assigned DID --</option>
+                  {assignedDids.map((d: any) => (
+                    <option key={d.id} value={d.did_number}>
+                      {d.did_number} {d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  value={editFormData.did_number}
+                  onChange={e => setEditFormData({ ...editFormData, did_number: e.target.value })}
+                />
+              )}
+            </FormField>
 
-      {showEditModal && (
-        <div className="modal-backdrop">
-          <div className="terrix-modal" style={{ maxWidth: '580px' }}>
-            <div className="modal-head">
-              <div className="modal-icon"><RouteIcon size={20} /></div>
-              <div>
-                <h3>Edit Routing Rule</h3>
-                <p>Modify route destination, type, pattern or priority</p>
-              </div>
-              <button className="modal-close" onClick={() => { setShowEditModal(false); setEditingRouteId(null); }}>×</button>
-            </div>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label required">Route Name</label>
-                    <input
-                      required
-                      className="form-control"
-                      value={editFormData.name}
-                      onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
-                      placeholder="e.g. Sales DID Inbound"
-                    />
-                  </div>
+            <FormField label="Destination Type">
+              <Select
+                value={editFormData.destination_type}
+                onChange={e => handleEditDestTypeChange(e.target.value)}
+              >
+                <option value="queue">Call Queue</option>
+                <option value="extension">Extension</option>
+                <option value="ivr">IVR Menu Flow</option>
+                <option value="voicemail">Voicemail Box</option>
+              </Select>
+            </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label">Route Type</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'inbound_did', label: 'Inbound DID Route' },
-                        { value: 'outbound', label: 'Outbound Dialplan Rule' }
-                      ]}
-                      value={editFormData.route_type}
-                      onChange={val => setEditFormData({ ...editFormData, route_type: val })}
-                    />
-                  </div>
+            <FormField label="Priority">
+              <Input
+                type="number"
+                value={String(editFormData.priority)}
+                onChange={e => setEditFormData({ ...editFormData, priority: parseInt(e.target.value) || 1 })}
+              />
+            </FormField>
 
-                  <div className="form-group">
-                    <label className="form-label required">
-                      {editFormData.route_type === 'inbound_did' ? 'Assigned DID Number' : 'Regex / Match Pattern'}
-                    </label>
-                    {editFormData.route_type === 'inbound_did' ? (
-                      <CustomSelect
-                        options={[
-                          { value: '', label: '-- Select Assigned DID --' },
-                          ...assignedDids.map((d: any) => ({
-                            value: d.did_number,
-                            label: `${d.did_number} ${d.tenant_name ? '(' + d.tenant_name + ')' : '(Assigned)'}`
-                          }))
-                        ]}
-                        value={editFormData.did_number}
-                        onChange={val => setEditFormData({ ...editFormData, did_number: val })}
-                      />
-                    ) : (
-                      <input
-                        required
-                        className="form-control"
-                        value={editFormData.did_number}
-                        onChange={e => setEditFormData({ ...editFormData, did_number: e.target.value })}
-                        placeholder="e.g. ^91\\d{10}$"
-                      />
-                    )}
-                  </div>
+            <FormField label="Status">
+              <Select
+                value={editFormData.enabled ? 'true' : 'false'}
+                onChange={e => setEditFormData({ ...editFormData, enabled: e.target.value === 'true' })}
+              >
+                <option value="true">Active / Enabled</option>
+                <option value="false">Disabled</option>
+              </Select>
+            </FormField>
+          </Grid>
 
-                  <div className="form-group">
-                    <label className="form-label">Destination Type</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'queue', label: 'Call Queue' },
-                        { value: 'extension', label: 'Extension' },
-                        { value: 'ivr', label: 'IVR Menu Flow' },
-                        { value: 'voicemail', label: 'Voicemail Box' }
-                      ]}
-                      value={editFormData.destination_type}
-                      onChange={handleEditDestTypeChange}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Priority</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      className="form-control"
-                      value={editFormData.priority}
-                      onChange={e => setEditFormData({ ...editFormData, priority: parseInt(e.target.value) || 1 })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Status</label>
-                    <CustomSelect
-                      options={[
-                        { value: 'true', label: 'Active / Enabled' },
-                        { value: 'false', label: 'Disabled' }
-                      ]}
-                      value={editFormData.enabled ? 'true' : 'false'}
-                      onChange={val => setEditFormData({ ...editFormData, enabled: val === 'true' })}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label required">
-                      Destination Target
-                      <small style={{ color: '#6B7280', fontWeight: 400, marginLeft: '8px' }}>
-                        ({editFormData.destination_type === 'queue' ? queues.length + ' queue(s)' : editFormData.destination_type === 'ivr' ? ivrs.length + ' IVR flow(s)' : extensions.length + ' extension(s)'} available)
-                      </small>
-                    </label>
-                    {editDestinationOptions.length > 0 ? (
-                      <CustomSelect
-                        options={[
-                          { value: '', label: `-- Select ${editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --` },
-                          ...editDestinationOptions
-                        ]}
-                        value={editFormData.destination}
-                        onChange={val => setEditFormData({ ...editFormData, destination: val })}
-                      />
-                    ) : (
-                      <input
-                        required
-                        className="form-control"
-                        value={editFormData.destination}
-                        onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
-                        placeholder="e.g. 7001 or 1001"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="modal-foot">
-                <button type="button" className="btn-secondary" onClick={() => { setShowEditModal(false); setEditingRouteId(null); }}>Cancel</button>
-                <button type="submit" className="btn-primary">Update Routing Rule</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+          <FormField label="Destination Target" required hint={`(${editFormData.destination_type === 'queue' ? queues.length + ' queue(s)' : editFormData.destination_type === 'ivr' ? ivrs.length + ' IVR flow(s)' : extensions.length + ' extension(s)'} available)`}>
+            {editDestinationOptions.length > 0 ? (
+              <Select
+                value={editFormData.destination}
+                onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
+              >
+                <option value="">-- Select {editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                {editDestinationOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={editFormData.destination}
+                onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
+              />
+            )}
+          </FormField>
+        </Stack>
+      </Modal>
+    </ListPageLayout>
   );
 };

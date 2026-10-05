@@ -1,41 +1,44 @@
 import React, { useState } from 'react';
-import { TerrixLogo } from './TerrixLogo';
+import logoSvg from '../assets/LogoTransparent.svg';
 import { apiService } from '../services/api';
 import type { User } from '../types';
-import { LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
+// Design System imports
+import { Button, Input, FormField } from './ui';
 
 interface LoginScreenProps {
   onLoginSuccess: (token: string, user: User) => void;
+  initialMessage?: { text: string; type: 'success' | 'error' } | null;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, initialMessage }) => {
   const [isSeeding, setIsSeeding] = useState(false);
-
-  // Login state
-  const [loginUser, setLoginUser] = useState('superadmin');
-  const [loginPassword, setLoginPassword] = useState('SuperSecurePassword123!');
-
-  // Seed state
-  const [seedUser, setSeedUser] = useState('superadmin');
-  const [seedEmail, setSeedEmail] = useState('admin@pbx.com');
-  const [seedPassword, setSeedPassword] = useState('SuperSecurePassword123!');
-
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(initialMessage || null);
+
+  // Login form state (empty initial values)
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // Seed form state (empty initial values)
+  const [seedUser, setSeedUser] = useState('');
+  const [seedEmail, setSeedEmail] = useState('');
+  const [seedPassword, setSeedPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
     try {
-      const res = await apiService.login({
-        username_or_email: loginUser,
-        password: loginPassword,
-      });
+      const res = await apiService.login({ username_or_email: loginUser, password: loginPassword });
       onLoginSuccess(res.access_token, res.user);
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+      setMessage({
+        text: err.message || 'Invalid username or password. Please try again.',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -45,80 +48,62 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
     try {
-      const res = await apiService.seedSuperAdmin({
+      await apiService.seedSuperAdmin({
         username: seedUser,
         email: seedEmail,
-        password: seedPassword,
+        password: seedPassword
       });
-      setMessage({ type: 'success', text: `SuperAdmin seeded successfully! User ID: ${res.user_id}` });
+      setMessage({
+        text: 'SuperAdmin account bootstrapped successfully! You can now log in.',
+        type: 'success'
+      });
       setIsSeeding(false);
+      setLoginUser(seedUser);
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+      setMessage({
+        text: err.message || 'Failed to bootstrap SuperAdmin account.',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section id="loginScreen">
-      <div className="login-box">
-        {/* Left Visual Pane */}
-        <div className="login-visual">
-          <div className="space-y-6 text-left">
-            <TerrixLogo size="large" />
-            
-            <div className="space-y-2 mt-6">
-              <h2 className="text-xl font-extrabold text-white tracking-tight">
-                Enterprise Multi-Tenant PBX
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Powered by FreeSWITCH 1.10.x, FastAPI control plane, dynamic mod_xml_curl directory routing, and WebRTC endpoints.
-              </p>
-            </div>
-
-            <div className="space-y-2.5 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#FF5430] shrink-0" />
-                <span>100% Isolated Tenant Domains</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span>Dynamic SIP Directory XML Generation</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" />
-                <span>SIP Softphone & WebRTC Support</span>
-              </div>
-            </div>
+    <section className="login-screen-wrap">
+      <div className="login-card">
+        {/* Left Visual Area */}
+        <div className="login-visual-area">
+          <div className="login-visual-content">
+            <img
+              src={logoSvg}
+              alt="Logo"
+              className="login-logo-img transition-transform duration-300 hover:scale-105"
+            />
           </div>
         </div>
 
         {/* Right Form Area */}
         <div className="login-form-area">
           <div className="login-form">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-lg bg-[#FFF0EC] text-[#FF5430]">
-                {isSeeding ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
-              </div>
-              <h1 className="login-title mb-0">
-                {isSeeding ? 'Bootstrap SuperAdmin' : 'Log In'}
-              </h1>
-            </div>
+            <h1 className="login-title">
+              {isSeeding ? 'Bootstrap SuperAdmin' : 'Log In'}
+            </h1>
 
-            <div className="login-subtitle">
+            <p className="login-subtitle">
               {isSeeding
                 ? 'Create the platform Super Admin account for initial setup.'
-                : 'Enter your credentials to access the Terrix AI PBX engine securely.'}
-            </div>
+                : 'Enter your details to access your account securely.'}
+            </p>
 
             {message && (
               <div
-                className={`p-3.5 mb-4 rounded-lg text-xs font-semibold flex items-center gap-2 ${
-                  message.type === 'success'
+                className={`p-3.5 mb-4 rounded-lg text-xs font-semibold flex items-center gap-2 ${message.type === 'success'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     : 'bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
+                  }`}
               >
                 {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
                 <span>{message.text}</span>
@@ -127,84 +112,84 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
             {!isSeeding ? (
               <form onSubmit={handleLogin}>
-                <div className="mb-3">
-                  <label className="form-label">Username or Email</label>
-                  <input
+                <FormField label="Username or Email" required>
+                  <Input
                     type="text"
-                    className="form-control"
                     value={loginUser}
                     onChange={(e) => setLoginUser(e.target.value)}
                     placeholder="Enter your username or email"
+                    autoComplete="username"
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-4">
-                  <label className="form-label">Password</label>
-                  <input
+                <FormField label="Password" required>
+                  <Input
                     type="password"
-                    className="form-control"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                     required
                   />
-                </div>
+                </FormField>
 
-                <button type="submit" disabled={loading} className="login-submit">
-                  {loading ? 'Authenticating...' : 'Log In'}
-                </button>
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  variant="primary"
+                  size="lg"
+                  className="w-full mt-2"
+                >
+                  Log In
+                </Button>
               </form>
             ) : (
               <form onSubmit={handleSeed}>
-                <div className="mb-3">
-                  <label className="form-label">Super Admin Username</label>
-                  <input
+                <FormField label="Super Admin Username" required>
+                  <Input
                     type="text"
-                    className="form-control"
                     value={seedUser}
                     onChange={(e) => setSeedUser(e.target.value)}
+                    placeholder="Enter super admin username"
+                    autoComplete="username"
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-3">
-                  <label className="form-label">Email Address</label>
-                  <input
+                <FormField label="Email Address" required>
+                  <Input
                     type="email"
-                    className="form-control"
                     value={seedEmail}
                     onChange={(e) => setSeedEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    autoComplete="email"
                     required
                   />
-                </div>
+                </FormField>
 
-                <div className="mb-4">
-                  <label className="form-label">Password</label>
-                  <input
+                <FormField label="Password" required>
+                  <Input
                     type="password"
-                    className="form-control"
                     value={seedPassword}
                     onChange={(e) => setSeedPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    autoComplete="new-password"
                     required
                   />
-                </div>
+                </FormField>
 
-                <button type="submit" disabled={loading} className="login-submit">
-                  {loading ? 'Seeding Account...' : 'Seed SuperAdmin Account'}
-                </button>
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  variant="primary"
+                  size="lg"
+                  className="w-full mt-2"
+                >
+                  Seed SuperAdmin Account
+                </Button>
               </form>
             )}
-
-            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSeeding(!isSeeding)}
-                className="text-xs font-bold text-[#FF5430] hover:underline bg-transparent border-0 cursor-pointer"
-              >
-                {isSeeding ? '← Back to Login' : 'Need to bootstrap SuperAdmin account? Click here'}
-              </button>
-            </div>
           </div>
         </div>
       </div>
