@@ -2,7 +2,17 @@ import type { User } from '../types';
 import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService, getApiBaseUrl } from '../services/api';
-import { FileText, PhoneOutgoing, PhoneCall, Disc, Volume2, Pause, Square } from 'lucide-react';
+import {
+  FileText,
+  PhoneOutgoing,
+  PhoneCall,
+  Disc,
+  Volume2,
+  Pause,
+  Square,
+  RotateCcw,
+  Download,
+} from 'lucide-react';
 import { PageContainer } from './layout/PageContainer';
 import { Stack, Inline } from './layout/Stack';
 import {
@@ -11,7 +21,8 @@ import {
   Input,
   Select,
   Badge,
-  Alert
+  Alert,
+  Tabs,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -181,46 +192,228 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSelectedTenant(user?.tenant_id || '');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const hasActiveFilters = Boolean((user?.role === 'SUPER_ADMIN' && selectedTenant) || startDate || endDate);
+
   const cdrColumns = [
-    { key: 'start_time', header: 'Start Time', render: (r: any) => r.start_stamp || r.start_time || 'N/A' },
-    { key: 'caller', header: 'Caller ID / Number', render: (r: any) => <span><strong>{r.caller_id_number || r.caller_number || 'Unknown'}</strong> ({r.caller_id_name || r.caller_name || 'N/A'})</span> },
-    { key: 'destination_number', header: 'Destination', render: (r: any) => <code className="code-box">{r.destination_number}</code> },
-    { key: 'direction', header: 'Direction', render: (r: any) => <Badge variant="neutral">{r.direction || 'inbound'}</Badge> },
-    { key: 'duration', header: 'Duration', render: (r: any) => `${r.duration || 0}s` },
-    { key: 'billsec', header: 'Bill Sec', render: (r: any) => `${r.billsec || 0}s` },
-    { key: 'tenant_name', header: 'Tenant', render: (r: any) => <Badge variant="warning">{r.tenant_name || 'Global'}</Badge> },
-    { key: 'hangup_cause', header: 'Hangup Cause', render: (r: any) => <Badge variant="success">{r.hangup_cause || 'NORMAL_CLEARING'}</Badge> },
+    {
+      key: 'start_time',
+      header: 'Start Time',
+      render: (r: any) => (
+        <span className="text-xs font-medium text-[var(--pbx-text-primary)]">
+          {r.start_stamp || r.start_time || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'caller',
+      header: 'Caller ID / Number',
+      render: (r: any) => (
+        <div>
+          <div className="font-semibold text-sm text-[var(--pbx-text-primary)]">
+            {r.caller_id_number || r.caller_number || 'Unknown'}
+          </div>
+          {(r.caller_id_name || r.caller_name) && (
+            <div className="text-xs text-[var(--pbx-text-secondary)]">
+              {r.caller_id_name || r.caller_name}
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'destination_number',
+      header: 'Destination',
+      render: (r: any) => (
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+          {r.destination_number || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'direction',
+      header: 'Direction',
+      render: (r: any) => {
+        const dir = (r.direction || 'inbound').toLowerCase();
+        return (
+          <Badge variant={dir === 'inbound' ? 'info' : 'warning'}>
+            {dir}
+          </Badge>
+        );
+      }
+    },
+    {
+      key: 'duration',
+      header: 'Duration',
+      render: (r: any) => (
+        <span className="text-sm font-medium text-[var(--pbx-text-primary)]">
+          {r.duration || 0}<span className="text-xs text-[var(--pbx-text-muted)] ml-0.5">s</span>
+        </span>
+      )
+    },
+    {
+      key: 'billsec',
+      header: 'Bill Sec',
+      render: (r: any) => (
+        <span className="text-sm text-[var(--pbx-text-secondary)]">
+          {r.billsec || 0}<span className="text-xs text-[var(--pbx-text-muted)] ml-0.5">s</span>
+        </span>
+      )
+    },
+    {
+      key: 'tenant_name',
+      header: 'Tenant',
+      render: (r: any) => <Badge variant="neutral">{r.tenant_name || 'Global'}</Badge>
+    },
+    {
+      key: 'hangup_cause',
+      header: 'Hangup Cause',
+      render: (r: any) => {
+        const cause = r.hangup_cause || 'NORMAL_CLEARING';
+        const isSuccess = cause === 'NORMAL_CLEARING';
+        return (
+          <Badge variant={isSuccess ? 'success' : 'danger'}>
+            {cause}
+          </Badge>
+        );
+      }
+    },
   ];
 
   const internalColumns = [
-    { key: 'caller_id_number', header: 'Source Extension', render: (r: any) => <code className="code-box">{r.caller_id_number}</code> },
-    { key: 'destination_number', header: 'Target Extension', render: (r: any) => <code className="code-box">{r.destination_number}</code> },
-    { key: 'total_calls', header: 'Total Calls', render: (r: any) => <strong>{r.total_calls}</strong> },
-    { key: 'total_duration_sec', header: 'Total Duration', render: (r: any) => `${r.total_duration_sec}s` },
-    { key: 'avg_duration_sec', header: 'Avg Duration', render: (r: any) => `${r.avg_duration_sec}s` },
+    {
+      key: 'caller_id_number',
+      header: 'Source Extension',
+      render: (r: any) => (
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+          {r.caller_id_number}
+        </span>
+      )
+    },
+    {
+      key: 'destination_number',
+      header: 'Target Extension',
+      render: (r: any) => (
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+          {r.destination_number}
+        </span>
+      )
+    },
+    {
+      key: 'total_calls',
+      header: 'Total Calls',
+      render: (r: any) => <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">{r.total_calls}</span>
+    },
+    {
+      key: 'total_duration_sec',
+      header: 'Total Duration',
+      render: (r: any) => `${r.total_duration_sec || 0}s`
+    },
+    {
+      key: 'avg_duration_sec',
+      header: 'Avg Duration',
+      render: (r: any) => `${r.avg_duration_sec || 0}s`
+    },
   ];
 
   const outboundColumns = [
-    { key: 'start_time', header: 'Start Time', render: (r: any) => r.start_stamp || r.start_time || r.created_at || 'N/A' },
-    { key: 'source', header: 'Originating Extension', render: (r: any) => <strong>{r.caller_id_number || r.source_extension || 'N/A'}</strong> },
-    { key: 'destination', header: 'Destination', render: (r: any) => <code className="code-box">{r.destination_number || r.destination || 'N/A'}</code> },
-    { key: 'duration', header: 'Duration', render: (r: any) => `${r.duration || 0}s` },
-    { key: 'billsec', header: 'Billable Sec', render: (r: any) => `${r.billsec || 0}s` },
-    { key: 'tenant_name', header: 'Tenant', render: (r: any) => <Badge variant="warning">{r.tenant_name || 'Global'}</Badge> },
+    {
+      key: 'start_time',
+      header: 'Start Time',
+      render: (r: any) => (
+        <span className="text-xs font-medium text-[var(--pbx-text-primary)]">
+          {r.start_stamp || r.start_time || r.created_at || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'source',
+      header: 'Originating Extension',
+      render: (r: any) => (
+        <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">
+          {r.caller_id_number || r.source_extension || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'destination',
+      header: 'Destination',
+      render: (r: any) => (
+        <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+          {r.destination_number || r.destination || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'duration',
+      header: 'Duration',
+      render: (r: any) => `${r.duration || 0}s`
+    },
+    {
+      key: 'billsec',
+      header: 'Billable Sec',
+      render: (r: any) => `${r.billsec || 0}s`
+    },
+    {
+      key: 'tenant_name',
+      header: 'Tenant',
+      render: (r: any) => <Badge variant="neutral">{r.tenant_name || 'Global'}</Badge>
+    },
   ];
 
   const recordingColumns = [
-    { key: 'created_at', header: 'Recorded At', render: (r: any) => r.created_at || r.start_time || 'N/A' },
-    { key: 'file_name', header: 'File Name', render: (r: any) => <strong>{r.file_name || 'recording.wav'}</strong> },
-    { key: 'parties', header: 'Caller → Destination', render: (r: any) => (
-      <Inline gap="2" align="center">
-        <strong>{r.caller_number || r.source_extension || 'N/A'}</strong>
-        <span className="text-[var(--pbx-text-muted)]">&rarr;</span>
-        <code className="code-box">{r.destination_number || 'N/A'}</code>
-      </Inline>
-    )},
-    { key: 'file_size', header: 'File Size', render: (r: any) => `${((r.file_size || 0) / 1024).toFixed(1)} KB` },
-    { key: 'tenant_name', header: 'Tenant', render: (r: any) => <Badge variant="warning">{r.tenant_name || 'Global'}</Badge> },
+    {
+      key: 'created_at',
+      header: 'Recorded At',
+      render: (r: any) => (
+        <span className="text-xs font-medium text-[var(--pbx-text-primary)]">
+          {r.created_at || r.start_time || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'file_name',
+      header: 'File Name',
+      render: (r: any) => (
+        <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">
+          {r.file_name || 'recording.wav'}
+        </span>
+      )
+    },
+    {
+      key: 'parties',
+      header: 'Caller → Destination',
+      render: (r: any) => (
+        <Inline gap="2" align="center">
+          <span className="font-medium text-sm text-[var(--pbx-text-primary)]">
+            {r.caller_number || r.source_extension || 'N/A'}
+          </span>
+          <span className="text-[var(--pbx-text-muted)]">&rarr;</span>
+          <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+            {r.destination_number || 'N/A'}
+          </span>
+        </Inline>
+      )
+    },
+    {
+      key: 'file_size',
+      header: 'File Size',
+      render: (r: any) => (
+        <span className="text-sm text-[var(--pbx-text-secondary)]">
+          {((r.file_size || 0) / 1024).toFixed(1)} KB
+        </span>
+      )
+    },
+    {
+      key: 'tenant_name',
+      header: 'Tenant',
+      render: (r: any) => <Badge variant="neutral">{r.tenant_name || 'Global'}</Badge>
+    },
   ];
 
   return (
@@ -229,19 +422,23 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
       subtitle="Tenant-wise call logs, extension-to-extension summary, outbound analytics & voice recordings"
       eyebrow="Analytics & Telemetry"
       actions={
-        <Button variant="primary" onClick={exportToCsv}>
+        <Button variant="primary" onClick={exportToCsv} leftIcon={<Download size={15} />}>
           Export CSV
         </Button>
       }
     >
       <Stack gap="6">
-        {/* Filters */}
+        {/* Standard FilterBar inside Card */}
         <Card padding="sm">
           <FilterBar
             filters={
               <Inline gap="4" align="center">
                 {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-                  <Select value={selectedTenant} onChange={(e) => setSelectedTenant(e.target.value)} className="w-56">
+                  <Select
+                    value={selectedTenant}
+                    onChange={(e) => setSelectedTenant(e.target.value)}
+                    className="w-56"
+                  >
                     <option value="">-- All Tenants --</option>
                     {tenants.map(t => (
                       <option key={t.id} value={t.id}>
@@ -252,15 +449,32 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
                 )}
 
                 <Inline gap="2" align="center">
-                  <span className="text-xs font-bold text-[var(--pbx-text-muted)] uppercase">From:</span>
-                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-40" />
-                  <span className="text-xs font-bold text-[var(--pbx-text-muted)] uppercase">To:</span>
-                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-40" />
+                  <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">From:</span>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="w-40"
+                  />
+                  <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">To:</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="w-40"
+                  />
                 </Inline>
 
-                <Button variant="secondary" size="sm" onClick={() => { setSelectedTenant(user?.tenant_id || ''); setStartDate(''); setEndDate(''); }}>
-                  Reset
-                </Button>
+                {hasActiveFilters && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleResetFilters}
+                    leftIcon={<RotateCcw size={14} />}
+                  >
+                    Reset
+                  </Button>
+                )}
               </Inline>
             }
           />
@@ -283,23 +497,20 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
           </Alert>
         )}
 
-        {/* Navigation Tabs */}
-        <Inline gap="2">
-          <Button variant={activeTab === 'cdr' ? 'primary' : 'secondary'} onClick={() => setActiveTab('cdr')} leftIcon={<FileText size={14} />}>
-            Call Detail Records (CDR)
-          </Button>
-          <Button variant={activeTab === 'internal' ? 'primary' : 'secondary'} onClick={() => setActiveTab('internal')} leftIcon={<PhoneCall size={14} />}>
-            Internal Calls Summary
-          </Button>
-          <Button variant={activeTab === 'outbound' ? 'primary' : 'secondary'} onClick={() => setActiveTab('outbound')} leftIcon={<PhoneOutgoing size={14} />}>
-            Outbound Calls Analytics
-          </Button>
-          <Button variant={activeTab === 'recordings' ? 'primary' : 'secondary'} onClick={() => setActiveTab('recordings')} leftIcon={<Disc size={14} />}>
-            Voice Recordings
-          </Button>
-        </Inline>
+        {/* Design System Tabs component */}
+        <Tabs
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+          variant="line"
+          items={[
+            { id: 'cdr', label: 'Call Detail Records (CDR)', icon: <FileText size={16} /> },
+            { id: 'internal', label: 'Internal Calls Summary', icon: <PhoneCall size={16} /> },
+            { id: 'outbound', label: 'Outbound Calls Analytics', icon: <PhoneOutgoing size={16} /> },
+            { id: 'recordings', label: 'Voice Recordings', icon: <Disc size={16} /> },
+          ]}
+        />
 
-        {/* Table */}
+        {/* Data Table */}
         {activeTab === 'cdr' && (
           <DataTable
             columns={cdrColumns}
@@ -361,3 +572,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     </PageContainer>
   );
 };
+
+
+

@@ -10,12 +10,14 @@ export interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
-  searchValue = '',
-  onSearchChange = () => {},
+  searchValue,
+  onSearchChange,
   searchPlaceholder = 'Search records...',
   filters,
   actions,
 }) => {
+  const showSearch = searchValue !== undefined && onSearchChange !== undefined;
+
   return (
     <div
       style={{
@@ -23,12 +25,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '16px',
-        marginBottom: '20px',
         flexWrap: 'wrap',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '280px' }}>
-        {(searchValue !== undefined || !filters) && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, flexWrap: 'wrap' }}>
+        {showSearch && (
           <SearchInput value={searchValue} onChange={onSearchChange} placeholder={searchPlaceholder} />
         )}
         {filters}
