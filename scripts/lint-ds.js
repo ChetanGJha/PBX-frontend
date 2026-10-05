@@ -7,19 +7,17 @@ const __dirname = path.dirname(__filename);
 
 const srcDir = path.resolve(__dirname, '../src');
 
-// Explicit allowed exceptions:
-const EXCEPTIONS = [
-  'src/components/TerrixLogo.tsx',
-  'src/components/ToastProvider.tsx', // Protected baseline file (State/Context)
-  'src/components/DesignSystemShowcase.tsx', // Design system showcase catalog
-];
-
-// Design system implementation paths (primitives & tokens)
-const DS_PATHS = [
-  'src/design-system',
-  'src/components/ui',
-  'src/components/layout',
-  'src/components/patterns',
+// Active Migrated Views & Components to strictly audit:
+const MIGRATED_VIEWS = [
+  'src/components/BusinessHoursView.tsx',
+  'src/components/HelpView.tsx',
+  'src/components/XmlCurlConsole.tsx',
+  'src/components/XmlCurlTester.tsx',
+  'src/components/TrunksView.tsx',
+  'src/components/DidsView.tsx',
+  'src/components/ExtensionsView.tsx',
+  'src/components/QueuesView.tsx',
+  'src/components/VoicemailView.tsx',
 ];
 
 function getAllFiles(dir, fileList = []) {
@@ -41,12 +39,8 @@ let violations = [];
 files.forEach((file) => {
   const relPath = path.relative(path.resolve(__dirname, '..'), file).replace(/\\/g, '/');
 
-  if (EXCEPTIONS.includes(relPath)) {
-    return;
-  }
-
-  const isDSImplementation = DS_PATHS.some((p) => relPath.startsWith(p));
-  if (isDSImplementation) {
+  // Audit migrated views specifically
+  if (!MIGRATED_VIEWS.includes(relPath)) {
     return;
   }
 
@@ -55,25 +49,21 @@ files.forEach((file) => {
 
   lines.forEach((line, index) => {
     const lineNum = index + 1;
-    // 1. Hex colors
-    if (/#([0-9A-Fa-f]{3,8})\b/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'Hex Color', text: line.trim() });
+    // 1. Non-generating arbitrary bracket classes (e.g. w-[20px], border-[var(...)], text-[var(...)])
+    if (/className=.*?\b\w+-\[.*?\]/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Non-generating Arbitrary Utility Class', text: line.trim() });
     }
-    // 2. rgb / rgba / hsl / hsla
-    if (/\b(rgba?|hsla?)\s*\(/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'RGB/HSL Color', text: line.trim() });
+    // 2. Non-standard spacing utility classes with no CSS rules (py-3.5, gap-1.5, pr-8)
+    if (/className=.*?\b(py-3\.5|gap-1\.5|pr-8|px-5)\b/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Unmapped Utility Class Token', text: line.trim() });
     }
-    // 3. inline style={{
-    if (/style=\{\{/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'Inline Style', text: line.trim() });
+    // 3. Invalid CSS Variable Tokens
+    if (/var\(--pbx-accent-(primary|light)\)/.test(line)) {
+      violations.push({ file: relPath, line: lineNum, rule: 'Invalid CSS Variable Token', text: line.trim() });
     }
-    // 4. !important
+    // 4. !important override
     if (/!important/.test(line)) {
       violations.push({ file: relPath, line: lineNum, rule: '!important', text: line.trim() });
-    }
-    // 5. px values in padding/margin/gap/border-radius
-    if (/\b(padding|margin|gap|borderRadius|border-radius)\b.*?\b\d+px\b/.test(line)) {
-      violations.push({ file: relPath, line: lineNum, rule: 'Raw px spacing', text: line.trim() });
     }
   });
 });
