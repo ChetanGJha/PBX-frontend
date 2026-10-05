@@ -93,6 +93,11 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     try {
       setLoading(true);
       setError(null);
+
+      if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && !targetTenantId) {
+        throw new Error('Please select an assigned tenant for this user account.');
+      }
+
       const payload: any = {
         username,
         email,
@@ -336,6 +341,23 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
                 <option value="AGENT">AGENT</option>
               </Select>
             </FormField>
+
+            {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && (
+              <FormField label="Assign to Tenant" required hint="Select which tenant organization this account belongs to">
+                <Select
+                  value={targetTenantId}
+                  onChange={(e) => setTargetTenantId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select Target Tenant --</option>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.domain})
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
 
             {role === 'SUB_ADMIN' && (
               <FormField label="Allowed Modules">

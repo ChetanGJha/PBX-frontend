@@ -23,19 +23,27 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
       }
 
       // Focus trap
       if (e.key === 'Tab' && modalRef.current) {
         const focusables = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), [href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         if (focusables.length === 0) return;
 
@@ -56,32 +64,40 @@ export const Modal: React.FC<ModalProps> = ({
       }
     };
 
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
 
-      // Focus first input or modal container
-      setTimeout(() => {
-        if (modalRef.current) {
-          const firstInput = modalRef.current.querySelector<HTMLElement>('input, button');
-          if (firstInput) {
-            firstInput.focus();
+    // Initial focus on modal open
+    const timer = setTimeout(() => {
+      if (modalRef.current) {
+        // Priority 1: First interactive form input/select/textarea
+        const firstFormInput = modalRef.current.querySelector<HTMLElement>(
+          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+        );
+        if (firstFormInput) {
+          firstFormInput.focus();
+        } else {
+          // Priority 2: Any focusable element that is NOT the close button
+          const firstFocusable = modalRef.current.querySelector<HTMLElement>(
+            'button:not([aria-label="Close dialog"]):not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+          );
+          if (firstFocusable) {
+            firstFocusable.focus();
           } else {
             modalRef.current.focus();
           }
         }
-      }, 50);
-    }
+      }
+    }, 50);
 
     return () => {
+      clearTimeout(timer);
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
       if (previousActiveElement.current) {
         previousActiveElement.current.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

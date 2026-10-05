@@ -75,10 +75,24 @@ export const FormField: React.FC<FormFieldProps> = ({
   style,
 }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px', ...style }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px', width: '100%', ...style }}>
       {label && (
-        <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--pbx-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {label} {required && <span style={{ color: 'var(--pbx-color-danger-600)' }}>*</span>}
+        <label
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--pbx-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            minHeight: '26px',
+            display: 'flex',
+            alignItems: 'flex-end',
+            lineHeight: '1.3',
+          }}
+        >
+          <span>
+            {label} {required && <span style={{ color: 'var(--pbx-color-danger-600)' }}>*</span>}
+          </span>
         </label>
       )}
       {children}
