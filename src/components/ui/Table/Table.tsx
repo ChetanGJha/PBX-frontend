@@ -78,7 +78,7 @@ export const TableCell: React.FC<TableCellProps> = ({
         fontSize: header ? '11px' : '13px',
         textTransform: header ? 'uppercase' : 'none',
         letterSpacing: header ? '0.04em' : 'normal',
-        textAlign: 'left',
+        textAlign: header ? 'center' : 'left',
         ...style,
       }}
       {...props}

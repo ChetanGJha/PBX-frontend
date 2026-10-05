@@ -12,6 +12,7 @@ import {
   FormField,
   Modal,
   Badge,
+  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -215,41 +216,45 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
       }
     >
       <Stack gap="6">
-        <FilterBar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search DID numbers, host or tenant..."
-        />
+        <Card padding="sm">
+          <FilterBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search DID numbers, host or tenant..."
+          />
+        </Card>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          isLoading={loading}
-          emptyTitle="No DIDs in inventory"
-          actions={(d: any) => (
-            user?.role === 'SUPER_ADMIN' ? (
-              <Inline gap="2" justify="center" wrap={false}>
-                <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
-                  <Edit2 size={14} />
-                </Button>
-                {d.tenant_id ? (
-                  <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
-                    <Unlink size={14} />
+        <Card padding="none">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            isLoading={loading}
+            emptyTitle="No DIDs in inventory"
+            actions={(d: any) => (
+              user?.role === 'SUPER_ADMIN' ? (
+                <Inline gap="2" justify="center" wrap={false}>
+                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(d)} title="Edit">
+                    <Edit2 size={14} />
                   </Button>
-                ) : (
-                  <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
-                    <Link2 size={14} />
+                  {d.tenant_id ? (
+                    <Button variant="secondary" size="sm" onClick={() => handleUnassignDid(d.id)} title="Unassign">
+                      <Unlink size={14} />
+                    </Button>
+                  ) : (
+                    <Button variant="primary" size="sm" onClick={() => setDidToAssign(d)} title="Assign">
+                      <Link2 size={14} />
+                    </Button>
+                  )}
+                  <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
+                    <Trash2 size={14} />
                   </Button>
-                )}
-                <Button variant="danger" size="sm" onClick={() => setDeleteDidId(d.id)} title="Delete">
-                  <Trash2 size={14} />
-                </Button>
-              </Inline>
-            ) : (
-              <Badge variant="success">Provisioned</Badge>
-            )
-          )}
-        />
+                </Inline>
+              ) : (
+                <Badge variant="success">Provisioned</Badge>
+              )
+            )}
+          />
+        </Card>
       </Stack>
 
       {/* ADD DID MODAL */}

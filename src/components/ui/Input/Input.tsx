@@ -74,6 +74,25 @@ export const FormField: React.FC<FormFieldProps> = ({
   children,
   style,
 }) => {
+  const renderLabelContent = () => {
+    if (!label) return null;
+    const optionalRegex = /\s*\((optional)\)\s*/i;
+    const hasOptional = optionalRegex.test(label);
+    const mainLabel = hasOptional ? label.replace(optionalRegex, '').trim() : label;
+
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'nowrap', gap: '4px' }}>
+        <span>{mainLabel}</span>
+        {hasOptional && (
+          <span style={{ color: 'var(--pbx-text-muted)', fontWeight: 500, textTransform: 'none' }}>
+            (Optional)
+          </span>
+        )}
+        {required && <span style={{ color: 'var(--pbx-color-danger-600)' }}>*</span>}
+      </span>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px', width: '100%', ...style }}>
       {label && (
@@ -84,15 +103,14 @@ export const FormField: React.FC<FormFieldProps> = ({
             color: 'var(--pbx-text-secondary)',
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            minHeight: '26px',
+            minHeight: '32px',
             display: 'flex',
             alignItems: 'flex-end',
+            paddingBottom: '4px',
             lineHeight: '1.3',
           }}
         >
-          <span>
-            {label} {required && <span style={{ color: 'var(--pbx-color-danger-600)' }}>*</span>}
-          </span>
+          {renderLabelContent()}
         </label>
       )}
       {children}

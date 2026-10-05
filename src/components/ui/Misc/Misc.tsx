@@ -64,7 +64,7 @@ export interface DividerProps {
   margin?: string;
 }
 
-export const Divider: React.FC<DividerProps> = ({ orientation = 'horizontal', margin = '16px 0' }) => {
+export const Divider: React.FC<DividerProps> = ({ orientation = 'horizontal', margin = '20px 0' }) => {
   if (orientation === 'vertical') {
     return (
       <div

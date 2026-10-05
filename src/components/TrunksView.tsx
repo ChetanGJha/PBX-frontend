@@ -12,6 +12,7 @@ import {
   Modal,
   Badge,
   Alert,
+  Card,
   Checkbox,
 } from './ui';
 import { DataTable, FilterBar, StatCard } from './patterns';
@@ -302,35 +303,39 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
 
         {error && <Alert variant="danger" title="Error">{error}</Alert>}
 
-        <FilterBar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search gateways by name, host or tenant..."
-        />
+        <Card padding="sm">
+          <FilterBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search gateways by name, host or tenant..."
+          />
+        </Card>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          isLoading={loading}
-          emptyTitle="No assigned gateways or SIP trunks found"
-          actions={(t: any) => (
-            <Inline gap="2" justify="center" wrap={false}>
-              <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} title="View Info">
-                <Info size={14} />
-              </Button>
-              {!isReadOnly && (
-                <>
-                  <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} title="Edit">
-                    <Edit2 size={14} />
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} title="Delete">
-                    <Trash2 size={14} />
-                  </Button>
-                </>
-              )}
-            </Inline>
-          )}
-        />
+        <Card padding="none">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            isLoading={loading}
+            emptyTitle="No assigned gateways or SIP trunks found"
+            actions={(t: any) => (
+              <Inline gap="2" justify="center" wrap={false}>
+                <Button variant="secondary" size="sm" onClick={() => setViewInfoItem(t)} title="View Info">
+                  <Info size={14} />
+                </Button>
+                {!isReadOnly && (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={() => handleEditClick(t)} title="Edit">
+                      <Edit2 size={14} />
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => setDeleteTrunkId(t.id)} title="Delete">
+                      <Trash2 size={14} />
+                    </Button>
+                  </>
+                )}
+              </Inline>
+            )}
+          />
+        </Card>
       </Stack>
 
       {/* VIEW INFO MODAL (READ ONLY) */}

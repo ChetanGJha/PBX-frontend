@@ -14,6 +14,7 @@ import {
   Modal,
   Badge,
   Alert,
+  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -277,49 +278,53 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       <Stack gap="6">
         {error && <Alert variant="danger" title="Error">{error}</Alert>}
 
-        <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Search extension or name..."
-          filters={
-            user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? (
-              <Select
-                value={selectedTenantFilter}
-                onChange={(e) => setSelectedTenantFilter(e.target.value)}
-              >
-                <option value="">All Tenants</option>
-                {tenants.map((t: Tenant) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </Select>
-            ) : undefined
-          }
-        />
+        <Card padding="sm">
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search extension or name..."
+            filters={
+              user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? (
+                <Select
+                  value={selectedTenantFilter}
+                  onChange={(e) => setSelectedTenantFilter(e.target.value)}
+                >
+                  <option value="">All Tenants</option>
+                  {tenants.map((t: Tenant) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Select>
+              ) : undefined
+            }
+          />
+        </Card>
 
-        <DataTable
-          columns={columns}
-          data={filteredExts}
-          isLoading={loading}
-          emptyTitle="No extensions found"
-          emptyDescription={canManage ? 'Click "Provision Extension" to add your first extension.' : undefined}
-          actions={
-            canManage
-              ? (ext: Extension) => (
-                  <Inline gap="2" justify="center" wrap={false}>
-                    <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} title="Edit">
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} title="Reset Password">
-                      <KeyRound size={14} />
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} title="Delete">
-                      <Trash2 size={14} />
-                    </Button>
-                  </Inline>
-                )
-              : undefined
-          }
-        />
+        <Card padding="none">
+          <DataTable
+            columns={columns}
+            data={filteredExts}
+            isLoading={loading}
+            emptyTitle="No extensions found"
+            emptyDescription={canManage ? 'Click "Provision Extension" to add your first extension.' : undefined}
+            actions={
+              canManage
+                ? (ext: Extension) => (
+                    <Inline gap="2" justify="center" wrap={false}>
+                      <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(ext)} title="Edit">
+                        <Edit2 size={14} />
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => { setSelectedExtId(ext.id); setShowResetModal(true); }} title="Reset Password">
+                        <KeyRound size={14} />
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(ext.id, ext.extension_number)} title="Delete">
+                        <Trash2 size={14} />
+                      </Button>
+                    </Inline>
+                  )
+                : undefined
+            }
+          />
+        </Card>
       </Stack>
 
       {/* Create Extension Modal */}

@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Plus, Edit2, Trash2, Mail, Building, PhoneCall } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
 import {
   Button,
@@ -182,17 +182,16 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Contacts Directory"
       subtitle="Centralized directory of enterprise contacts, customers, and partners."
-      eyebrow="Enterprise Phonebook"
+      eyebrow="ENTERPRISE PHONEBOOK"
       actions={
         <Button variant="primary" onClick={handleOpenCreate} leftIcon={<Plus size={16} />}>
           Add Contact
         </Button>
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
@@ -203,25 +202,25 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ token, user }) => {
             </div>
           }
         />
-
-        <DataTable
-          columns={columns}
-          data={contacts}
-          isLoading={loading}
-          emptyTitle="No contacts found"
-          emptyDescription='Click "Add Contact" to populate your directory.'
-          actions={(c: any) => (
-            <Inline gap="2" justify="center" wrap={false}>
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
-                <Edit2 size={14} />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, `${c.first_name} ${c.last_name || ''}`)} title="Delete">
-                <Trash2 size={14} className="text-rose-600" />
-              </Button>
-            </Inline>
-          )}
-        />
-      </Stack>
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={contacts}
+        isLoading={loading}
+        emptyTitle="No contacts found"
+        emptyDescription='Click "Add Contact" to populate your directory.'
+        actions={(c: any) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
+              <Edit2 size={14} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, `${c.first_name} ${c.last_name || ''}`)} title="Delete">
+              <Trash2 size={14} className="text-rose-600" />
+            </Button>
+          </Inline>
+        )}
+      />
 
       {/* Modal */}
       <Modal
@@ -301,6 +300,6 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ token, user }) => {
           </Stack>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };

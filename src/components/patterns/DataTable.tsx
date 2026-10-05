@@ -84,14 +84,31 @@ export function DataTable<T extends Record<string, any>>({
           ) : (
             data.map((row, rowIndex) => (
               <TableRow key={row.id || rowIndex}>
-                {columns.map((col) => (
-                  <TableCell key={col.key}>
-                    {col.render ? col.render(row) : row[col.key]}
-                  </TableCell>
-                ))}
+                {columns.map((col) => {
+                  const rawVal = row[col.key];
+                  const stringVal = typeof rawVal === 'string' ? rawVal : undefined;
+                  const content = col.render ? col.render(row) : (
+                    stringVal !== undefined ? stringVal : rawVal
+                  );
+                  return (
+                    <TableCell key={col.key} style={{ maxWidth: col.width || '240px' }}>
+                      <div
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                        }}
+                        title={stringVal}
+                      >
+                        {content}
+                      </div>
+                    </TableCell>
+                  );
+                })}
                 {actions && (
                   <TableCell style={{ textAlign: 'center', whiteSpace: 'nowrap', width: '1%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'nowrap', width: 'max-content', margin: '0 auto' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'nowrap', width: 'max-content', margin: '0 auto' }}>
                       {actions(row)}
                     </div>
                   </TableCell>

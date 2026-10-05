@@ -67,11 +67,11 @@ export const Modal: React.FC<ModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
 
     // Initial focus on modal open
-    const timer = setTimeout(() => {
+    const focusFirstElement = () => {
       if (modalRef.current) {
         // Priority 1: First interactive form input/select/textarea
         const firstFormInput = modalRef.current.querySelector<HTMLElement>(
-          'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+          'input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])'
         );
         if (firstFormInput) {
           firstFormInput.focus();
@@ -87,7 +87,13 @@ export const Modal: React.FC<ModalProps> = ({
           }
         }
       }
-    }, 50);
+    };
+
+    // Try focusing immediately if children are ready
+    focusFirstElement();
+    
+    // Also try again after a short delay for asynchronous child renders
+    const timer = setTimeout(focusFirstElement, 100);
 
     return () => {
       clearTimeout(timer);
@@ -167,6 +173,7 @@ export const Modal: React.FC<ModalProps> = ({
               )}
             </div>
             <button
+              type="button"
               onClick={onClose}
               style={{
                 background: 'none',

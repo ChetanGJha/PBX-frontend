@@ -97,6 +97,7 @@ export const Inline: React.FC<InlineProps> = ({
 export interface GridProps {
   cols?: 1 | 2 | 3 | 4 | 6 | 12;
   gap?: '1' | '2' | '3' | '4' | '5' | '6' | '8' | number | string;
+  align?: 'start' | 'center' | 'end' | 'stretch';
   children: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
@@ -105,6 +106,7 @@ export interface GridProps {
 export const Grid: React.FC<GridProps> = ({
   cols = 3,
   gap = '6',
+  align = 'start',
   children,
   style,
   className = '',
@@ -127,6 +129,7 @@ export const Grid: React.FC<GridProps> = ({
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
         gap: gapValue,
+        alignItems: align,
         ...style,
       }}
       className={className}

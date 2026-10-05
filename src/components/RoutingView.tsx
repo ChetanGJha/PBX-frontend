@@ -12,6 +12,7 @@ import {
   FormField,
   Modal,
   Badge,
+  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -333,28 +334,32 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       }
     >
       <Stack gap="6">
-        <FilterBar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search routes..."
-        />
+        <Card padding="sm">
+          <FilterBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search routes..."
+          />
+        </Card>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          isLoading={loading}
-          emptyTitle="No routing rules configured yet"
-          actions={canManage ? (r: any) => (
-            <Inline gap="2" justify="flex-end">
-              <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(r)} leftIcon={<Edit2 size={12} />}>
-                Edit
-              </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(r.id)} leftIcon={<Trash2 size={12} />}>
-                Delete
-              </Button>
-            </Inline>
-          ) : undefined}
-        />
+        <Card padding="none">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            isLoading={loading}
+            emptyTitle="No routing rules configured yet"
+            actions={canManage ? (r: any) => (
+              <Inline gap="2" justify="flex-end">
+                <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(r)} leftIcon={<Edit2 size={12} />}>
+                  Edit
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => handleDelete(r.id)} leftIcon={<Trash2 size={12} />}>
+                  Delete
+                </Button>
+              </Inline>
+            ) : undefined}
+          />
+        </Card>
       </Stack>
 
       {/* CREATE MODAL */}

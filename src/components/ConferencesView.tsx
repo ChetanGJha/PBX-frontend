@@ -12,7 +12,8 @@ import {
   FormField,
   Badge,
   Modal,
-  Checkbox
+  Checkbox,
+  Divider,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -252,34 +253,38 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
           </Card>
         </Grid>
 
-        <FilterBar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search conference rooms or extension..."
-          actions={
-            <div className="text-xs text-[var(--pbx-text-muted)]">
-              Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> from any extension to join
-            </div>
-          }
-        />
+        <Card padding="sm">
+          <FilterBar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search conference rooms or extension..."
+            actions={
+              <div className="text-xs text-[var(--pbx-text-muted)]">
+                Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> from any extension to join
+              </div>
+            }
+          />
+        </Card>
 
-        <DataTable
-          columns={columns}
-          data={filtered}
-          isLoading={loading}
-          emptyTitle="No conference rooms configured"
-          emptyDescription='Click "Create Conference Room" to set up your first room.'
-          actions={(c: any) => (
-            <Inline gap="2" justify="center" wrap={false}>
-              <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
-                <Edit2 size={14} />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)} title="Delete">
-                <Trash2 size={14} className="text-rose-600" />
-              </Button>
-            </Inline>
-          )}
-        />
+        <Card padding="none">
+          <DataTable
+            columns={columns}
+            data={filtered}
+            isLoading={loading}
+            emptyTitle="No conference rooms configured"
+            emptyDescription='Click "Create Conference Room" to set up your first room.'
+            actions={(c: any) => (
+              <Inline gap="2" justify="center" wrap={false}>
+                <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(c)} title="Edit">
+                  <Edit2 size={14} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.name)} title="Delete">
+                  <Trash2 size={14} className="text-rose-600" />
+                </Button>
+              </Inline>
+            )}
+          />
+        </Card>
       </Stack>
 
       {/* Modal */}
@@ -343,7 +348,8 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
               </FormField>
             </Grid>
 
-            <Stack gap="3" className="pt-3 border-t border-[var(--pbx-border)]">
+            <Stack gap="3">
+              <Divider />
               <Checkbox
                 label="Automatically record this conference"
                 checked={formData.record_conference}

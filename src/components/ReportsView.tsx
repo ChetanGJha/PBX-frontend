@@ -432,12 +432,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         <Card padding="sm">
           <FilterBar
             filters={
-              <Inline gap="4" align="center">
+              <Inline gap="4" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
                 {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
                   <Select
                     value={selectedTenant}
                     onChange={(e) => setSelectedTenant(e.target.value)}
-                    className="w-56"
+                    className="w-56 min-w-[200px]"
                   >
                     <option value="">-- All Tenants --</option>
                     {tenants.map(t => (
@@ -448,7 +448,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
                   </Select>
                 )}
 
-                <Inline gap="2" align="center">
+                <Inline gap="2" align="center" wrap={false}>
                   <span className="text-xs font-semibold text-[var(--pbx-text-secondary)] uppercase">From:</span>
                   <Input
                     type="date"

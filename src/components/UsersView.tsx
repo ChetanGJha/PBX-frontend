@@ -4,9 +4,9 @@ import type { User as UserType } from '../types';
 import { UserPlus, RefreshCw, Trash2, Settings } from 'lucide-react';
 
 // Design System imports
-import { PageHeader } from './layout';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
-import { Button, Card, Badge, Alert, Modal, FormField, Input, Select, Checkbox } from './ui';
+import { Button, Badge, Alert, Modal, FormField, Input, Select, Checkbox } from './ui';
 import { DataTable, FilterBar } from './patterns';
 import type { Column } from './patterns';
 
@@ -209,14 +209,14 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+      <ListPageLayout
         title={tenantScoped ? 'Tenant Admins & Sub-Admins' : 'Global Users & Administrators'}
         subtitle={
           tenantScoped
             ? 'Manage tenant administrators and create sub-admins with modular access (e.g. extensions-only, reporting-only).'
             : 'Provision Platform Super Administrators, Tenant Master Admins, Sub-Admins, and Staff across all tenants.'
         }
+        eyebrow={tenantScoped ? 'TENANT MANAGEMENT' : 'SYSTEM'}
         actions={
           <Inline gap="3">
             <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
@@ -229,46 +229,44 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             )}
           </Inline>
         }
-      />
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      <Card padding="sm">
-        <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Search username or email..."
-          filters={
-            <Inline gap="3">
-              <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
-                <option value="">All Roles</option>
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                <option value="TENANT_ADMIN">TENANT_ADMIN</option>
-                <option value="SUB_ADMIN">SUB_ADMIN</option>
-                <option value="SUPERVISOR">SUPERVISOR</option>
-                <option value="AGENT">AGENT</option>
-              </Select>
-
-              {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
-                <Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} className="w-48">
-                  <option value="">All Tenants</option>
-                  <option value="global">Global / System</option>
-                  {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.domain})
-                    </option>
-                  ))}
+        alert={error ? <Alert variant="danger">{error}</Alert> : undefined}
+        filterBar={
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search username or email..."
+            filters={
+              <Inline gap="3" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
+                <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
+                  <option value="">All Roles</option>
+                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                  <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+                  <option value="SUB_ADMIN">SUB_ADMIN</option>
+                  <option value="SUPERVISOR">SUPERVISOR</option>
+                  <option value="AGENT">AGENT</option>
                 </Select>
-              )}
-            </Inline>
-          }
-          actions={
-            <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
-              Total Users: <span className="text-[var(--pbx-text-primary)]">{filteredUsers.length}</span>
-            </div>
-          }
-        />
 
+                {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
+                  <Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} className="w-48">
+                    <option value="">All Tenants</option>
+                    <option value="global">Global / System</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.domain})
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Inline>
+            }
+            actions={
+              <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
+                Total Users: <span className="text-[var(--pbx-text-primary)]">{filteredUsers.length}</span>
+              </div>
+            }
+          />
+        }
+      >
         <DataTable
           columns={columns}
           data={filteredUsers}
@@ -290,7 +288,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             </Inline>
           )}
         />
-      </Card>
 
       {/* Create User Modal */}
       <Modal
@@ -409,6 +406,6 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
           </Stack>
         </form>
       </Modal>
-    </div>
+    </ListPageLayout>
   );
 };

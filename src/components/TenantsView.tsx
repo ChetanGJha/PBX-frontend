@@ -4,9 +4,9 @@ import type { Tenant, User } from '../types';
 import { Plus, RefreshCw, Edit2, Trash2 } from 'lucide-react';
 
 // Design System imports
-import { PageHeader } from './layout';
+import { ListPageLayout } from './layout';
 import { Stack, Inline, Grid } from './layout/Stack';
-import { Button, Card, Badge, Alert, Modal, FormField, Input } from './ui';
+import { Button, Badge, Alert, Modal, FormField, Input } from './ui';
 import { DataTable, FilterBar } from './patterns';
 import type { Column } from './patterns';
 
@@ -140,8 +140,8 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <>
+      <ListPageLayout
         title="Tenants Registry"
         subtitle="Isolated multi-tenant domain mapping for PBX routing (`/api/v1/tenants`)."
         actions={
@@ -154,22 +154,20 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
             </Button>
           </Inline>
         }
-      />
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      <Card padding="sm">
-        <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Search tenant name or domain..."
-          actions={
-            <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
-              Total Registered Tenants: <span className="text-[var(--pbx-text-primary)]">{tenants.length}</span>
-            </div>
-          }
-        />
-
+        alert={error ? <Alert variant="danger">{error}</Alert> : null}
+        filterBar={
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Search tenant name or domain..."
+            actions={
+              <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
+                Total Registered Tenants: <span className="text-[var(--pbx-text-primary)]">{tenants.length}</span>
+              </div>
+            }
+          />
+        }
+      >
         <DataTable
           columns={columns}
           data={filteredTenants}
@@ -187,7 +185,7 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
             </Inline>
           )}
         />
-      </Card>
+      </ListPageLayout>
 
       {/* Create Tenant Modal */}
       <Modal
@@ -319,6 +317,6 @@ export const TenantsView: React.FC<TenantsViewProps> = ({ token }) => {
           </Stack>
         </form>
       </Modal>
-    </div>
+    </>
   );
 };

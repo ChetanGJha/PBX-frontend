@@ -403,7 +403,7 @@ export const BusinessHoursView: React.FC<BusinessHoursViewProps> = ({ token, use
                           </Badge>
                         </Inline>
                         <p className="text-xs text-[var(--pbx-text-muted)] mt-1">
-                          Active Route: <strong className="text-[var(--pbx-text-primary)]">{live?.active_destination?.type || 'extension'}</strong> &rarr; <code className="code-box">{live?.active_destination?.target || '1001'}</code>
+                          Active Route: <strong className="text-[var(--pbx-text-primary)]">{live?.active_destination?.type || 'extension'}</strong> &rarr; <code className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">{live?.active_destination?.target || '1001'}</code>
                         </p>
                       </div>
 

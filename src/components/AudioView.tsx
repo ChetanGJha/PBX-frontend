@@ -3,7 +3,7 @@ import { useToast } from './ToastProvider';
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService, getApiBaseUrl } from '../services/api';
 import { Upload, Play, Pause, Trash2, Volume2, VolumeX, Music } from 'lucide-react';
-import { PageContainer } from './layout/PageContainer';
+import { ListPageLayout } from './layout';
 import { Stack, Inline } from './layout/Stack';
 import {
   Button,
@@ -220,7 +220,7 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
     {
       key: 'file_name',
       header: 'File Name',
-      render: (a: any) => <code className="code-box">{a.file_name}</code>,
+      render: (a: any) => <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium truncate max-w-[240px] inline-block">{a.file_name}</span>,
     },
     {
       key: 'file_size',
@@ -235,10 +235,10 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
   ];
 
   return (
-    <PageContainer
+    <ListPageLayout
       title="Voice Prompts & Greetings"
       subtitle="Upload and stream custom WAV/MP3 prompts for IVRs, call greetings, and music-on-hold"
-      eyebrow="Audio Asset Library"
+      eyebrow="AUDIO ASSET LIBRARY"
       actions={
         canManage ? (
           <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<Upload size={16} />}>
@@ -246,13 +246,14 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
           </Button>
         ) : undefined
       }
-    >
-      <Stack gap="6">
+      filterBar={
         <FilterBar
           searchValue={search}
           onSearchChange={setSearch}
           searchPlaceholder="Search audio prompts..."
         />
+      }
+    >
 
         <DataTable
           columns={columns}
@@ -280,7 +281,6 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
             );
           }}
         />
-      </Stack>
 
       {/* Floating Audio Player Bar */}
       {currentPlaying && (
@@ -379,6 +379,6 @@ export const AudioView: React.FC<AudioViewProps> = ({ token, user }) => {
           </Stack>
         </form>
       </Modal>
-    </PageContainer>
+    </ListPageLayout>
   );
 };
