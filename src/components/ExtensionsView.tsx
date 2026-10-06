@@ -41,6 +41,7 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
 
   // Edit Form
   const [editFormData, setEditFormData] = useState({
+    tenant_id: '',
     extension_number: '',
     display_name: '',
     email: '',
@@ -97,8 +98,9 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
     setLoading(true);
     try {
       const cleanEmail = email && email.trim() ? email.trim() : undefined;
+      const targetTenant = tenantId || (user?.role === 'SUPER_ADMIN' && tenants.length > 0 ? tenants[0].id : (user?.tenant_id ?? undefined));
       await apiService.createExtension(token, {
-        tenant_id: tenantId || (user?.tenant_id ?? undefined),
+        tenant_id: targetTenant,
         extension_number: extNumber,
         display_name: displayName,
         email: cleanEmail,
@@ -147,6 +149,7 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
   const handleOpenEdit = (ext: Extension) => {
     setEditingExtId(ext.id);
     setEditFormData({
+      tenant_id: ext.tenant_id || '',
       extension_number: ext.extension_number,
       display_name: ext.display_name || '',
       email: ext.email || '',
@@ -230,6 +233,18 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
       sortable: true,
       render: (ext: Extension) => ext.display_name,
     },
+    ...(user?.role === 'SUPER_ADMIN'
+      ? [
+          {
+            key: 'tenant',
+            header: 'Tenant',
+            render: (ext: Extension) => {
+              const t = tenants.find((tnt) => tnt.id === ext.tenant_id);
+              return t ? t.name : ext.tenant_id || 'N/A';
+            },
+          },
+        ]
+      : []),
     {
       key: 'email',
       header: 'User Email',
@@ -330,65 +345,70 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={loading}>Provision Extension</Button>
+            <Button type="submit" form="create-ext-form" variant="primary" isLoading={loading}>Provision Extension</Button>
           </>
         }
       >
-        <Stack gap="4">
-          {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
-            <FormField label="Target Tenant">
-              <Select value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
-                {tenants.map((t: Tenant) => (
-                  <option key={t.id} value={t.id}>{t.name} ({t.sip_domain})</option>
-                ))}
-              </Select>
-            </FormField>
-          )}
+        <form id="create-ext-form" onSubmit={handleCreate}>
+          <Stack gap="4">
+            {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+              <FormField label="Target Tenant" required>
+                <Select value={tenantId} onChange={(e) => setTenantId(e.target.value)} required>
+                  {tenants.map((t: Tenant) => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.sip_domain})</option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
 
-          <Grid cols={2} gap="4">
-            <FormField label="Extension Number" required>
-              <Input
-                value={extNumber}
-                onChange={(e) => setExtNumber(e.target.value)}
-                placeholder="1001"
-              />
-            </FormField>
-            <FormField label="Display Name" required>
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Alice Smith"
-              />
-            </FormField>
-          </Grid>
+            <Grid cols={2} gap="4">
+              <FormField label="Extension Number" required>
+                <Input
+                  value={extNumber}
+                  onChange={(e) => setExtNumber(e.target.value)}
+                  placeholder="1001"
+                  required
+                />
+              </FormField>
+              <FormField label="Display Name" required>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Alice Smith"
+                  required
+                />
+              </FormField>
+            </Grid>
 
-          <FormField label="User Email Address">
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="alice@acme.com"
-            />
-          </FormField>
+            <FormField label="User Email Address">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="alice@acme.com"
+              />
+            </FormField>
 
-          <Grid cols={2} gap="4">
-            <FormField label="SIP Password" required>
-              <Input
-                type="password"
-                value={sipPassword}
-                onChange={(e) => setSipPassword(e.target.value)}
-                placeholder="SIPPassword123!"
-              />
-            </FormField>
-            <FormField label="Voicemail PIN">
-              <Input
-                value={voicemailPin}
-                onChange={(e) => setVoicemailPin(e.target.value)}
-                placeholder="1234"
-              />
-            </FormField>
-          </Grid>
-        </Stack>
+            <Grid cols={2} gap="4">
+              <FormField label="SIP Password" required>
+                <Input
+                  type="password"
+                  value={sipPassword}
+                  onChange={(e) => setSipPassword(e.target.value)}
+                  placeholder="SIPPassword123!"
+                  required
+                />
+              </FormField>
+              <FormField label="Voicemail PIN">
+                <Input
+                  value={voicemailPin}
+                  onChange={(e) => setVoicemailPin(e.target.value)}
+                  placeholder="1234"
+                />
+              </FormField>
+            </Grid>
+          </Stack>
+        </form>
       </Modal>
 
       {/* Reset Password Modal */}
@@ -400,27 +420,29 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowResetModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleResetPassword} isLoading={loading}>Save Credentials</Button>
+            <Button type="submit" form="reset-pwd-form" variant="primary" isLoading={loading}>Save Credentials</Button>
           </>
         }
       >
-        <Stack gap="4">
-          <FormField label="New SIP Password" hint="Leave empty to keep unchanged">
-            <Input
-              type="password"
-              value={newSipPwd}
-              onChange={(e) => setNewSipPwd(e.target.value)}
-              placeholder="New password..."
-            />
-          </FormField>
-          <FormField label="New Voicemail PIN" hint="Leave empty to keep unchanged">
-            <Input
-              value={newVmPin}
-              onChange={(e) => setNewVmPin(e.target.value)}
-              placeholder="New PIN..."
-            />
-          </FormField>
-        </Stack>
+        <form id="reset-pwd-form" onSubmit={handleResetPassword}>
+          <Stack gap="4">
+            <FormField label="New SIP Password" hint="Leave empty to keep unchanged">
+              <Input
+                type="password"
+                value={newSipPwd}
+                onChange={(e) => setNewSipPwd(e.target.value)}
+                placeholder="New password..."
+              />
+            </FormField>
+            <FormField label="New Voicemail PIN" hint="Leave empty to keep unchanged">
+              <Input
+                value={newVmPin}
+                onChange={(e) => setNewVmPin(e.target.value)}
+                placeholder="New PIN..."
+              />
+            </FormField>
+          </Stack>
+        </form>
       </Modal>
 
       {/* Edit Extension Modal */}
@@ -432,64 +454,75 @@ export const ExtensionsView: React.FC<ExtensionsViewProps> = ({ token, user }) =
         footer={
           <>
             <Button variant="secondary" onClick={() => { setShowEditModal(false); setEditingExtId(null); }}>Cancel</Button>
-            <Button variant="primary" onClick={handleUpdate} isLoading={loading}>Save Extension Changes</Button>
+            <Button type="submit" form="edit-ext-form" variant="primary" isLoading={loading}>Save Extension Changes</Button>
           </>
         }
       >
-        <Stack gap="4">
-          <Grid cols={2} gap="4">
-            <FormField label="Display Name" required>
-              <Input
-                value={editFormData.display_name}
-                onChange={(e) => setEditFormData({ ...editFormData, display_name: e.target.value })}
-              />
-            </FormField>
-            <FormField label="User Email">
-              <Input
-                type="email"
-                value={editFormData.email}
-                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-              />
-            </FormField>
-            <FormField label="Caller ID Name">
-              <Input
-                value={editFormData.caller_id_name}
-                onChange={(e) => setEditFormData({ ...editFormData, caller_id_name: e.target.value })}
-              />
-            </FormField>
-            <FormField label="Caller ID Number">
-              <Input
-                value={editFormData.caller_id_number}
-                onChange={(e) => setEditFormData({ ...editFormData, caller_id_number: e.target.value })}
-              />
-            </FormField>
-            <FormField label="No-Answer Timeout (sec)">
-              <Input
-                type="number"
-                value={String(editFormData.no_answer_timeout)}
-                onChange={(e) => setEditFormData({ ...editFormData, no_answer_timeout: parseInt(e.target.value) || 20 })}
-              />
-            </FormField>
-            <FormField label="WebRTC Softphone">
+        <form id="edit-ext-form" onSubmit={handleUpdate}>
+          <Stack gap="4">
+            {user?.role === 'SUPER_ADMIN' && (
+              <FormField label="Assigned Tenant">
+                <Input
+                  value={tenants.find((t) => t.id === editFormData.tenant_id)?.name || editFormData.tenant_id || 'Global'}
+                  disabled
+                />
+              </FormField>
+            )}
+            <Grid cols={2} gap="4">
+              <FormField label="Display Name" required>
+                <Input
+                  value={editFormData.display_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, display_name: e.target.value })}
+                  required
+                />
+              </FormField>
+              <FormField label="User Email">
+                <Input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Caller ID Name">
+                <Input
+                  value={editFormData.caller_id_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, caller_id_name: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Caller ID Number">
+                <Input
+                  value={editFormData.caller_id_number}
+                  onChange={(e) => setEditFormData({ ...editFormData, caller_id_number: e.target.value })}
+                />
+              </FormField>
+              <FormField label="No-Answer Timeout (sec)">
+                <Input
+                  type="number"
+                  value={String(editFormData.no_answer_timeout)}
+                  onChange={(e) => setEditFormData({ ...editFormData, no_answer_timeout: parseInt(e.target.value) || 20 })}
+                />
+              </FormField>
+              <FormField label="WebRTC Softphone">
+                <Select
+                  value={editFormData.webrtc_enabled ? 'true' : 'false'}
+                  onChange={(e) => setEditFormData({ ...editFormData, webrtc_enabled: e.target.value === 'true' })}
+                >
+                  <option value="true">Enabled (WSS / WebRTC)</option>
+                  <option value="false">Disabled (SIP Only)</option>
+                </Select>
+              </FormField>
+            </Grid>
+            <FormField label="Extension Status">
               <Select
-                value={editFormData.webrtc_enabled ? 'true' : 'false'}
-                onChange={(e) => setEditFormData({ ...editFormData, webrtc_enabled: e.target.value === 'true' })}
+                value={editFormData.enabled ? 'true' : 'false'}
+                onChange={(e) => setEditFormData({ ...editFormData, enabled: e.target.value === 'true' })}
               >
-                <option value="true">Enabled (WSS / WebRTC)</option>
-                <option value="false">Disabled (SIP Only)</option>
+                <option value="true">Active / Registered</option>
+                <option value="false">Suspended / Inactive</option>
               </Select>
             </FormField>
-          </Grid>
-          <FormField label="Extension Status">
-            <Select
-              value={editFormData.enabled ? 'true' : 'false'}
-              onChange={(e) => setEditFormData({ ...editFormData, enabled: e.target.value === 'true' })}
-            >
-              <option value="true">Active / Registered</option>
-              <option value="false">Suspended / Inactive</option>
-            </Select>
-          </FormField>
-        </Stack>
+          </Stack>
+        </form>
       </Modal>
     </ListPageLayout>
   );

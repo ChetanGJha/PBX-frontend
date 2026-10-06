@@ -385,11 +385,12 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleCreateSubmit}>Register Trunk</Button>
+            <Button type="submit" form="create-trunk-form" variant="primary">Register Trunk</Button>
           </>
         }
       >
-        <Stack gap="4">
+        <form id="create-trunk-form" onSubmit={handleCreateSubmit}>
+          <Stack gap="4">
           <Grid cols={2} gap="4">
             <FormField label="Trunk Name" required>
               <Input placeholder="e.g. Tata Telecommunications" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
@@ -448,6 +449,7 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
             </FormField>
           </Grid>
         </Stack>
+        </form>
       </Modal>
 
       {/* EDIT MODAL */}
@@ -459,69 +461,71 @@ export const TrunksView: React.FC<TrunksViewProps> = ({ token, user, readOnly })
         footer={
           <>
             <Button variant="secondary" onClick={() => setEditTrunk(null)}>Cancel</Button>
-            <Button variant="primary" onClick={handleEditSubmit}>Update Trunk</Button>
+            <Button type="submit" form="edit-trunk-form" variant="primary">Update Trunk</Button>
           </>
         }
       >
-        <Stack gap="4">
-          <Grid cols={2} gap="4">
-            <FormField label="Trunk Name" required>
-              <Input value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})} />
-            </FormField>
-            <FormField label="SIP Host / Proxy" required>
-              <Input value={editFormData.host} onChange={e => setEditFormData({...editFormData, host: e.target.value})} />
-            </FormField>
-            <FormField label="SIP Port">
-              <Input type="number" value={String(editFormData.port)} onChange={e => setEditFormData({...editFormData, port: parseInt(e.target.value) || 5060})} />
-            </FormField>
-            <FormField label="Transport Protocol">
-              <Select value={editFormData.transport} onChange={e => setEditFormData({...editFormData, transport: e.target.value})}>
-                <option value="UDP">UDP (Standard)</option>
-                <option value="TCP">TCP</option>
-                <option value="TLS">TLS (Encrypted)</option>
-              </Select>
-            </FormField>
-          </Grid>
+        <form id="edit-trunk-form" onSubmit={handleEditSubmit}>
+          <Stack gap="4">
+            <Grid cols={2} gap="4">
+              <FormField label="Trunk Name" required>
+                <Input value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})} required />
+              </FormField>
+              <FormField label="SIP Host / Proxy" required>
+                <Input value={editFormData.host} onChange={e => setEditFormData({...editFormData, host: e.target.value})} required />
+              </FormField>
+              <FormField label="SIP Port">
+                <Input type="number" value={String(editFormData.port)} onChange={e => setEditFormData({...editFormData, port: parseInt(e.target.value) || 5060})} />
+              </FormField>
+              <FormField label="Transport Protocol">
+                <Select value={editFormData.transport} onChange={e => setEditFormData({...editFormData, transport: e.target.value})}>
+                  <option value="UDP">UDP (Standard)</option>
+                  <option value="TCP">TCP</option>
+                  <option value="TLS">TLS (Encrypted)</option>
+                </Select>
+              </FormField>
+            </Grid>
 
-          <FormField label={`Assigned Tenants (${editFormData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${editFormData.tenant_ids.length} selected`})`}>
-            <Stack gap="2">
-              <Inline gap="2">
-                <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: tenants.map(t => t.id) })}>Select All</Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: [] })}>Clear (Make Shared)</Button>
-              </Inline>
-              <Grid cols={2} gap="2">
-                {tenants.map(t => {
-                  const isSelected = editFormData.tenant_ids.includes(t.id);
-                  return (
-                    <Checkbox
-                      key={t.id}
-                      label={t.name}
-                      checked={isSelected}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...editFormData.tenant_ids, t.id]
-                          : editFormData.tenant_ids.filter((id: string) => id !== t.id);
-                        setEditFormData({ ...editFormData, tenant_ids: next });
-                      }}
-                    />
-                  );
-                })}
-              </Grid>
-            </Stack>
-          </FormField>
+            <FormField label={`Assigned Tenants (${editFormData.tenant_ids.length === 0 ? 'Shared to All Tenants' : `${editFormData.tenant_ids.length} selected`})`}>
+              <Stack gap="2">
+                <Inline gap="2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: tenants.map(t => t.id) })}>Select All</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditFormData({ ...editFormData, tenant_ids: [] })}>Clear (Make Shared)</Button>
+                </Inline>
+                <Grid cols={2} gap="2">
+                  {tenants.map(t => {
+                    const isSelected = editFormData.tenant_ids.includes(t.id);
+                    return (
+                      <Checkbox
+                        key={t.id}
+                        label={t.name}
+                        checked={isSelected}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...editFormData.tenant_ids, t.id]
+                            : editFormData.tenant_ids.filter((id: string) => id !== t.id);
+                          setEditFormData({ ...editFormData, tenant_ids: next });
+                        }}
+                      />
+                    );
+                  })}
+                </Grid>
+              </Stack>
+            </FormField>
 
-          <Grid cols={3} gap="4">
-            <FormField label="Priority Level">
-              <Input type="number" value={String(editFormData.priority)} onChange={e => setEditFormData({...editFormData, priority: parseInt(e.target.value) || 1})} />
-            </FormField>
-            <FormField label="Auth Username">
-              <Input value={editFormData.username} onChange={e => setEditFormData({...editFormData, username: e.target.value})} />
-            </FormField>
-            <FormField label="Auth Password">
-              <Input type="password" value={editFormData.password} onChange={e => setEditFormData({...editFormData, password: e.target.value})} />
-            </FormField>
-          </Grid>
-        </Stack>
+            <Grid cols={3} gap="4">
+              <FormField label="Priority Level">
+                <Input type="number" value={String(editFormData.priority)} onChange={e => setEditFormData({...editFormData, priority: parseInt(e.target.value) || 1})} />
+              </FormField>
+              <FormField label="Auth Username">
+                <Input value={editFormData.username} onChange={e => setEditFormData({...editFormData, username: e.target.value})} />
+              </FormField>
+              <FormField label="Auth Password">
+                <Input type="password" value={editFormData.password} onChange={e => setEditFormData({...editFormData, password: e.target.value})} />
+              </FormField>
+            </Grid>
+          </Stack>
+        </form>
       </Modal>
 
       {/* DELETE MODAL */}

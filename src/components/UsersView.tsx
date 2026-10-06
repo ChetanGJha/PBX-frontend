@@ -88,6 +88,13 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     fetchData();
   }, [token]);
 
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    if (newRole === 'SUPER_ADMIN') {
+      setTargetTenantId('');
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -107,7 +114,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         role,
       };
 
-      if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && targetTenantId) {
+      if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && targetTenantId) {
         payload.tenant_id = targetTenantId;
       } else if (tenantScoped && currentUser?.tenant_id) {
         payload.tenant_id = currentUser.tenant_id;
@@ -198,115 +205,171 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
     return matchesSearch && matchesRole && matchesTenant;
   });
 
-  const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'TENANT_ADMIN';
-
   const columns: Column<UserType>[] = [
-    { key: 'username', header: 'Username', sortable: true, render: (u: UserType) => <span className="font-bold">{u.username}</span> },
-    { key: 'email', header: 'Email' },
-    { key: 'role', header: 'Role', render: (u: UserType) => <Badge variant="primary">{u.role}</Badge> },
-    { key: 'tenant_domain', header: 'Tenant Domain', render: (u: UserType) => <span className="font-mono">{u.tenant_domain || 'Global'}</span> },
-    { key: 'status', header: 'Status', render: () => <Badge variant="success">Active</Badge> },
+    {
+      key: 'username',
+      header: 'Username',
+      sortable: true,
+      render: (u) => (
+        <div>
+          <strong className="font-semibold text-[var(--pbx-text-primary)]">{u.username}</strong>
+          {(u.first_name || u.last_name) && (
+            <div className="text-xs text-[var(--pbx-text-muted)]">
+              {u.first_name} {u.last_name}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      sortable: true,
+      render: (u) => u.email,
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      sortable: true,
+      render: (u) => {
+        const variants: Record<string, 'primary' | 'success' | 'warning' | 'info' | 'neutral'> = {
+          SUPER_ADMIN: 'danger' as any,
+          TENANT_ADMIN: 'primary',
+          SUB_ADMIN: 'info',
+          SUPERVISOR: 'warning',
+          AGENT: 'neutral',
+        };
+        return <Badge variant={variants[u.role] || 'neutral'}>{u.role}</Badge>;
+      },
+    },
+    ...(currentUser?.role === 'SUPER_ADMIN'
+      ? [
+          {
+            key: 'tenant',
+            header: 'Tenant',
+            render: (u: UserType) => {
+              if (u.role === 'SUPER_ADMIN' || !u.tenant_id) return <span className="text-[var(--pbx-text-muted)]">Global</span>;
+              const t = tenants.find((tnt) => tnt.id === u.tenant_id);
+              return t ? t.name : u.tenant_domain || u.tenant_id;
+            },
+          },
+        ]
+      : []),
+    {
+      key: 'modules',
+      header: 'Access Scope',
+      render: (u) => {
+        if (u.role === 'SUPER_ADMIN') return <span className="text-xs text-[var(--pbx-text-muted)]">Full System Access</span>;
+        if (u.role === 'TENANT_ADMIN') return <span className="text-xs text-[var(--pbx-text-muted)]">Full Tenant Suite</span>;
+        if (u.role === 'SUB_ADMIN') {
+          const count = u.allowed_modules?.length || 0;
+          return <span className="text-xs text-[var(--pbx-action-primary)] font-medium">{count} module(s) granted</span>;
+        }
+        return <span className="text-xs text-[var(--pbx-text-muted)]">Standard Access</span>;
+      },
+    },
   ];
 
   return (
-      <ListPageLayout
-        title={tenantScoped ? 'Tenant Admins & Sub-Admins' : 'Global Users & Administrators'}
-        subtitle={
-          tenantScoped
-            ? 'Manage tenant administrators and create sub-admins with modular access (e.g. extensions-only, reporting-only).'
-            : 'Provision Platform Super Administrators, Tenant Master Admins, Sub-Admins, and Staff across all tenants.'
-        }
-        eyebrow={tenantScoped ? 'TENANT MANAGEMENT' : 'SYSTEM'}
-        actions={
-          <Inline gap="3">
-            <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
-              Refresh
-            </Button>
-            {canManage && (
-              <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<UserPlus size={16} />}>
-                {tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin'}
+    <ListPageLayout
+      title={tenantScoped ? 'Tenant Admins & Users' : 'Global User Administration'}
+      subtitle={
+        tenantScoped
+          ? 'Manage sub-administrators, supervisors, and extension agents for your tenant'
+          : 'Provision platform super admins, tenant master administrators, and configure RBAC policies'
+      }
+      eyebrow={tenantScoped ? 'TENANT USER DIRECTORY' : 'PLATFORM RBAC MANAGEMENT'}
+      actions={
+        <Inline gap="3">
+          <Button variant="secondary" onClick={fetchData} isLoading={loading} leftIcon={<RefreshCw size={14} />}>
+            Refresh List
+          </Button>
+          <Button variant="primary" onClick={() => setShowModal(true)} leftIcon={<UserPlus size={16} />}>
+            Provision User Account
+          </Button>
+        </Inline>
+      }
+      alert={error ? <Alert variant="danger" title="User Management Notice">{error}</Alert> : undefined}
+      filterBar={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search username, email, name..."
+          filters={
+            <Inline gap="3">
+              <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
+                <option value="">All Roles</option>
+                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="TENANT_ADMIN">TENANT_ADMIN</option>
+                <option value="SUB_ADMIN">SUB_ADMIN</option>
+                <option value="SUPERVISOR">SUPERVISOR</option>
+                <option value="AGENT">AGENT</option>
+              </Select>
+
+              {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                <Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} className="w-48">
+                  <option value="">All Tenants & Global</option>
+                  <option value="global">Global (No Tenant)</option>
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </Select>
+              )}
+            </Inline>
+          }
+        />
+      }
+    >
+      <DataTable
+        columns={columns}
+        data={filteredUsers}
+        isLoading={loading}
+        emptyTitle="No user accounts found"
+        emptyDescription="Click 'Provision User Account' to create a new user profile."
+        actions={(u) => (
+          <Inline gap="2" justify="center" wrap={false}>
+            {u.role === 'SUB_ADMIN' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openPermModal(u)}
+                title="Configure Accessible Modules"
+              >
+                <Settings size={14} />
+              </Button>
+            )}
+            {currentUser?.id !== u.id && (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDelete(u.id)}
+                title="Deactivate Account"
+              >
+                <Trash2 size={14} />
               </Button>
             )}
           </Inline>
-        }
-        alert={error ? <Alert variant="danger">{error}</Alert> : undefined}
-        filterBar={
-          <FilterBar
-            searchValue={searchTerm}
-            onSearchChange={setSearchTerm}
-            searchPlaceholder="Search username or email..."
-            filters={
-              <Inline gap="3" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
-                <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="w-40">
-                  <option value="">All Roles</option>
-                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                  <option value="TENANT_ADMIN">TENANT_ADMIN</option>
-                  <option value="SUB_ADMIN">SUB_ADMIN</option>
-                  <option value="SUPERVISOR">SUPERVISOR</option>
-                  <option value="AGENT">AGENT</option>
-                </Select>
-
-                {currentUser?.role === 'SUPER_ADMIN' && !tenantScoped && tenants.length > 0 && (
-                  <Select value={tenantFilter} onChange={(e) => setTenantFilter(e.target.value)} className="w-48">
-                    <option value="">All Tenants</option>
-                    <option value="global">Global / System</option>
-                    {tenants.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.domain})
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Inline>
-            }
-            actions={
-              <div className="text-xs font-semibold text-[var(--pbx-text-secondary)]">
-                Total Users: <span className="text-[var(--pbx-text-primary)]">{filteredUsers.length}</span>
-              </div>
-            }
-          />
-        }
-      >
-        <DataTable
-          columns={columns}
-          data={filteredUsers}
-          isLoading={loading}
-          emptyTitle="No users found"
-          emptyDescription="Provision a new user account to get started."
-          actions={(u: UserType) => (
-            <Inline gap="1" justify="center" wrap={false}>
-              {u.role === 'SUB_ADMIN' && (
-                <Button variant="ghost" size="sm" onClick={() => openPermModal(u)} title="Configure Permissions">
-                  <Settings size={14} />
-                </Button>
-              )}
-              {canManage && (
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(u.id)} title="Deactivate User">
-                  <Trash2 size={14} className="text-rose-600" />
-                </Button>
-              )}
-            </Inline>
-          )}
-        />
+        )}
+      />
 
       {/* Create User Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title={tenantScoped ? 'Provision Sub-Admin / Staff' : 'Provision User / Admin Account'}
-        subtitle="Create credentials and assign domain role & permissions"
+        onClose={() => { setShowModal(false); resetForm(); }}
+        title="Provision User Account"
+        subtitle="Create a new authentication profile and assign RBAC permissions"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+            <Button variant="secondary" onClick={() => { setShowModal(false); resetForm(); }}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreate} isLoading={loading}>
+            <Button type="submit" form="create-user-form" variant="primary" isLoading={loading}>
               Create User Account
             </Button>
           </>
         }
       >
-        <form onSubmit={handleCreate}>
+        <form id="create-user-form" onSubmit={handleCreate}>
           <Stack gap="4">
             <Grid cols={2} gap="4">
               <FormField label="First Name">
@@ -330,7 +393,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             </FormField>
 
             <FormField label="Role" required>
-              <Select value={role} onChange={(e) => setRole(e.target.value)}>
+              <Select value={role} onChange={(e) => handleRoleChange(e.target.value)}>
                 {!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
                 <option value="TENANT_ADMIN">TENANT_ADMIN</option>
                 <option value="SUB_ADMIN">SUB_ADMIN (Custom Modules)</option>
@@ -385,13 +448,13 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             <Button variant="secondary" onClick={() => setPermModalUser(null)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleSavePermissions} isLoading={savingPerms}>
+            <Button type="submit" form="edit-perms-form" variant="primary" isLoading={savingPerms}>
               Save Permissions
             </Button>
           </>
         }
       >
-        <form onSubmit={handleSavePermissions}>
+        <form id="edit-perms-form" onSubmit={handleSavePermissions}>
           <Stack gap="3">
             <div className="grid grid-cols-2 gap-2">
               {AVAILABLE_MODULES.map((m) => (

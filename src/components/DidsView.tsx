@@ -260,41 +260,44 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-            <Button variant="primary" onClick={handleAddDid}>Add DID</Button>
+            <Button type="submit" form="add-did-form" variant="primary">Add DID</Button>
           </>
         }
       >
-        <Stack gap="4">
-          <FormField label="DID Phone Number" required>
-            <Input
-              value={addForm.did_number}
-              onChange={e => setAddForm({...addForm, did_number: e.target.value})}
-              placeholder="e.g. +18005550199"
-            />
-          </FormField>
-          <FormField label="Provider SIP Trunk / Gateway">
-            <Select
-              value={addForm.trunk_id}
-              onChange={e => setAddForm({ ...addForm, trunk_id: e.target.value })}
-            >
-              <option value="">-- Select Host SIP Trunk --</option>
-              {trunks.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Assign to Tenant (Optional)">
-            <Select
-              value={addForm.tenant_id}
-              onChange={e => setAddForm({ ...addForm, tenant_id: e.target.value })}
-            >
-              <option value="">-- Free / Unallocated --</option>
-              {tenants.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-              ))}
-            </Select>
-          </FormField>
-        </Stack>
+        <form id="add-did-form" onSubmit={handleAddDid}>
+          <Stack gap="4">
+            <FormField label="DID Phone Number" required>
+              <Input
+                value={addForm.did_number}
+                onChange={e => setAddForm({...addForm, did_number: e.target.value})}
+                placeholder="e.g. +18005550199"
+                required
+              />
+            </FormField>
+            <FormField label="Provider SIP Trunk / Gateway">
+              <Select
+                value={addForm.trunk_id}
+                onChange={e => setAddForm({ ...addForm, trunk_id: e.target.value })}
+              >
+                <option value="">-- Select Host SIP Trunk --</option>
+                {trunks.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Assign to Tenant (Optional)">
+              <Select
+                value={addForm.tenant_id}
+                onChange={e => setAddForm({ ...addForm, tenant_id: e.target.value })}
+              >
+                <option value="">-- Free / Unallocated --</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                ))}
+              </Select>
+            </FormField>
+          </Stack>
+        </form>
       </Modal>
 
       {/* EDIT DID MODAL */}
@@ -306,47 +309,50 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
         footer={
           <>
             <Button variant="secondary" onClick={() => setEditDid(null)}>Cancel</Button>
-            <Button variant="primary" onClick={handleEditSubmit}>Update DID</Button>
+            <Button type="submit" form="edit-did-form" variant="primary">Update DID</Button>
           </>
         }
       >
-        <Stack gap="4">
-          <FormField label="DID Phone Number" required>
-            <Input
-              value={editForm.did_number}
-              onChange={e => setEditForm({...editForm, did_number: e.target.value})}
-            />
-          </FormField>
-          <FormField label="Provider SIP Trunk / Gateway">
-            <Select
-              value={editForm.trunk_id}
-              onChange={e => setEditForm({ ...editForm, trunk_id: e.target.value })}
-            >
-              <option value="">-- Select Host SIP Trunk --</option>
-              {trunks.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Assign to Tenant (Optional)">
-            <Select
-              value={editForm.tenant_id}
-              onChange={e => setEditForm({ ...editForm, tenant_id: e.target.value })}
-            >
-              <option value="">-- Free / Unallocated --</option>
-              {tenants.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField label="Inbound Destination Target">
-            <Input
-              placeholder="e.g. 1001 or Main IVR"
-              value={editForm.destination}
-              onChange={e => setEditForm({...editForm, destination: e.target.value})}
-            />
-          </FormField>
-        </Stack>
+        <form id="edit-did-form" onSubmit={handleEditSubmit}>
+          <Stack gap="4">
+            <FormField label="DID Phone Number" required>
+              <Input
+                value={editForm.did_number}
+                onChange={e => setEditForm({...editForm, did_number: e.target.value})}
+                required
+              />
+            </FormField>
+            <FormField label="Provider SIP Trunk / Gateway">
+              <Select
+                value={editForm.trunk_id}
+                onChange={e => setEditForm({ ...editForm, trunk_id: e.target.value })}
+              >
+                <option value="">-- Select Host SIP Trunk --</option>
+                {trunks.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.host})</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Assign to Tenant (Optional)">
+              <Select
+                value={editForm.tenant_id}
+                onChange={e => setEditForm({ ...editForm, tenant_id: e.target.value })}
+              >
+                <option value="">-- Free / Unallocated --</option>
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Inbound Destination Target">
+              <Input
+                placeholder="e.g. 1001 or Main IVR"
+                value={editForm.destination}
+                onChange={e => setEditForm({...editForm, destination: e.target.value})}
+              />
+            </FormField>
+          </Stack>
+        </form>
       </Modal>
 
       {/* DELETE DID MODAL */}
@@ -376,21 +382,24 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
         footer={
           <>
             <Button variant="secondary" onClick={() => setDidToAssign(null)}>Cancel</Button>
-            <Button variant="primary" onClick={handleAssignDid}>Assign Number</Button>
+            <Button type="submit" form="assign-did-form" variant="primary">Assign Number</Button>
           </>
         }
       >
-        <FormField label="Target Tenant">
-          <Select
-            value={selectedTenantId}
-            onChange={e => setSelectedTenantId(e.target.value)}
-          >
-            <option value="">-- Select Tenant --</option>
-            {tenants.map(t => (
-              <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
-            ))}
-          </Select>
-        </FormField>
+        <form id="assign-did-form" onSubmit={handleAssignDid}>
+          <FormField label="Target Tenant">
+            <Select
+              value={selectedTenantId}
+              onChange={e => setSelectedTenantId(e.target.value)}
+              required
+            >
+              <option value="">-- Select Tenant --</option>
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+              ))}
+            </Select>
+          </FormField>
+        </form>
       </Modal>
     </ListPageLayout>
   );

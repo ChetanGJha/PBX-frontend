@@ -42,6 +42,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 const canAccess = (user: User | null, tab: string) => {
   if (!user) return false;
   const role = user.role || 'AGENT';
+  if (tab === 'contacts' && role === 'SUPER_ADMIN') return false;
   if (role === 'SUPER_ADMIN') return true;
   if (tab === 'dashboard' || tab === 'help') return true;
 
@@ -137,6 +138,12 @@ export const App: React.FC = () => {
       apiService.getGateways(token).then(setGateways).catch(() => {});
     }
   }, [token, user?.role, activeTab]);
+
+  useEffect(() => {
+    if (user && !canAccess(user, activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [user, activeTab]);
 
   const handleLoginSuccess = (newToken: string, newUser: User) => {
     setToken(newToken);

@@ -63,7 +63,7 @@ const navGroups: NavGroup[] = [
       { id: 'conferences',      label: 'Conferences',      icon: Users2,          roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'call-block',       label: 'Call Block',       icon: Ban,             roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
       { id: 'business-hours',   label: 'Business Hours',   icon: Clock,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
-      { id: 'contacts',         label: 'Contacts',         icon: Contact,         roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR', 'AGENT'] },
+      { id: 'contacts',         label: 'Contacts',         icon: Contact,         roles: ['TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR', 'AGENT'] },
     ],
   },
   {
@@ -85,6 +85,7 @@ function isItemVisible(item: NavItem, user: UserType | null, groupLabel?: string
   if (!user) return false;
   const role = user.role || 'AGENT';
 
+  if (item.id === 'contacts' && role === 'SUPER_ADMIN') return false;
   if (role === 'SUPER_ADMIN') return true;
   if (item.id === 'dashboard' || item.id === 'help') return true;
 
