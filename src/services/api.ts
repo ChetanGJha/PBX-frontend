@@ -78,8 +78,8 @@ export const apiService = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Failed to seed super admin');
+      const err = await res.json().catch(() => ({ detail: 'Failed to seed super admin' }));
+      throw new Error(parseErrorDetail(err, 'Failed to seed super admin'));
     }
     return res.json();
   },
