@@ -48,7 +48,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Tenant Management',
     items: [
-      { id: 'tenant-users',     label: 'Admins & Users',   icon: UserCog,         roles: ['SUPER_ADMIN', 'TENANT_ADMIN'] },
+      { id: 'tenant-users',     label: 'Admins & Users',   icon: UserCog,         roles: ['TENANT_ADMIN'] },
       { id: 'email-settings',   label: 'SMTP & Email',     icon: Mail,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN'] },
       { id: 'extensions',       label: 'SIP Extensions',   icon: Phone,           roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
       { id: 'tenant-dids',      label: 'Assigned DIDs',    icon: Hash,            roles: ['SUPER_ADMIN', 'TENANT_ADMIN', 'SUB_ADMIN', 'SUPERVISOR'] },
@@ -85,7 +85,7 @@ function isItemVisible(item: NavItem, user: UserType | null, groupLabel?: string
   if (!user) return false;
   const role = user.role || 'AGENT';
 
-  if (item.id === 'contacts' && role === 'SUPER_ADMIN') return false;
+  if ((item.id === 'contacts' || item.id === 'tenant-users') && role === 'SUPER_ADMIN') return false;
   if (role === 'SUPER_ADMIN') return true;
   if (item.id === 'dashboard' || item.id === 'help') return true;
 
