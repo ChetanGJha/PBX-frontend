@@ -94,7 +94,9 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
   // Combine Gateways and Trunks for selection
   const combinedGateways = useMemo(() => {
-    const list = [...gateways, ...trunks];
+    const realGws = gateways.map(g => ({ ...g, is_real_gateway: true }));
+    const sipTrunks = trunks.map(t => ({ ...t, is_real_gateway: false }));
+    const list = [...realGws, ...sipTrunks];
     const uniqueMap = new Map();
     list.forEach(item => {
       if (item.id && !uniqueMap.has(item.id)) {
@@ -188,7 +190,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
         ...prev,
         route_type: 'outbound',
         destination_type: 'gateway',
-        gateway_id: defaultGw ? defaultGw.id : '',
+        gateway_id: defaultGw && defaultGw.is_real_gateway ? defaultGw.id : '',
         destination: defaultGw ? (defaultGw.name || defaultGw.host || 'Gateway') : 'Outbound Gateway',
         did_number: prev.did_number && prev.did_number !== '' ? prev.did_number : '^91\\d{10}$'
       }));
@@ -214,7 +216,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       setFormData(prev => ({
         ...prev,
         destination_type: 'gateway',
-        gateway_id: defaultGw.id,
+        gateway_id: defaultGw && defaultGw.is_real_gateway ? defaultGw.id : '',
         destination: defaultGw.name || defaultGw.host || 'Gateway'
       }));
       return;
@@ -601,7 +603,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     const selectedGw = combinedGateways.find(g => g.id === e.target.value);
                     setFormData(prev => ({
                       ...prev,
-                      gateway_id: e.target.value,
+                      gateway_id: selectedGw && selectedGw.is_real_gateway ? selectedGw.id : '',
                       destination: selectedGw ? (selectedGw.name || selectedGw.host || 'Gateway') : 'Outbound Gateway'
                     }));
                   }}
@@ -778,7 +780,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     const selectedGw = combinedGateways.find(g => g.id === e.target.value);
                     setEditFormData(prev => ({
                       ...prev,
-                      gateway_id: e.target.value,
+                      gateway_id: selectedGw && selectedGw.is_real_gateway ? selectedGw.id : '',
                       destination: selectedGw ? (selectedGw.name || selectedGw.host || 'Gateway') : 'Outbound Gateway'
                     }));
                   }}
