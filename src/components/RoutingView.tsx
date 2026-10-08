@@ -28,6 +28,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const [queues, setQueues] = useState<any[]>([]);
   const [ivrs, setIvrs] = useState<any[]>([]);
   const [dids, setDids] = useState<any[]>([]);
+  const [gateways, setGateways] = useState<any[]>([]);
+  const [trunks, setTrunks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -60,13 +62,15 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [rData, tData, extData, qData, ivrData, didData] = await Promise.allSettled([
+      const [rData, tData, extData, qData, ivrData, didData, gData, trData] = await Promise.allSettled([
         apiService.getRoutes(token),
         user?.role === 'SUPER_ADMIN' ? apiService.getTenants(token) : Promise.resolve([]),
         apiService.getExtensions(token),
         apiService.getQueues(token),
         apiService.getIvrs(token),
         apiService.getDids(token),
+        apiService.getGateways(token),
+        apiService.getTrunks(token),
       ]);
 
       if (rData.status === 'fulfilled') setRoutes(rData.value);
@@ -75,6 +79,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       if (qData.status === 'fulfilled') setQueues(qData.value);
       if (ivrData.status === 'fulfilled') setIvrs(ivrData.value);
       if (didData.status === 'fulfilled') setDids(didData.value);
+      if (gData.status === 'fulfilled') setGateways(gData.value);
+      if (trData.status === 'fulfilled') setTrunks(trData.value);
     } catch (err) {
       console.error('Failed to load routing data:', err);
     } finally {
@@ -85,6 +91,18 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   useEffect(() => {
     loadData();
   }, [token]);
+
+  // Combine Gateways and Trunks for selection
+  const combinedGateways = useMemo(() => {
+    const list = [...gateways, ...trunks];
+    const uniqueMap = new Map();
+    list.forEach(item => {
+      if (item.id && !uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  }, [gateways, trunks]);
 
   // Set default tenant when tenants list loads for SUPER_ADMIN if empty
   useEffect(() => {
@@ -163,12 +181,44 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     }));
   };
 
+  const handleRouteTypeChange = (newRouteType: string) => {
+    if (newRouteType === 'outbound') {
+      const defaultGw = combinedGateways[0];
+      setFormData(prev => ({
+        ...prev,
+        route_type: 'outbound',
+        destination_type: 'gateway',
+        gateway_id: defaultGw ? defaultGw.id : '',
+        destination: defaultGw ? (defaultGw.name || defaultGw.host || 'Gateway') : 'Outbound Gateway',
+        did_number: prev.did_number && prev.did_number !== '' ? prev.did_number : '^91\\d{10}$'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        route_type: 'inbound_did',
+        destination_type: 'queue',
+        gateway_id: '',
+        destination: filteredQueues[0] ? filteredQueues[0].queue_number : ''
+      }));
+    }
+  };
+
   const handleDestTypeChange = (newType: string) => {
     let def = '';
     if (newType === 'queue' && filteredQueues.length > 0) def = filteredQueues[0].queue_number;
     else if (newType === 'extension' && filteredExtensions.length > 0) def = filteredExtensions[0].extension_number;
     else if (newType === 'ivr' && filteredIvrs.length > 0) def = filteredIvrs[0].name;
     else if (newType === 'voicemail' && filteredExtensions.length > 0) def = filteredExtensions[0].extension_number;
+    else if (newType === 'gateway' && combinedGateways.length > 0) {
+      const defaultGw = combinedGateways[0];
+      setFormData(prev => ({
+        ...prev,
+        destination_type: 'gateway',
+        gateway_id: defaultGw.id,
+        destination: defaultGw.name || defaultGw.host || 'Gateway'
+      }));
+      return;
+    }
 
     setFormData(prev => ({
       ...prev,
@@ -480,7 +530,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
               <FormField label="Route Type">
                 <Select
                   value={formData.route_type}
-                  onChange={e => setFormData({ ...formData, route_type: e.target.value })}
+                  onChange={e => handleRouteTypeChange(e.target.value)}
                 >
                   <option value="inbound_did">Inbound DID Route</option>
                   <option value="outbound">Outbound Dialplan Rule</option>
@@ -517,7 +567,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                   <Input
                     value={formData.did_number}
                     onChange={e => setFormData({ ...formData, did_number: e.target.value })}
-                    placeholder="e.g. ^91\d{10}$"
+                    placeholder="e.g. ^91\d{10}$ or .*"
                     required
                   />
                 )}
@@ -529,45 +579,75 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                   onChange={e => handleDestTypeChange(e.target.value)}
                   disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
                 >
-                  <option value="queue">Call Queue</option>
-                  <option value="extension">Extension</option>
-                  <option value="ivr">IVR Menu Flow</option>
-                  <option value="voicemail">Voicemail Box</option>
+                  {formData.route_type === 'outbound' ? (
+                    <option value="gateway">SIP Gateway / Trunk (Outbound Only)</option>
+                  ) : (
+                    <>
+                      <option value="queue">Call Queue</option>
+                      <option value="extension">Extension</option>
+                      <option value="ivr">IVR Menu Flow</option>
+                      <option value="voicemail">Voicemail Box</option>
+                    </>
+                  )}
                 </Select>
               </FormField>
             </Grid>
 
-            <FormField
-              label="Destination Target"
-              required
-              hint={
-                user?.role === 'SUPER_ADMIN' && !formData.tenant_id
-                  ? 'Select a Target Tenant first to view available targets'
-                  : `(${formData.destination_type === 'queue' ? filteredQueues.length + ' queue(s)' : formData.destination_type === 'ivr' ? filteredIvrs.length + ' IVR flow(s)' : filteredExtensions.length + ' extension(s)'} available)`
-              }
-            >
-              {destinationOptions.length > 0 ? (
+            {formData.route_type === 'outbound' || formData.destination_type === 'gateway' ? (
+              <FormField label="Outbound Gateway / Trunk" required hint="Carrier gateway or trunk for routing outbound calls">
                 <Select
-                  value={formData.destination}
-                  onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                  value={formData.gateway_id || (combinedGateways.find(g => g.name === formData.destination)?.id || '')}
+                  onChange={e => {
+                    const selectedGw = combinedGateways.find(g => g.id === e.target.value);
+                    setFormData(prev => ({
+                      ...prev,
+                      gateway_id: e.target.value,
+                      destination: selectedGw ? (selectedGw.name || selectedGw.host || 'Gateway') : 'Outbound Gateway'
+                    }));
+                  }}
                   required
-                  disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
                 >
-                  <option value="">-- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
-                  {destinationOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option value="">-- Select Outbound Gateway / Trunk --</option>
+                  {combinedGateways.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.host || g.proxy || 'Gateway'})
+                    </option>
                   ))}
                 </Select>
-              ) : (
-                <Input
-                  value={formData.destination}
-                  onChange={e => setFormData({ ...formData, destination: e.target.value })}
-                  placeholder="e.g. 7001 or 1001"
-                  required
-                  disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
-                />
-              )}
-            </FormField>
+              </FormField>
+            ) : (
+              <FormField
+                label="Destination Target"
+                required
+                hint={
+                  user?.role === 'SUPER_ADMIN' && !formData.tenant_id
+                    ? 'Select a Target Tenant first to view available targets'
+                    : `(${formData.destination_type === 'queue' ? filteredQueues.length + ' queue(s)' : formData.destination_type === 'ivr' ? filteredIvrs.length + ' IVR flow(s)' : filteredExtensions.length + ' extension(s)'} available)`
+                }
+              >
+                {destinationOptions.length > 0 ? (
+                  <Select
+                    value={formData.destination}
+                    onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                    required
+                    disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
+                  >
+                    <option value="">-- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                    {destinationOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input
+                    value={formData.destination}
+                    onChange={e => setFormData({ ...formData, destination: e.target.value })}
+                    placeholder="e.g. 7001 or 1001"
+                    required
+                    disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
+                  />
+                )}
+              </FormField>
+            )}
           </Stack>
         </form>
       </Modal>
@@ -615,7 +695,26 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
               <FormField label="Route Type">
                 <Select
                   value={editFormData.route_type}
-                  onChange={e => setEditFormData({ ...editFormData, route_type: e.target.value })}
+                  onChange={e => {
+                    const newRouteType = e.target.value;
+                    if (newRouteType === 'outbound') {
+                      const defaultGw = combinedGateways[0];
+                      setEditFormData(prev => ({
+                        ...prev,
+                        route_type: 'outbound',
+                        destination_type: 'gateway',
+                        gateway_id: defaultGw ? defaultGw.id : prev.gateway_id,
+                        destination: defaultGw ? (defaultGw.name || defaultGw.host || 'Gateway') : (prev.destination || 'Outbound Gateway')
+                      }));
+                    } else {
+                      setEditFormData(prev => ({
+                        ...prev,
+                        route_type: 'inbound_did',
+                        destination_type: 'queue',
+                        gateway_id: ''
+                      }));
+                    }
+                  }}
                 >
                   <option value="inbound_did">Inbound DID Route</option>
                   <option value="outbound">Outbound Dialplan Rule</option>
@@ -657,34 +756,64 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                   value={editFormData.destination_type}
                   onChange={e => handleEditDestTypeChange(e.target.value)}
                 >
-                  <option value="queue">Call Queue</option>
-                  <option value="extension">Extension</option>
-                  <option value="ivr">IVR Menu Flow</option>
-                  <option value="voicemail">Voicemail Box</option>
+                  {editFormData.route_type === 'outbound' ? (
+                    <option value="gateway">SIP Gateway / Trunk (Outbound Only)</option>
+                  ) : (
+                    <>
+                      <option value="queue">Call Queue</option>
+                      <option value="extension">Extension</option>
+                      <option value="ivr">IVR Menu Flow</option>
+                      <option value="voicemail">Voicemail Box</option>
+                    </>
+                  )}
                 </Select>
               </FormField>
             </Grid>
 
-            <FormField label="Destination Target" required>
-              {editDestinationOptions.length > 0 ? (
+            {editFormData.route_type === 'outbound' || editFormData.destination_type === 'gateway' ? (
+              <FormField label="Outbound Gateway / Trunk" required hint="Carrier gateway or trunk for routing outbound calls">
                 <Select
-                  value={editFormData.destination}
-                  onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
+                  value={editFormData.gateway_id || (combinedGateways.find(g => g.name === editFormData.destination)?.id || '')}
+                  onChange={e => {
+                    const selectedGw = combinedGateways.find(g => g.id === e.target.value);
+                    setEditFormData(prev => ({
+                      ...prev,
+                      gateway_id: e.target.value,
+                      destination: selectedGw ? (selectedGw.name || selectedGw.host || 'Gateway') : 'Outbound Gateway'
+                    }));
+                  }}
                   required
                 >
-                  <option value="">-- Select {editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
-                  {editDestinationOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option value="">-- Select Outbound Gateway / Trunk --</option>
+                  {combinedGateways.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.host || g.proxy || 'Gateway'})
+                    </option>
                   ))}
                 </Select>
-              ) : (
-                <Input
-                  value={editFormData.destination}
-                  onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
-                  required
-                />
-              )}
-            </FormField>
+              </FormField>
+            ) : (
+              <FormField label="Destination Target" required>
+                {editDestinationOptions.length > 0 ? (
+                  <Select
+                    value={editFormData.destination}
+                    onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
+                    required
+                  >
+                    <option value="">-- Select {editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                    {editDestinationOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input
+                    value={editFormData.destination}
+                    onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
+                    required
+                  />
+                )}
+              </FormField>
+            )}
           </Stack>
         </form>
       </Modal>
