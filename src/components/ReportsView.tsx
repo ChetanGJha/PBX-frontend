@@ -12,6 +12,7 @@ import {
   Square,
   RotateCcw,
   Download,
+  PieChart,
 } from 'lucide-react';
 import { ListPageLayout } from './layout';
 import { Inline } from './layout/Stack';
@@ -32,7 +33,7 @@ interface ReportsViewProps {
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
-  const [activeTab, setActiveTab] = useState<'cdr' | 'internal' | 'outbound' | 'recordings'>('cdr');
+  const [activeTab, setActiveTab] = useState<'summary' | 'cdr' | 'internal' | 'outbound' | 'recordings'>('summary');
   const [tenants, setTenants] = useState<any[]>([]);
   const [selectedTenant, setSelectedTenant] = useState(user?.tenant_id || '');
   const [startDate, setStartDate] = useState('');
@@ -137,7 +138,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   const loadReport = async () => {
     try {
       setLoading(true);
-      if (activeTab === 'cdr') {
+      if (activeTab === 'summary') {
+        const data = await apiService.getTenantSummaryReport(token, startDate, endDate);
+        setReportData(data);
+      } else if (activeTab === 'cdr') {
         const data = await apiService.getCdrReport(token, selectedTenant, startDate, endDate);
         setReportData(data);
       } else if (activeTab === 'internal') {
@@ -198,6 +202,61 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   };
 
   const hasActiveFilters = Boolean((user?.role === 'SUPER_ADMIN' && selectedTenant) || startDate || endDate);
+
+  const summaryColumns = [
+    {
+      key: 'tenant_name',
+      header: 'Tenant Domain',
+      render: (r: any) => (
+        <div>
+          <div className="font-bold text-sm text-[var(--pbx-text-primary)]">{r.tenant_name || 'Global Domain'}</div>
+          <div className="text-xs text-[var(--pbx-text-secondary)]">{r.tenant_domain || 'global'}</div>
+        </div>
+      )
+    },
+    {
+      key: 'total_calls',
+      header: 'Total Calls',
+      render: (r: any) => <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">{r.total_calls || 0}</span>
+    },
+    {
+      key: 'inbound_calls',
+      header: 'Inbound Calls',
+      render: (r: any) => (
+        <Badge variant="info">
+          {r.inbound_calls || 0} <span className="text-[10px] opacity-75 ml-1">({Math.round((r.inbound_duration_sec || 0) / 60)}m)</span>
+        </Badge>
+      )
+    },
+    {
+      key: 'outbound_calls',
+      header: 'Outbound Calls',
+      render: (r: any) => (
+        <Badge variant="warning">
+          {r.outbound_calls || 0} <span className="text-[10px] opacity-75 ml-1">({Math.round((r.outbound_duration_sec || 0) / 60)}m)</span>
+        </Badge>
+      )
+    },
+    {
+      key: 'outbound_answered',
+      header: 'Answered',
+      render: (r: any) => <Badge variant="success">{r.outbound_answered || 0}</Badge>
+    },
+    {
+      key: 'outbound_failed',
+      header: 'Failed',
+      render: (r: any) => <Badge variant="danger">{r.outbound_failed || 0}</Badge>
+    },
+    {
+      key: 'total_billsec',
+      header: 'Billable Time',
+      render: (r: any) => (
+        <span className="font-medium text-sm text-[var(--pbx-text-primary)]">
+          {Math.round((r.total_billsec || 0) / 60)} <span className="text-xs text-[var(--pbx-text-muted)]">mins</span>
+        </span>
+      )
+    },
+  ];
 
   const cdrColumns = [
     {
@@ -429,7 +488,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         <FilterBar
           filters={
             <Inline gap="4" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
-              {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+              {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && activeTab !== 'summary' && (
                 <Select
                   value={selectedTenant}
                   onChange={(e) => setSelectedTenant(e.target.value)}
@@ -500,6 +559,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
           onChange={(id) => setActiveTab(id as any)}
           variant="line"
           items={[
+            { id: 'summary', label: 'Summarized Reports (Traffic-wise)', icon: <PieChart size={16} /> },
             { id: 'cdr', label: 'Call Detail Records (CDR)', icon: <FileText size={16} /> },
             { id: 'internal', label: 'Internal Calls Summary', icon: <PhoneCall size={16} /> },
             { id: 'outbound', label: 'Outbound Calls Analytics', icon: <PhoneOutgoing size={16} /> },
@@ -507,7 +567,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
           ]}
         />
 
-        {/* Data Table */}
+        {/* Data Tables */}
+        {activeTab === 'summary' && (
+          <DataTable
+            columns={summaryColumns}
+            data={reportData}
+            isLoading={loading}
+            emptyTitle="No summary traffic records found"
+          />
+        )}
+
         {activeTab === 'cdr' && (
           <DataTable
             columns={cdrColumns}
@@ -568,6 +637,3 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     </ListPageLayout>
   );
 };
-
-
-

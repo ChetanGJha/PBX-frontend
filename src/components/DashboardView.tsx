@@ -3,23 +3,48 @@ import { apiService } from '../services/api';
 import type { SystemStatus, User } from '../types';
 import {
   Building2,
-  Users,
   Phone,
   ArrowLeftRight,
   Server,
   Hash,
   GitBranch,
-  List,
-  BarChart2,
-  Voicemail,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  Cpu,
+  HardDrive,
+  TrendingUp,
+  PhoneIncoming,
+  PhoneOutgoing
 } from 'lucide-react';
 
 import { PageContainer, PageHeader } from './layout/PageContainer';
-import { Stack, Grid } from './layout/Stack';
-import { Card, StatCard, Heading, Text, Button, Badge, IconTile } from './ui';
+import { Stack, Grid, Inline } from './layout/Stack';
+import { Card, StatCard, Heading, Text, Badge, IconTile } from './ui';
 
+interface DashboardMetrics {
+  system_utilization: {
+    cpu_percent: number;
+    memory_percent: number;
+    disk_percent: number;
+  };
+  counts: {
+    tenants: number;
+    carriers: number;
+    extensions: number;
+    dids: number;
+    queues_and_ivrs: number;
+  };
+  live_calls: number;
+  traffic_summary: {
+    inbound: { total: number; answered: number; unanswered: number; failed: number };
+    outbound: { total: number; answered: number; unanswered: number; failed: number };
+  };
+  traffic_peak: {
+    inbound_peak: number;
+    outbound_peak: number;
+  };
+}
 
 interface DashboardViewProps {
   token: string;
@@ -39,11 +64,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
     database: 'disconnected',
     redis: 'disconnected'
   });
-  const [tenantCount, setTenantCount] = useState<number>(0);
-  const [userCount, setUserCount] = useState<number>(0);
-  const [extensionCount, setExtensionCount] = useState<number>(0);
-  const [gatewayCount, setGatewayCount] = useState<number>(0);
-  const [didCount, setDidCount] = useState<number>(0);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -57,18 +78,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
     const fetchMetrics = async () => {
       try {
-        if (user?.role === 'SUPER_ADMIN') {
-          const tenants = await apiService.getTenants(token);
-          setTenantCount(tenants.length);
-          const usersList = await apiService.getUsers(token);
-          setUserCount(usersList.length);
-        }
-        const extList = await apiService.getExtensions(token);
-        setExtensionCount(extList.length);
-        const gwList = await apiService.getGateways(token);
-        setGatewayCount(gwList.length);
-        const didList = await apiService.getDids(token);
-        setDidCount(didList.length);
+        const data = await apiService.getDashboardMetrics(token);
+        setMetrics(data);
       } catch (err) {
         console.error('Failed to fetch dashboard metrics:', err);
       }
@@ -76,18 +87,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
     fetchStatus();
     fetchMetrics();
-  }, [token, user]);
+  }, [token]);
 
   const isSuper = user?.role === 'SUPER_ADMIN';
-
-  const canAccessTab = (modId: string) => {
-    if (!user) return false;
-    if (user.role === 'SUPER_ADMIN' || user.role === 'TENANT_ADMIN') return true;
-    if (user.role === 'SUB_ADMIN') {
-      return (user.allowed_modules || []).includes(modId);
-    }
-    return false;
-  };
 
   return (
     <PageContainer>
@@ -107,215 +109,254 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
           }
         />
 
-        {/* ── METRICS GRID ────────────────────────────────────────────────────── */}
+        {/* ── TOP STAT CARDS ────────────────────────────────────────────────────── */}
         <Grid cols={4} gap="6">
           {isSuper ? (
             <>
               <div className="cursor-pointer h-full" onClick={() => setActiveTab('tenants')}>
                 <StatCard
-                  title="Active Tenants"
-                  value={tenantCount}
+                  title="Number of Tenants"
+                  value={metrics?.counts.tenants ?? 0}
                   icon={<Building2 size={20} />}
-                  trend="Multi-Tenant Domain Isolations"
-                />
-              </div>
-
-              <div className="cursor-pointer h-full" onClick={() => setActiveTab('users')}>
-                <StatCard
-                  title="Total Users"
-                  value={userCount}
-                  icon={<Users size={20} />}
-                  trend="RBAC Platform Accounts"
+                  trend="Multi-Tenant Organizations"
                 />
               </div>
 
               <div className="cursor-pointer h-full" onClick={() => setActiveTab('trunks')}>
                 <StatCard
-                  title="Carrier Trunks"
-                  value={gatewayCount}
+                  title="Number of Carriers"
+                  value={metrics?.counts.carriers ?? 0}
                   icon={<ArrowLeftRight size={20} />}
-                  trend="Active Carrier Routes"
+                  trend="Sofia Gateways + SIP Trunks"
                 />
               </div>
 
               <StatCard
-                title="Media Core & DB"
+                title="Live Calls on Platform"
+                value={metrics?.live_calls ?? 0}
+                icon={<Activity size={20} />}
+                trend="Active Real-Time Channels"
+              />
+
+              <StatCard
+                title="PBX Engine Status"
                 value={status.database === 'connected' ? 'Connected' : 'Offline'}
                 icon={<Server size={20} />}
-                trend="FreeSWITCH 1.10.x Active"
+                trend="FreeSWITCH 1.10 Core Active"
               />
             </>
           ) : (
             <>
               <div className="cursor-pointer h-full" onClick={() => setActiveTab('extensions')}>
                 <StatCard
-                  title="Active Extensions"
-                  value={extensionCount}
+                  title="Number of Extensions"
+                  value={metrics?.counts.extensions ?? 0}
                   icon={<Phone size={20} />}
-                  trend="SIP & WebRTC Active"
+                  trend="SIP & WebRTC Endpoints"
                 />
               </div>
 
-              <div className="cursor-pointer h-full" onClick={() => setActiveTab('tenant-trunks')}>
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('dids')}>
                 <StatCard
-                  title="Active Gateways"
-                  value={gatewayCount}
-                  icon={<ArrowLeftRight size={20} />}
-                  trend="Assigned In/Out Trunks"
+                  title="Assigned DIDs"
+                  value={metrics?.counts.dids ?? 0}
+                  icon={<Hash size={20} />}
+                  trend="Inbound Numbers Pool"
+                />
+              </div>
+
+              <div className="cursor-pointer h-full" onClick={() => setActiveTab('queues')}>
+                <StatCard
+                  title="Queues & IVRs"
+                  value={metrics?.counts.queues_and_ivrs ?? 0}
+                  icon={<GitBranch size={20} />}
+                  trend="Call Queues & Auto-Attendants"
                 />
               </div>
 
               <StatCard
-                title="Assigned DIDs"
-                value={didCount}
-                icon={<Hash size={20} />}
-                trend="Inbound Phone Numbers"
-              />
-
-              <StatCard
-                title="PBX Engine Status"
-                value={status.database === 'connected' ? 'Operational' : 'Degraded'}
-                icon={<Server size={20} />}
-                trend="mod_xml_curl Ready"
+                title="Active Tenant Calls"
+                value={metrics?.live_calls ?? 0}
+                icon={<Activity size={20} />}
+                trend="Current Live Sessions"
               />
             </>
           )}
         </Grid>
 
-        {/* ── QUICK NAVIGATION CARDS ───────────────────────────────────────────── */}
-        <Grid cols={4} gap="6">
-        {isSuper ? (
-          <>
-            <Card className="flex flex-col justify-between gap-4 h-full">
-              <div>
-                <IconTile icon={<Building2 size={20} />} className="mb-3" />
-                <Heading level={3}>Tenants Registry</Heading>
-                <Text size="sm" variant="secondary" className="mt-1">
-                  Provision client tenant domains, extension quotas, and domain bindings.
-                </Text>
-              </div>
-              <Button variant="primary" className="w-full" onClick={() => setActiveTab('tenants')}>
-                Manage Tenants
-              </Button>
-            </Card>
-
-            <Card className="flex flex-col justify-between gap-4 h-full">
-              <div>
-                <IconTile icon={<Users size={20} />} className="mb-3" />
-                <Heading level={3}>Global Users</Heading>
-                <Text size="sm" variant="secondary" className="mt-1">
-                  Manage platform RBAC users, super admins, and tenant administrators.
-                </Text>
-              </div>
-              <Button variant="primary" className="w-full" onClick={() => setActiveTab('users')}>
-                Manage Users
-              </Button>
-            </Card>
-
-            <Card className="flex flex-col justify-between gap-4 h-full">
-              <div>
-                <IconTile icon={<Hash size={20} />} className="mb-3" />
-                <Heading level={3}>DID Inventory</Heading>
-                <Text size="sm" variant="secondary" className="mt-1">
-                  Manage pool of telephone numbers and allocate them to tenant domains.
-                </Text>
-              </div>
-              <Button variant="primary" className="w-full" onClick={() => setActiveTab('dids')}>
-                Manage DIDs
-              </Button>
-            </Card>
-
-            <Card className="flex flex-col justify-between gap-4 h-full">
-              <div>
-                <IconTile icon={<ArrowLeftRight size={20} />} className="mb-3" />
-                <Heading level={3}>SIP Trunks & Gateways</Heading>
-                <Text size="sm" variant="secondary" className="mt-1">
-                  Configure upstream carrier Sofia gateways, outbound proxies, and codecs.
-                </Text>
-              </div>
-              <Button variant="primary" className="w-full" onClick={() => setActiveTab('trunks')}>
-                Configure Trunks
-              </Button>
-            </Card>
-          </>
-        ) : (
-          <>
-            {canAccessTab('extensions') && (
-              <Card className="flex flex-col justify-between gap-4 h-full">
+        {/* ── SYSTEM UTILIZATION WIDGET (Superadmin) ──────────────────────────── */}
+        {isSuper && (
+          <Card className="p-6">
+            <Stack gap="4">
+              <Inline justify="between" align="center">
                 <div>
-                  <IconTile icon={<Phone size={20} />} className="mb-3" />
-                  <Heading level={3}>Extension Management</Heading>
-                  <Text size="sm" variant="secondary" className="mt-1">
-                    View and manage SIP & WebRTC softphone credentials and extension status.
-                  </Text>
+                  <Heading level={3}>System Utilization</Heading>
+                  <Text size="sm" variant="secondary">Live CPU, RAM, and storage health telemetry</Text>
                 </div>
-                <Button variant="primary" className="w-full" onClick={() => setActiveTab('extensions')}>
-                  Manage Extensions
-                </Button>
-              </Card>
-            )}
+                <Badge variant="info">Host Node Performance</Badge>
+              </Inline>
+              <Grid cols={3} gap="6">
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
+                  <Inline justify="between" align="center" className="mb-2">
+                    <span className="text-sm font-semibold text-[var(--pbx-text-primary)] flex items-center gap-2">
+                      <Cpu size={16} /> CPU Utilization
+                    </span>
+                    <Badge variant={(metrics?.system_utilization.cpu_percent ?? 0) > 85 ? 'danger' : 'success'}>
+                      {metrics?.system_utilization.cpu_percent ?? 0}%
+                    </Badge>
+                  </Inline>
+                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`bg-[var(--pbx-accent)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.cpu_percent ?? 0), 0), 100)}%]`}
+                    />
+                  </div>
+                </div>
 
-            {(canAccessTab('ivr') || canAccessTab('call-routing')) && (
-              <Card className="flex flex-col justify-between gap-4 h-full">
-                <div>
-                  <IconTile icon={<GitBranch size={20} />} className="mb-3" />
-                  <Heading level={3}>Call Routing & IVR</Heading>
-                  <Text size="sm" variant="secondary" className="mt-1">
-                    Design visual drag-and-drop auto-attendants and map inbound DIDs to departments.
-                  </Text>
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
+                  <Inline justify="between" align="center" className="mb-2">
+                    <span className="text-sm font-semibold text-[var(--pbx-text-primary)] flex items-center gap-2">
+                      <Activity size={16} /> Memory Utilization
+                    </span>
+                    <Badge variant={(metrics?.system_utilization.memory_percent ?? 0) > 85 ? 'danger' : 'info'}>
+                      {metrics?.system_utilization.memory_percent ?? 0}%
+                    </Badge>
+                  </Inline>
+                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`bg-[var(--pbx-primary)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.memory_percent ?? 0), 0), 100)}%]`}
+                    />
+                  </div>
                 </div>
-                <Button variant="primary" className="w-full" onClick={() => setActiveTab(canAccessTab('ivr') ? 'ivr' : 'call-routing')}>
-                  {canAccessTab('ivr') ? 'Design IVR Flow' : 'View Call Routing'}
-                </Button>
-              </Card>
-            )}
 
-            {(canAccessTab('queues') || canAccessTab('hunt-groups')) && (
-              <Card className="flex flex-col justify-between gap-4 h-full">
-                <div>
-                  <IconTile icon={<List size={20} />} className="mb-3" />
-                  <Heading level={3}>Call Queues & Hunt Groups</Heading>
-                  <Text size="sm" variant="secondary" className="mt-1">
-                    Manage agent queues, ring groups, and call distribution strategies.
-                  </Text>
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
+                  <Inline justify="between" align="center" className="mb-2">
+                    <span className="text-sm font-semibold text-[var(--pbx-text-primary)] flex items-center gap-2">
+                      <HardDrive size={16} /> Disk Space
+                    </span>
+                    <Badge variant={(metrics?.system_utilization.disk_percent ?? 0) > 85 ? 'danger' : 'neutral'}>
+                      {metrics?.system_utilization.disk_percent ?? 0}%
+                    </Badge>
+                  </Inline>
+                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`bg-[var(--pbx-accent)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.disk_percent ?? 0), 0), 100)}%]`}
+                    />
+                  </div>
                 </div>
-                <Button variant="primary" className="w-full" onClick={() => setActiveTab(canAccessTab('queues') ? 'queues' : 'hunt-groups')}>
-                  {canAccessTab('queues') ? 'Manage Queues' : 'Manage Hunt Groups'}
-                </Button>
-              </Card>
-            )}
-
-            {canAccessTab('reports') && (
-              <Card className="flex flex-col justify-between gap-4 h-full">
-                <div>
-                  <IconTile icon={<BarChart2 size={20} />} className="mb-3" />
-                  <Heading level={3}>CDR & Analytics</Heading>
-                  <Text size="sm" variant="secondary" className="mt-1">
-                    View call detail records, call logs, and performance analytics.
-                  </Text>
-                </div>
-                <Button variant="primary" className="w-full" onClick={() => setActiveTab('reports')}>
-                  View CDR & Reports
-                </Button>
-              </Card>
-            )}
-
-            {(canAccessTab('voicemail') || canAccessTab('call-forwarding')) && (
-              <Card className="flex flex-col justify-between gap-4 h-full">
-                <div>
-                  <IconTile icon={<Voicemail size={20} />} className="mb-3" />
-                  <Heading level={3}>Voicemail & Forwarding</Heading>
-                  <Text size="sm" variant="secondary" className="mt-1">
-                    Manage extension voicemail boxes, PINs, and call forwarding rules.
-                  </Text>
-                </div>
-                <Button variant="primary" className="w-full" onClick={() => setActiveTab(canAccessTab('voicemail') ? 'voicemail' : 'call-forwarding')}>
-                  {canAccessTab('voicemail') ? 'Voicemail Settings' : 'Call Forwarding'}
-                </Button>
-              </Card>
-            )}
-          </>
+              </Grid>
+            </Stack>
+          </Card>
         )}
+
+        {/* ── TRAFFIC SUMMARY & TRAFFIC PEAK WIDGETS ──────────────────────────── */}
+        <Grid cols={2} gap="6">
+          {/* Traffic Summary */}
+          <Card className="p-6">
+            <Stack gap="4">
+              <Inline justify="between" align="center">
+                <div>
+                  <Heading level={3}>Traffic Summary</Heading>
+                  <Text size="sm" variant="secondary">Inbound and Outbound answered, failed & unanswered breakdown</Text>
+                </div>
+                <Badge variant="primary">Call Telemetry</Badge>
+              </Inline>
+
+              <Grid cols={2} gap="4">
+                {/* Inbound Summary */}
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <IconTile icon={<PhoneIncoming size={16} />} />
+                    <span className="font-bold text-sm text-[var(--pbx-text-primary)]">Inbound Calls</span>
+                  </div>
+                  <div className="text-2xl font-bold text-[var(--pbx-text-primary)] mb-3">
+                    {metrics?.traffic_summary.inbound.total ?? 0}
+                  </div>
+                  <Stack gap="1">
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Answered:</span>
+                      <Badge variant="success">{metrics?.traffic_summary.inbound.answered ?? 0}</Badge>
+                    </Inline>
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Unanswered:</span>
+                      <Badge variant="warning">{metrics?.traffic_summary.inbound.unanswered ?? 0}</Badge>
+                    </Inline>
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Failed:</span>
+                      <Badge variant="danger">{metrics?.traffic_summary.inbound.failed ?? 0}</Badge>
+                    </Inline>
+                  </Stack>
+                </div>
+
+                {/* Outbound Summary */}
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <IconTile icon={<PhoneOutgoing size={16} />} />
+                    <span className="font-bold text-sm text-[var(--pbx-text-primary)]">Outbound Calls</span>
+                  </div>
+                  <div className="text-2xl font-bold text-[var(--pbx-text-primary)] mb-3">
+                    {metrics?.traffic_summary.outbound.total ?? 0}
+                  </div>
+                  <Stack gap="1">
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Answered:</span>
+                      <Badge variant="success">{metrics?.traffic_summary.outbound.answered ?? 0}</Badge>
+                    </Inline>
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Unanswered:</span>
+                      <Badge variant="warning">{metrics?.traffic_summary.outbound.unanswered ?? 0}</Badge>
+                    </Inline>
+                    <Inline justify="between" className="text-xs">
+                      <span className="text-[var(--pbx-text-secondary)]">Failed:</span>
+                      <Badge variant="danger">{metrics?.traffic_summary.outbound.failed ?? 0}</Badge>
+                    </Inline>
+                  </Stack>
+                </div>
+              </Grid>
+            </Stack>
+          </Card>
+
+          {/* Traffic Peak */}
+          <Card className="p-6">
+            <Stack gap="4">
+              <Inline justify="between" align="center">
+                <div>
+                  <Heading level={3}>Traffic Peak</Heading>
+                  <Text size="sm" variant="secondary">Peak hourly channel concurrency limits</Text>
+                </div>
+                <Badge variant="neutral">30-Day Analysis</Badge>
+              </Inline>
+
+              <Grid cols={2} gap="4">
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <IconTile icon={<TrendingUp size={16} />} />
+                      <span className="font-bold text-sm text-[var(--pbx-text-primary)]">Inbound Peak</span>
+                    </div>
+                    <div className="text-3xl font-extrabold text-[var(--pbx-text-primary)] my-2">
+                      {metrics?.traffic_peak.inbound_peak ?? 0}
+                      <span className="text-xs font-normal text-[var(--pbx-text-muted)] ml-1.5">concurrent calls</span>
+                    </div>
+                  </div>
+                  <Text size="xs" variant="secondary">Highest simultaneous inbound call spike</Text>
+                </div>
+
+                <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <IconTile icon={<TrendingUp size={16} />} />
+                      <span className="font-bold text-sm text-[var(--pbx-text-primary)]">Outbound Peak</span>
+                    </div>
+                    <div className="text-3xl font-extrabold text-[var(--pbx-text-primary)] my-2">
+                      {metrics?.traffic_peak.outbound_peak ?? 0}
+                      <span className="text-xs font-normal text-[var(--pbx-text-muted)] ml-1.5">concurrent calls</span>
+                    </div>
+                  </div>
+                  <Text size="xs" variant="secondary">Highest simultaneous outbound channel spike</Text>
+                </div>
+              </Grid>
+            </Stack>
+          </Card>
         </Grid>
       </Stack>
     </PageContainer>
