@@ -413,6 +413,23 @@ export const apiService = {
     return res.json();
   },
 
+  async getDashboardMetrics(token: string, tenantId?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/dashboard-metrics`;
+    if (tenantId) url += `?tenant_id=${tenantId}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch dashboard metrics');
+    return res.json();
+  },
+
+  async getTenantSummaryReport(token: string, startDate?: string, endDate?: string) {
+    let url = `${API_BASE_URL}/api/v1/reports/tenant-summary?`;
+    if (startDate) url += `&start_date=${startDate}`;
+    if (endDate) url += `&end_date=${endDate}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch tenant summary report');
+    return res.json();
+  },
+
   getVoicemailAudioUrl(messageId: string): string {
     return `${API_BASE_URL}/api/v1/reports/voicemail/${messageId}/audio`;
   },
