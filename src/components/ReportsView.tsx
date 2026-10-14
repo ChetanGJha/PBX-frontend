@@ -1,6 +1,6 @@
 import type { User } from '../types';
 import { useToast } from './ToastProvider';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiService, getApiBaseUrl } from '../services/api';
 import {
   FileText,
@@ -13,9 +13,15 @@ import {
   RotateCcw,
   Download,
   PieChart,
+  CheckCircle2,
+  PhoneMissed,
+  PhoneOff,
+  XCircle,
+  Activity,
+  Radio,
 } from 'lucide-react';
 import { ListPageLayout } from './layout';
-import { Inline } from './layout/Stack';
+import { Inline, Stack, Grid } from './layout/Stack';
 import {
   Button,
   Input,
@@ -23,8 +29,9 @@ import {
   Badge,
   Alert,
   Tabs,
+  ProgressBar,
 } from './ui';
-import { DataTable, FilterBar } from './patterns';
+import { DataTable, FilterBar, StatCard } from './patterns';
 
 interface ReportsViewProps {
   token: string;
@@ -33,13 +40,21 @@ interface ReportsViewProps {
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
-  const [activeTab, setActiveTab] = useState<'summary' | 'cdr' | 'internal' | 'outbound' | 'recordings'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'disposition' | 'cdr' | 'internal' | 'outbound' | 'recordings'>('summary');
   const [tenants, setTenants] = useState<any[]>([]);
   const [selectedTenant, setSelectedTenant] = useState(user?.tenant_id || '');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [directionFilter, setDirectionFilter] = useState<string>('all');
+  const [dispositionFilter, setDispositionFilter] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
+  const [dispositionData, setDispositionData] = useState<any>(null);
+
+  // WebSocket Live Real-Time State
+  const [wsConnected, setWsConnected] = useState(false);
+  const [livePulse, setLivePulse] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Audio Playback State
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
@@ -76,6 +91,96 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
       stopAudio();
     };
   }, []);
+
+  // WebSocket Connection for Real-Time Live Reports
+  useEffect(() => {
+    if (!token) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use host from current browser window (nginx proxies /ws to api:8000)
+    const wsUrl = `${protocol}//${window.location.host}/ws/reports?token=${encodeURIComponent(token)}`;
+    let reconnectTimer: any = null;
+    let pingInterval: any = null;
+
+    const connectWs = () => {
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          setWsConnected(true);
+          pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send('ping');
+            }
+          }, 20000);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            if (event.data === 'pong') return;
+            const payload = JSON.parse(event.data);
+            if (payload.event === 'cdr.created' || payload.type === 'cdr.created') {
+              const cdr = payload.data;
+              setLivePulse(true);
+              setTimeout(() => setLivePulse(false), 2000);
+
+              // Prepend to CDR table if viewing CDR tab
+              setReportData((prev) => {
+                if (activeTab === 'cdr') {
+                  const matchesTenant = !selectedTenant || cdr.tenant_id === selectedTenant;
+                  const matchesDir = directionFilter === 'all' || cdr.direction === directionFilter;
+                  let matchesDisp = true;
+                  if (dispositionFilter !== 'all') {
+                    const isAnswered = cdr.billsec > 0 || cdr.hangup_cause === 'NORMAL_CLEARING';
+                    if (dispositionFilter === 'ANSWERED') matchesDisp = isAnswered;
+                    else if (dispositionFilter === 'NO_ANSWER') matchesDisp = !isAnswered && ['NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE'].includes(cdr.hangup_cause);
+                    else if (dispositionFilter === 'BUSY') matchesDisp = !isAnswered && ['USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
+                    else if (dispositionFilter === 'FAILED') matchesDisp = !isAnswered && !['NORMAL_CLEARING', 'NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE', 'USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
+                  }
+                  if (matchesTenant && matchesDir && matchesDisp) {
+                    return [cdr, ...prev];
+                  }
+                }
+                return prev;
+              });
+
+              // If viewing disposition or summary tab, refresh metrics
+              if (activeTab === 'disposition') {
+                loadDispositionData();
+              } else if (activeTab === 'summary') {
+                apiService.getTenantSummaryReport(token, startDate, endDate).then(setReportData).catch(console.error);
+              }
+            }
+          } catch {
+            // Ignore parse errors or non-json messages
+          }
+        };
+
+        ws.onclose = () => {
+          setWsConnected(false);
+          if (pingInterval) clearInterval(pingInterval);
+          reconnectTimer = setTimeout(connectWs, 3000);
+        };
+
+        ws.onerror = () => {
+          setWsConnected(false);
+        };
+      } catch (e) {
+        console.error('WebSocket initialization error:', e);
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      if (pingInterval) clearInterval(pingInterval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [token, activeTab, selectedTenant, directionFilter, dispositionFilter, startDate, endDate]);
 
   const handlePlayRecording = async (rec: any) => {
     const recId = rec.recording_id || rec.id;
@@ -135,14 +240,25 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     }
   };
 
+  const loadDispositionData = async () => {
+    try {
+      const data = await apiService.getDispositionSummaryReport(token, selectedTenant, startDate, endDate, directionFilter);
+      setDispositionData(data);
+    } catch (err) {
+      console.error('Failed to load disposition report:', err);
+    }
+  };
+
   const loadReport = async () => {
     try {
       setLoading(true);
       if (activeTab === 'summary') {
         const data = await apiService.getTenantSummaryReport(token, startDate, endDate);
         setReportData(data);
+      } else if (activeTab === 'disposition') {
+        await loadDispositionData();
       } else if (activeTab === 'cdr') {
-        const data = await apiService.getCdrReport(token, selectedTenant, startDate, endDate);
+        const data = await apiService.getCdrReport(token, selectedTenant, startDate, endDate, directionFilter, dispositionFilter);
         setReportData(data);
       } else if (activeTab === 'internal') {
         const data = await apiService.getInternalReport(token, selectedTenant, startDate, endDate);
@@ -163,18 +279,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
 
   useEffect(() => {
     loadReport();
-  }, [token, activeTab, selectedTenant, startDate, endDate]);
+  }, [token, activeTab, selectedTenant, startDate, endDate, directionFilter, dispositionFilter]);
 
   const exportToCsv = () => {
-    if (!reportData || reportData.length === 0) {
+    const dataToExport = activeTab === 'disposition' ? dispositionData?.breakdown : reportData;
+    if (!dataToExport || dataToExport.length === 0) {
       showErrorModal('Export Notice', 'No data available to export for the current filters.');
       return;
     }
     try {
-      const headers = Object.keys(reportData[0]);
+      const headers = Object.keys(dataToExport[0]);
       const csvRows = [
         headers.join(','),
-        ...reportData.map(row =>
+        ...dataToExport.map((row: any) =>
           headers.map(h => {
             const val = row[h] === null || row[h] === undefined ? '' : String(row[h]);
             return `"${val.replace(/"/g, '""')}"`;
@@ -189,7 +306,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showSuccessModal('Report Exported', `Successfully exported ${reportData.length} records to CSV.`);
+      showSuccessModal('Report Exported', `Successfully exported ${dataToExport.length} records to CSV.`);
     } catch (err: any) {
       showErrorModal('Export Failed', err.message || 'Failed to export report.');
     }
@@ -199,9 +316,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     setSelectedTenant(user?.tenant_id || '');
     setStartDate('');
     setEndDate('');
+    setDirectionFilter('all');
+    setDispositionFilter('all');
   };
 
-  const hasActiveFilters = Boolean((user?.role === 'SUPER_ADMIN' && selectedTenant) || startDate || endDate);
+  const hasActiveFilters = Boolean(
+    (user?.role === 'SUPER_ADMIN' && selectedTenant) ||
+    startDate ||
+    endDate ||
+    directionFilter !== 'all' ||
+    dispositionFilter !== 'all'
+  );
 
   const summaryColumns = [
     {
@@ -258,6 +383,56 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     },
   ];
 
+  const dispositionBreakdownColumns = [
+    {
+      key: 'cause',
+      header: 'Hangup Cause / Disposition',
+      render: (r: any) => {
+        const cause = r.cause || 'UNKNOWN';
+        let variant: 'success' | 'warning' | 'danger' | 'neutral' = 'neutral';
+        if (cause === 'NORMAL_CLEARING') variant = 'success';
+        else if (['NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE'].includes(cause)) variant = 'warning';
+        else if (['USER_BUSY', 'CALL_REJECTED'].includes(cause)) variant = 'warning';
+        else variant = 'danger';
+
+        return <Badge variant={variant}>{cause}</Badge>;
+      }
+    },
+    {
+      key: 'count',
+      header: 'Total Calls',
+      render: (r: any) => <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">{r.count}</span>
+    },
+    {
+      key: 'percentage',
+      header: 'Share of Traffic',
+      render: (r: any) => (
+        <Inline gap="2" align="center">
+          <span className="font-medium text-sm text-[var(--pbx-text-primary)]">{r.percentage}%</span>
+          <ProgressBar value={r.percentage} color="primary" className="w-24" />
+        </Inline>
+      )
+    },
+    {
+      key: 'avg_duration',
+      header: 'Avg Duration',
+      render: (r: any) => (
+        <span className="text-sm font-medium text-[var(--pbx-text-primary)]">
+          {r.avg_duration}<span className="text-xs text-[var(--pbx-text-muted)] ml-0.5">s</span>
+        </span>
+      )
+    },
+    {
+      key: 'avg_billsec',
+      header: 'Avg Billable Time',
+      render: (r: any) => (
+        <span className="text-sm text-[var(--pbx-text-secondary)]">
+          {r.avg_billsec}<span className="text-xs text-[var(--pbx-text-muted)] ml-0.5">s</span>
+        </span>
+      )
+    }
+  ];
+
   const cdrColumns = [
     {
       key: 'start_time',
@@ -289,7 +464,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
       header: 'Destination',
       render: (r: any) => (
         <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
-          {r.destination_number || 'N/A'}
+          {r.destination_number || r.destination || 'N/A'}
         </span>
       )
     },
@@ -298,8 +473,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
       header: 'Direction',
       render: (r: any) => {
         const dir = (r.direction || 'inbound').toLowerCase();
+        let variant: 'info' | 'warning' | 'neutral' = 'neutral';
+        if (dir === 'inbound') variant = 'info';
+        else if (dir === 'outbound') variant = 'warning';
         return (
-          <Badge variant={dir === 'inbound' ? 'info' : 'warning'}>
+          <Badge variant={variant}>
             {dir}
           </Badge>
         );
@@ -330,12 +508,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     },
     {
       key: 'hangup_cause',
-      header: 'Hangup Cause',
+      header: 'Disposition / Cause',
       render: (r: any) => {
         const cause = r.hangup_cause || 'NORMAL_CLEARING';
-        const isSuccess = cause === 'NORMAL_CLEARING';
+        const isAnswered = r.billsec > 0 || cause === 'NORMAL_CLEARING';
+        let variant: 'success' | 'warning' | 'danger' = 'danger';
+        if (isAnswered) variant = 'success';
+        else if (['NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE', 'USER_BUSY'].includes(cause)) variant = 'warning';
+
         return (
-          <Badge variant={isSuccess ? 'success' : 'danger'}>
+          <Badge variant={variant}>
             {cause}
           </Badge>
         );
@@ -477,12 +659,25 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   return (
     <ListPageLayout
       title="Reports & Call Detail Records"
-      subtitle="Tenant-wise call logs, extension-to-extension summary, outbound analytics & voice recordings"
+      subtitle="Real-time call logs, disposition summary, extension-to-extension stats & audio recordings"
       eyebrow="ANALYTICS & TELEMETRY"
       actions={
-        <Button variant="primary" onClick={exportToCsv} leftIcon={<Download size={15} />}>
-          Export CSV
-        </Button>
+        <Inline gap="3" align="center">
+          {wsConnected ? (
+            <Badge variant="success" className={livePulse ? 'ring-2 ring-[var(--pbx-success)] ring-offset-1 transition-all' : ''}>
+              <Radio size={12} className="animate-pulse mr-1" />
+              Live Real-Time
+            </Badge>
+          ) : (
+            <Badge variant="neutral">
+              <Radio size={12} className="opacity-50 mr-1" />
+              Connecting Real-Time...
+            </Badge>
+          )}
+          <Button variant="primary" onClick={exportToCsv} leftIcon={<Download size={15} />}>
+            Export CSV
+          </Button>
+        </Inline>
       }
       filterBar={
         <FilterBar
@@ -500,6 +695,33 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
                       {t.name} ({t.domain})
                     </option>
                   ))}
+                </Select>
+              )}
+
+              {(activeTab === 'cdr' || activeTab === 'disposition') && (
+                <Select
+                  value={directionFilter}
+                  onChange={(e) => setDirectionFilter(e.target.value)}
+                  className="w-40 min-w-[150px]"
+                >
+                  <option value="all">All Directions</option>
+                  <option value="inbound">Inbound</option>
+                  <option value="outbound">Outbound</option>
+                  <option value="internal">Internal</option>
+                </Select>
+              )}
+
+              {activeTab === 'cdr' && (
+                <Select
+                  value={dispositionFilter}
+                  onChange={(e) => setDispositionFilter(e.target.value)}
+                  className="w-40 min-w-[150px]"
+                >
+                  <option value="all">All Dispositions</option>
+                  <option value="ANSWERED">Answered</option>
+                  <option value="NO_ANSWER">No Answer</option>
+                  <option value="BUSY">Busy</option>
+                  <option value="FAILED">Failed</option>
                 </Select>
               )}
 
@@ -535,105 +757,149 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         />
       }
     >
-
-        {/* Audio Player Bar */}
-        {playingRecordingId && activeRecordingInfo && (
-          <Alert variant="info" icon={<Volume2 size={20} />}>
-            <Inline justify="between" align="center" className="w-full">
-              <div>
-                <div className="font-bold">Now Playing: {activeRecordingInfo.file_name || 'Call Recording Audio'}</div>
-                <div className="text-xs text-[var(--pbx-text-muted)] mt-0.5">
-                  {activeRecordingInfo.tenant_name || 'Global'} • {activeRecordingInfo.caller_id_number || activeRecordingInfo.source_extension || 'N/A'} &rarr; {activeRecordingInfo.destination_number || 'N/A'}
-                </div>
+      {/* Audio Player Bar */}
+      {playingRecordingId && activeRecordingInfo && (
+        <Alert variant="info" icon={<Volume2 size={20} />}>
+          <Inline justify="between" align="center" className="w-full">
+            <div>
+              <div className="font-bold">Now Playing: {activeRecordingInfo.file_name || 'Call Recording Audio'}</div>
+              <div className="text-xs text-[var(--pbx-text-muted)] mt-0.5">
+                {activeRecordingInfo.tenant_name || 'Global'} • {activeRecordingInfo.caller_id_number || activeRecordingInfo.source_extension || 'N/A'} &rarr; {activeRecordingInfo.destination_number || 'N/A'}
               </div>
-              <Button variant="secondary" size="sm" onClick={stopAudio} leftIcon={<Square size={12} />}>
-                Stop Playback
-              </Button>
-            </Inline>
-          </Alert>
-        )}
+            </div>
+            <Button variant="secondary" size="sm" onClick={stopAudio} leftIcon={<Square size={12} />}>
+              Stop Playback
+            </Button>
+          </Inline>
+        </Alert>
+      )}
 
-        {/* Design System Tabs component */}
-        <Tabs
-          activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as any)}
-          variant="line"
-          items={[
-            { id: 'summary', label: 'Summarized Reports (Traffic-wise)', icon: <PieChart size={16} /> },
-            { id: 'cdr', label: 'Call Detail Records (CDR)', icon: <FileText size={16} /> },
-            { id: 'internal', label: 'Internal Calls Summary', icon: <PhoneCall size={16} /> },
-            { id: 'outbound', label: 'Outbound Calls Analytics', icon: <PhoneOutgoing size={16} /> },
-            { id: 'recordings', label: 'Voice Recordings', icon: <Disc size={16} /> },
-          ]}
+      {/* Design System Tabs component */}
+      <Tabs
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+        variant="line"
+        items={[
+          { id: 'summary', label: 'Summarized Reports (Traffic)', icon: <PieChart size={16} /> },
+          { id: 'disposition', label: 'Disposition Summary', icon: <CheckCircle2 size={16} /> },
+          { id: 'cdr', label: 'Call Detail Records (CDR)', icon: <FileText size={16} /> },
+          { id: 'internal', label: 'Internal Calls Summary', icon: <PhoneCall size={16} /> },
+          { id: 'outbound', label: 'Outbound Calls Analytics', icon: <PhoneOutgoing size={16} /> },
+          { id: 'recordings', label: 'Voice Recordings', icon: <Disc size={16} /> },
+        ]}
+      />
+
+      {/* Data Tables */}
+      {activeTab === 'summary' && (
+        <DataTable
+          columns={summaryColumns}
+          data={reportData}
+          isLoading={loading}
+          emptyTitle="No summary traffic records found"
         />
+      )}
 
-        {/* Data Tables */}
-        {activeTab === 'summary' && (
-          <DataTable
-            columns={summaryColumns}
-            data={reportData}
-            isLoading={loading}
-            emptyTitle="No summary traffic records found"
-          />
-        )}
+      {activeTab === 'disposition' && (
+        <Stack gap="6">
+          <Grid cols={5} gap="4">
+            <StatCard
+              title="Answered Calls"
+              value={dispositionData?.answered ?? 0}
+              icon={<CheckCircle2 size={20} className="text-[var(--pbx-success)]" />}
+              trend={dispositionData?.total_calls ? `${Math.round(((dispositionData?.answered ?? 0) / dispositionData.total_calls) * 100)}% of total` : '0%'}
+            />
+            <StatCard
+              title="No Answer"
+              value={dispositionData?.no_answer ?? 0}
+              icon={<PhoneMissed size={20} className="text-[var(--pbx-warning)]" />}
+              trend={dispositionData?.total_calls ? `${Math.round(((dispositionData?.no_answer ?? 0) / dispositionData.total_calls) * 100)}% of total` : '0%'}
+            />
+            <StatCard
+              title="User Busy"
+              value={dispositionData?.busy ?? 0}
+              icon={<PhoneOff size={20} className="text-[var(--pbx-warning)]" />}
+              trend={dispositionData?.total_calls ? `${Math.round(((dispositionData?.busy ?? 0) / dispositionData.total_calls) * 100)}% of total` : '0%'}
+            />
+            <StatCard
+              title="Failed Calls"
+              value={dispositionData?.failed ?? 0}
+              icon={<XCircle size={20} className="text-[var(--pbx-danger)]" />}
+              trend={dispositionData?.total_calls ? `${Math.round(((dispositionData?.failed ?? 0) / dispositionData.total_calls) * 100)}% of total` : '0%'}
+            />
+            <StatCard
+              title="Answer Rate"
+              value={`${dispositionData?.answer_rate ?? 0}%`}
+              icon={<Activity size={20} className="text-[var(--pbx-primary)]" />}
+              trend={`${dispositionData?.total_calls ?? 0} total calls`}
+            />
+          </Grid>
 
-        {activeTab === 'cdr' && (
           <DataTable
-            columns={cdrColumns}
-            data={reportData}
+            columns={dispositionBreakdownColumns}
+            data={dispositionData?.breakdown ?? []}
             isLoading={loading}
-            emptyTitle="No call detail records found"
-            actions={(r: any) => r.recording_id ? (
-              <Button
-                variant={playingRecordingId === r.recording_id ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => handlePlayRecording(r)}
-                isLoading={audioLoadingId === r.recording_id}
-                title={playingRecordingId === r.recording_id ? 'Pause' : 'Play'}
-              >
-                {playingRecordingId === r.recording_id ? <Pause size={14} /> : <Volume2 size={14} />}
-              </Button>
-            ) : undefined}
+            emptyTitle="No disposition breakdown records found"
           />
-        )}
+        </Stack>
+      )}
 
-        {activeTab === 'internal' && (
-          <DataTable
-            columns={internalColumns}
-            data={reportData}
-            isLoading={loading}
-            emptyTitle="No internal call records found"
-          />
-        )}
+      {activeTab === 'cdr' && (
+        <DataTable
+          columns={cdrColumns}
+          data={reportData}
+          isLoading={loading}
+          emptyTitle="No call detail records found"
+          actions={(r: any) => r.recording_id ? (
+            <Button
+              variant={playingRecordingId === r.recording_id ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => handlePlayRecording(r)}
+              isLoading={audioLoadingId === r.recording_id}
+              title={playingRecordingId === r.recording_id ? 'Pause' : 'Play'}
+            >
+              {playingRecordingId === r.recording_id ? <Pause size={14} /> : <Volume2 size={14} />}
+            </Button>
+          ) : undefined}
+        />
+      )}
 
-        {activeTab === 'outbound' && (
-          <DataTable
-            columns={outboundColumns}
-            data={reportData}
-            isLoading={loading}
-            emptyTitle="No outbound call records found"
-          />
-        )}
+      {activeTab === 'internal' && (
+        <DataTable
+          columns={internalColumns}
+          data={reportData}
+          isLoading={loading}
+          emptyTitle="No internal call records found"
+        />
+      )}
 
-        {activeTab === 'recordings' && (
-          <DataTable
-            columns={recordingColumns}
-            data={reportData}
-            isLoading={loading}
-            emptyTitle="No voice recordings found"
-            actions={(r: any) => (
-              <Button
-                variant={playingRecordingId === r.id ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => handlePlayRecording(r)}
-                isLoading={audioLoadingId === r.id}
-                title={playingRecordingId === r.id ? 'Pause' : 'Play'}
-              >
-                {playingRecordingId === r.id ? <Pause size={14} /> : <Volume2 size={14} />}
-              </Button>
-            )}
-          />
-        )}
+      {activeTab === 'outbound' && (
+        <DataTable
+          columns={outboundColumns}
+          data={reportData}
+          isLoading={loading}
+          emptyTitle="No outbound call records found"
+        />
+      )}
+
+      {activeTab === 'recordings' && (
+        <DataTable
+          columns={recordingColumns}
+          data={reportData}
+          isLoading={loading}
+          emptyTitle="No voice recordings found"
+          actions={(r: any) => (
+            <Button
+              variant={playingRecordingId === r.id ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => handlePlayRecording(r)}
+              isLoading={audioLoadingId === r.id}
+              title={playingRecordingId === r.id ? 'Pause' : 'Play'}
+            >
+              {playingRecordingId === r.id ? <Pause size={14} /> : <Volume2 size={14} />}
+            </Button>
+          )}
+        />
+      )}
     </ListPageLayout>
   );
 };

@@ -396,13 +396,30 @@ export const apiService = {
   },
 
   // Reports Endpoints
-  async getCdrReport(token: string, tenantId?: string, startDate?: string, endDate?: string) {
-    let url = `${API_BASE_URL}/api/v1/reports/cdr?call_type=all`;
-    if (tenantId) url += `&tenant_id=${tenantId}`;
-    if (startDate) url += `&start_date=${startDate}`;
-    if (endDate) url += `&end_date=${endDate}`;
+  async getCdrReport(token: string, tenantId?: string, startDate?: string, endDate?: string, direction?: string, disposition?: string) {
+    const params = new URLSearchParams();
+    if (tenantId) params.append('tenant_id', tenantId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (direction && direction !== 'all') params.append('direction', direction);
+    if (disposition && disposition !== 'all') params.append('disposition', disposition);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/v1/reports/cdr${queryString ? `?${queryString}` : ''}`;
     const res = await fetch(url, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Failed to fetch CDR report');
+    return res.json();
+  },
+
+  async getDispositionSummaryReport(token: string, tenantId?: string, startDate?: string, endDate?: string, direction?: string) {
+    const params = new URLSearchParams();
+    if (tenantId) params.append('tenant_id', tenantId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (direction && direction !== 'all') params.append('direction', direction);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/v1/reports/disposition-summary${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch disposition summary');
     return res.json();
   },
 
