@@ -192,7 +192,7 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
     {
       key: 'destination',
       header: 'Destination Target',
-      render: (d: any) => `${d.destination_type}: ${d.destination || 'Default Route'}`,
+      render: (d: any) => `${d.destination_type || 'extension'}: ${d.destination || 'Default Route'}`,
     },
     {
       key: 'status',
@@ -296,6 +296,26 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
                 ))}
               </Select>
             </FormField>
+            <FormField label="Destination Type">
+              <Select
+                value={addForm.destination_type}
+                onChange={e => setAddForm({ ...addForm, destination_type: e.target.value })}
+              >
+                <option value="extension">Extension</option>
+                <option value="queue">Call Queue</option>
+                <option value="hunt_group">Hunt Group</option>
+                <option value="conference">Conference Room</option>
+                <option value="ivr">IVR Menu</option>
+                <option value="voicemail">Voicemail Box</option>
+              </Select>
+            </FormField>
+            <FormField label="Inbound Destination Target">
+              <Input
+                placeholder="e.g. 1001, queue number, or conference number"
+                value={addForm.destination}
+                onChange={e => setAddForm({...addForm, destination: e.target.value})}
+              />
+            </FormField>
           </Stack>
         </form>
       </Modal>
@@ -344,9 +364,22 @@ export const DidsView: React.FC<DidsViewProps> = ({ token, user }) => {
                 ))}
               </Select>
             </FormField>
+            <FormField label="Destination Type">
+              <Select
+                value={editForm.destination_type}
+                onChange={e => setEditForm({ ...editForm, destination_type: e.target.value })}
+              >
+                <option value="extension">Extension</option>
+                <option value="queue">Call Queue</option>
+                <option value="hunt_group">Hunt Group</option>
+                <option value="conference">Conference Room</option>
+                <option value="ivr">IVR Menu</option>
+                <option value="voicemail">Voicemail Box</option>
+              </Select>
+            </FormField>
             <FormField label="Inbound Destination Target">
               <Input
-                placeholder="e.g. 1001 or Main IVR"
+                placeholder="e.g. 1001, queue number, or conference number"
                 value={editForm.destination}
                 onChange={e => setEditForm({...editForm, destination: e.target.value})}
               />

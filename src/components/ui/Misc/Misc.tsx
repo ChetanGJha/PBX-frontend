@@ -91,3 +91,46 @@ export const Divider: React.FC<DividerProps> = ({ orientation = 'horizontal', ma
     />
   );
 };
+
+export interface ProgressBarProps {
+  value: number;
+  color?: 'primary' | 'accent' | 'success' | 'warning' | 'danger';
+  className?: string;
+}
+
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  value,
+  color = 'accent',
+  className = '',
+}) => {
+  const clamped = Math.min(Math.max(Math.round(value || 0), 0), 100);
+  const colorMap: Record<string, string> = {
+    primary: 'var(--pbx-primary)',
+    accent: 'var(--pbx-accent)',
+    success: 'var(--pbx-success)',
+    warning: 'var(--pbx-warning)',
+    danger: 'var(--pbx-danger)',
+  };
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        backgroundColor: 'var(--pbx-border-default)',
+        height: '8px',
+        borderRadius: '9999px',
+        overflow: 'hidden',
+      }}
+      className={className}
+    >
+      <div
+        style={{
+          width: `${clamped}%`,
+          backgroundColor: colorMap[color] || 'var(--pbx-accent)',
+          height: '100%',
+          transition: 'width 300ms ease-in-out',
+        }}
+      />
+    </div>
+  );
+};

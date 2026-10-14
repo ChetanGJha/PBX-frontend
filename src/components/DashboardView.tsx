@@ -20,7 +20,7 @@ import {
 
 import { PageContainer, PageHeader } from './layout/PageContainer';
 import { Stack, Grid, Inline } from './layout/Stack';
-import { Card, StatCard, Heading, Text, Badge, IconTile } from './ui';
+import { Card, StatCard, Heading, Text, Badge, IconTile, ProgressBar } from './ui';
 
 interface DashboardMetrics {
   system_utilization: {
@@ -87,6 +87,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
     fetchStatus();
     fetchMetrics();
+
+    // WebSocket auto-refresh for real-time live telemetry
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/reports?token=${encodeURIComponent(token)}`;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: any = null;
+
+    const connectWs = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+          try {
+            if (event.data === 'pong') return;
+            const payload = JSON.parse(event.data);
+            if (payload.event === 'cdr.created' || payload.type === 'cdr.created') {
+              fetchMetrics();
+            }
+          } catch {}
+        };
+        ws.onclose = () => {
+          reconnectTimer = setTimeout(connectWs, 5000);
+        };
+      } catch {}
+    };
+
+    connectWs();
+
+    // Safety periodic refresh every 15 seconds
+    const interval = setInterval(() => {
+      fetchMetrics();
+    }, 15000);
+
+    return () => {
+      clearInterval(interval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
   }, [token]);
 
   const isSuper = user?.role === 'SUPER_ADMIN';
@@ -205,11 +242,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                       {metrics?.system_utilization.cpu_percent ?? 0}%
                     </Badge>
                   </Inline>
-                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`bg-[var(--pbx-accent)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.cpu_percent ?? 0), 0), 100)}%]`}
-                    />
-                  </div>
+                  <ProgressBar value={metrics?.system_utilization.cpu_percent ?? 0} color="accent" />
                 </div>
 
                 <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
@@ -221,11 +254,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                       {metrics?.system_utilization.memory_percent ?? 0}%
                     </Badge>
                   </Inline>
-                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`bg-[var(--pbx-primary)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.memory_percent ?? 0), 0), 100)}%]`}
-                    />
-                  </div>
+                  <ProgressBar value={metrics?.system_utilization.memory_percent ?? 0} color="primary" />
                 </div>
 
                 <div className="p-4 rounded-lg bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)]">
@@ -237,11 +266,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
                       {metrics?.system_utilization.disk_percent ?? 0}%
                     </Badge>
                   </Inline>
-                  <div className="w-full bg-[var(--pbx-border-default)] h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`bg-[var(--pbx-accent)] h-full transition-all duration-300 w-[${Math.min(Math.max(Math.round(metrics?.system_utilization.disk_percent ?? 0), 0), 100)}%]`}
-                    />
-                  </div>
+                  <ProgressBar value={metrics?.system_utilization.disk_percent ?? 0} color="accent" />
                 </div>
               </Grid>
             </Stack>

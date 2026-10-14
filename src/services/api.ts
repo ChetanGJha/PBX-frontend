@@ -18,7 +18,7 @@ export function parseErrorDetail(errData: any, fallback: string): string {
 
 import type { Tenant, Extension, User, SystemStatus } from '../types';
 
-let API_BASE_URL = 'http://localhost:8000';
+let API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 
 export const getApiBaseUrl = () => API_BASE_URL;
 export const setApiBaseUrl = (url: string) => {
@@ -336,6 +336,27 @@ export const apiService = {
     if (!res.ok) throw new Error('Failed to delete route');
   },
 
+  async getInternalRoutingPolicy(token: string, tenantId?: string) {
+    const query = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/internal-policy${query}`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch internal routing policy');
+    return res.json();
+  },
+
+  async updateInternalRoutingPolicy(token: string, allowInternalCalls: boolean, tenantId?: string) {
+    const query = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/internal-policy${query}`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ allow_internal_calls: allowInternalCalls }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to update internal routing policy');
+    }
+    return res.json();
+  },
+
   // Queues CRUD
   async getQueues(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/queues`, { headers: getHeaders(token) });
@@ -375,13 +396,30 @@ export const apiService = {
   },
 
   // Reports Endpoints
-  async getCdrReport(token: string, tenantId?: string, startDate?: string, endDate?: string) {
-    let url = `${API_BASE_URL}/api/v1/reports/cdr?call_type=all`;
-    if (tenantId) url += `&tenant_id=${tenantId}`;
-    if (startDate) url += `&start_date=${startDate}`;
-    if (endDate) url += `&end_date=${endDate}`;
+  async getCdrReport(token: string, tenantId?: string, startDate?: string, endDate?: string, direction?: string, disposition?: string) {
+    const params = new URLSearchParams();
+    if (tenantId) params.append('tenant_id', tenantId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (direction && direction !== 'all') params.append('direction', direction);
+    if (disposition && disposition !== 'all') params.append('disposition', disposition);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/v1/reports/cdr${queryString ? `?${queryString}` : ''}`;
     const res = await fetch(url, { headers: getHeaders(token) });
     if (!res.ok) throw new Error('Failed to fetch CDR report');
+    return res.json();
+  },
+
+  async getDispositionSummaryReport(token: string, tenantId?: string, startDate?: string, endDate?: string, direction?: string) {
+    const params = new URLSearchParams();
+    if (tenantId) params.append('tenant_id', tenantId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (direction && direction !== 'all') params.append('direction', direction);
+    const queryString = params.toString();
+    const url = `${API_BASE_URL}/api/v1/reports/disposition-summary${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch disposition summary');
     return res.json();
   },
 
