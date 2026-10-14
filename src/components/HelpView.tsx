@@ -86,7 +86,7 @@ const Field: React.FC<{ label: string; value: string; note?: string }> = ({ labe
 
 export const HelpView: React.FC<HelpViewProps> = ({ user }) => {
   const sipDomain = user?.sip_domain || 'sip.yourpbx.com';
-  const serverIP = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
+  const serverIP = window.location.hostname || 'your-server-ip';
 
   const tabs = ['Zoiper 5', 'X-Lite / Bria', 'Linphone', 'FreeSWITCH Test', 'Troubleshooting'];
   const [activeTab, setActiveTab] = useState('Zoiper 5');

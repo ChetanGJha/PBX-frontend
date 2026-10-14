@@ -18,7 +18,7 @@ export function parseErrorDetail(errData: any, fallback: string): string {
 
 import type { Tenant, Extension, User, SystemStatus } from '../types';
 
-let API_BASE_URL = 'http://localhost:8000';
+let API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '';
 
 export const getApiBaseUrl = () => API_BASE_URL;
 export const setApiBaseUrl = (url: string) => {
