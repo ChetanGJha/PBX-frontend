@@ -19,6 +19,11 @@ import {
   XCircle,
   Activity,
   Radio,
+  Voicemail,
+  Mail,
+  MailOpen,
+  Trash2,
+  Play,
 } from 'lucide-react';
 import { ListPageLayout } from './layout';
 import { Inline, Stack, Grid } from './layout/Stack';
@@ -40,7 +45,7 @@ interface ReportsViewProps {
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   const { showSuccessModal, showErrorModal } = useToast();
-  const [activeTab, setActiveTab] = useState<'summary' | 'disposition' | 'cdr' | 'internal' | 'outbound' | 'recordings'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'disposition' | 'voicemail' | 'cdr' | 'internal' | 'outbound' | 'recordings'>('summary');
   const [tenants, setTenants] = useState<any[]>([]);
   const [selectedTenant, setSelectedTenant] = useState(user?.tenant_id || '');
   const [startDate, setStartDate] = useState('');
@@ -50,6 +55,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any[]>([]);
   const [dispositionData, setDispositionData] = useState<any>(null);
+
+  // Voicemail Analytics State
+  const [voicemailData, setVoicemailData] = useState<any>(null);
+  const [voicemailLoading, setVoicemailLoading] = useState(false);
+  const [vmExtensionFilter, setVmExtensionFilter] = useState('');
+  const [vmReadFilter, setVmReadFilter] = useState<'all' | 'unread' | 'read'>('all');
 
   // WebSocket Live Real-Time State
   const [wsConnected, setWsConnected] = useState(false);
@@ -148,8 +159,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
               // If viewing disposition or summary tab, refresh metrics
               if (activeTab === 'disposition') {
                 loadDispositionData();
+              } else if (activeTab === 'voicemail') {
+                loadVoicemailData();
               } else if (activeTab === 'summary') {
                 apiService.getTenantSummaryReport(token, startDate, endDate).then(setReportData).catch(console.error);
+              }
+            } else if (payload.type === 'voicemail.created' || payload.event === 'voicemail.created') {
+              setLivePulse(true);
+              setTimeout(() => setLivePulse(false), 2000);
+              if (activeTab === 'voicemail') {
+                loadVoicemailData();
               }
             }
           } catch {
@@ -249,6 +268,109 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     }
   };
 
+  const loadVoicemailData = async () => {
+    try {
+      setVoicemailLoading(true);
+      const isReadParam = vmReadFilter === 'all' ? undefined : vmReadFilter === 'read';
+      const data = await apiService.getVoicemailReport(
+        token,
+        vmExtensionFilter || undefined,
+        isReadParam,
+        startDate || undefined,
+        endDate || undefined
+      );
+      setVoicemailData(data);
+    } catch (err) {
+      console.error('Failed to load voicemail report:', err);
+    } finally {
+      setVoicemailLoading(false);
+    }
+  };
+
+  const handlePlayVoicemail = async (msg: any) => {
+    const msgId = msg.id;
+    if (!msgId) return;
+
+    if (playingRecordingId === msgId) {
+      stopAudio();
+      return;
+    }
+
+    stopAudio();
+    setAudioLoadingId(msgId);
+
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/reports/voicemail/${msgId}/audio`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showErrorModal('Playback Error', err.detail || `Voicemail audio could not be loaded (${res.status})`);
+        setAudioLoadingId(null);
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const audio = new Audio(objectUrl);
+
+      audio.onended = () => {
+        setPlayingRecordingId(null);
+        setCurrentAudio(null);
+        setActiveRecordingInfo(null);
+        URL.revokeObjectURL(objectUrl);
+      };
+
+      audio.onerror = () => {
+        showErrorModal('Playback Error', 'Failed to decode or play voicemail audio.');
+        setPlayingRecordingId(null);
+        setCurrentAudio(null);
+        setActiveRecordingInfo(null);
+        URL.revokeObjectURL(objectUrl);
+      };
+
+      await audio.play();
+      setPlayingRecordingId(msgId);
+      setCurrentAudio(audio);
+      setActiveRecordingInfo({
+        caller_id_number: msg.caller_id_number,
+        destination_number: msg.extension_number || msg.mailbox,
+        recording_id: msgId,
+        type: 'Voicemail'
+      });
+    } catch (err: any) {
+      showErrorModal('Playback Error', err.message || 'Failed to stream voicemail audio file.');
+      setPlayingRecordingId(null);
+      setCurrentAudio(null);
+      setActiveRecordingInfo(null);
+    } finally {
+      setAudioLoadingId(null);
+    }
+  };
+
+  const handleToggleVoicemailRead = async (msg: any) => {
+    try {
+      await apiService.toggleVoicemailRead(token, msg.id, !msg.read);
+      showSuccessModal('Voicemail Updated', `Marked message as ${!msg.read ? 'read' : 'unread'}`);
+      loadVoicemailData();
+    } catch (err: any) {
+      showErrorModal('Update Failed', err.message || 'Failed to update read status');
+    }
+  };
+
+  const handleDeleteVoicemail = async (msg: any) => {
+    if (!window.confirm(`Delete voicemail message from ${msg.caller_id_number}?`)) return;
+    try {
+      if (playingRecordingId === msg.id) {
+        stopAudio();
+      }
+      await apiService.deleteVoicemailMessage(token, msg.id);
+      showSuccessModal('Voicemail Deleted', 'Voicemail message removed successfully');
+      loadVoicemailData();
+    } catch (err: any) {
+      showErrorModal('Delete Failed', err.message || 'Failed to delete voicemail');
+    }
+  };
+
   const loadReport = async () => {
     try {
       setLoading(true);
@@ -257,6 +379,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         setReportData(data);
       } else if (activeTab === 'disposition') {
         await loadDispositionData();
+      } else if (activeTab === 'voicemail') {
+        await loadVoicemailData();
       } else if (activeTab === 'cdr') {
         const data = await apiService.getCdrReport(token, selectedTenant, startDate, endDate, directionFilter, dispositionFilter);
         setReportData(data);
@@ -279,10 +403,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
 
   useEffect(() => {
     loadReport();
-  }, [token, activeTab, selectedTenant, startDate, endDate, directionFilter, dispositionFilter]);
+  }, [token, activeTab, selectedTenant, startDate, endDate, directionFilter, dispositionFilter, vmExtensionFilter, vmReadFilter]);
 
   const exportToCsv = () => {
-    const dataToExport = activeTab === 'disposition' ? dispositionData?.breakdown : reportData;
+    const dataToExport = activeTab === 'disposition' 
+      ? dispositionData?.breakdown 
+      : activeTab === 'voicemail' 
+      ? voicemailData?.messages 
+      : reportData;
     if (!dataToExport || dataToExport.length === 0) {
       showErrorModal('Export Notice', 'No data available to export for the current filters.');
       return;
@@ -429,6 +557,139 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         <span className="text-sm text-[var(--pbx-text-secondary)]">
           {r.avg_billsec}<span className="text-xs text-[var(--pbx-text-muted)] ml-0.5">s</span>
         </span>
+      )
+    }
+  ];
+
+  const voicemailColumns = [
+    {
+      key: 'created_at',
+      header: 'Received At',
+      render: (r: any) => (
+        <span className="text-xs font-medium text-[var(--pbx-text-primary)]">
+          {r.created_at ? new Date(r.created_at).toLocaleString() : 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'extension_number',
+      header: 'Mailbox / Extension',
+      render: (r: any) => (
+        <Inline gap={2} align="center">
+          <span className="font-mono text-xs px-2 py-0.5 rounded bg-[var(--pbx-bg-subtle)] border border-[var(--pbx-border-default)] text-[var(--pbx-text-primary)] font-medium">
+            {r.extension_number || r.mailbox}
+          </span>
+          {r.display_name && (
+            <span className="text-xs text-[var(--pbx-text-muted)] font-normal">
+              ({r.display_name})
+            </span>
+          )}
+        </Inline>
+      )
+    },
+    {
+      key: 'caller_id_number',
+      header: 'Caller ID',
+      render: (r: any) => (
+        <Stack gap={0.5}>
+          <span className="font-semibold text-sm text-[var(--pbx-text-primary)]">
+            {r.caller_id_number}
+          </span>
+          {r.caller_id_name && r.caller_id_name !== r.caller_id_number && (
+            <span className="text-xs text-[var(--pbx-text-muted)]">
+              {r.caller_id_name}
+            </span>
+          )}
+        </Stack>
+      )
+    },
+    {
+      key: 'duration',
+      header: 'Duration',
+      render: (r: any) => {
+        const dur = r.duration || 0;
+        const mins = Math.floor(dur / 60);
+        const secs = dur % 60;
+        return (
+          <span className="font-mono text-xs font-medium text-[var(--pbx-text-primary)]">
+            {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'read',
+      header: 'Status',
+      render: (r: any) => (
+        <Badge variant={r.read ? 'neutral' : 'warning'}>
+          {r.read ? 'Read' : 'New / Unread'}
+        </Badge>
+      )
+    },
+    {
+      key: 'audio',
+      header: 'Audio Playback',
+      render: (r: any) => {
+        const isThisPlaying = playingRecordingId === r.id;
+        const isLoadingThis = audioLoadingId === r.id;
+        return (
+          <Inline gap={1.5} align="center">
+            <Button
+              variant={isThisPlaying ? 'primary' : 'secondary'}
+              size="sm"
+              disabled={isLoadingThis}
+              leftIcon={
+                isLoadingThis ? (
+                  <RotateCcw size={12} className="animate-spin" />
+                ) : isThisPlaying ? (
+                  <Pause size={12} />
+                ) : (
+                  <Play size={12} />
+                )
+              }
+              onClick={() => handlePlayVoicemail(r)}
+            >
+              {isLoadingThis ? 'Loading' : isThisPlaying ? 'Pause' : 'Play'}
+            </Button>
+            <a
+              href={`${getApiBaseUrl()}/api/v1/reports/voicemail/${r.id}/audio`}
+              download={`voicemail_${r.caller_id_number}_${r.id}.wav`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center p-1.5 rounded text-[var(--pbx-text-muted)] hover:text-[var(--pbx-text-primary)] hover:bg-[var(--pbx-bg-subtle)] transition-colors"
+              title="Download audio WAV"
+            >
+              <Download size={14} />
+            </a>
+          </Inline>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (r: any) => (
+        <Inline gap={1} align="center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleToggleVoicemailRead(r)}
+            leftIcon={r.read ? <Mail size={12} /> : <MailOpen size={12} />}
+            title={r.read ? 'Mark as Unread' : 'Mark as Read'}
+          >
+            {r.read ? 'Mark Unread' : 'Mark Read'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteVoicemail(r)}
+            className="text-[var(--pbx-danger-text,#ef4444)] hover:bg-[var(--pbx-danger-subtle,#fee2e2)]"
+            leftIcon={<Trash2 size={12} />}
+            title="Delete voicemail"
+          >
+            Delete
+          </Button>
+        </Inline>
       )
     }
   ];
@@ -782,12 +1043,85 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         items={[
           { id: 'summary', label: 'Summarized Reports (Traffic)', icon: <PieChart size={16} /> },
           { id: 'disposition', label: 'Disposition Summary', icon: <CheckCircle2 size={16} /> },
+          { id: 'voicemail', label: 'Voicemail Analytics', icon: <Voicemail size={16} /> },
           { id: 'cdr', label: 'Call Detail Records (CDR)', icon: <FileText size={16} /> },
           { id: 'internal', label: 'Internal Calls Summary', icon: <PhoneCall size={16} /> },
           { id: 'outbound', label: 'Outbound Calls Analytics', icon: <PhoneOutgoing size={16} /> },
           { id: 'recordings', label: 'Voice Recordings', icon: <Disc size={16} /> },
         ]}
       />
+
+      {/* Voicemail Analytics Panel */}
+      {activeTab === 'voicemail' && (
+        <Stack gap="6">
+          <Grid cols={4} gap="4">
+            <StatCard
+              title="Total Voicemails"
+              value={voicemailData?.total_messages ?? 0}
+              icon={<Voicemail size={20} />}
+            />
+            <StatCard
+              title="Unread Messages"
+              value={voicemailData?.unread_messages ?? 0}
+              icon={<Mail size={20} />}
+              trend={voicemailData?.unread_messages > 0 ? `${voicemailData.unread_messages} unread` : undefined}
+            />
+            <StatCard
+              title="Total Duration"
+              value={`${Math.floor((voicemailData?.total_duration_seconds ?? 0) / 60)}m ${(voicemailData?.total_duration_seconds ?? 0) % 60}s`}
+              icon={<Volume2 size={20} />}
+            />
+            <StatCard
+              title="Configured Mailboxes"
+              value={voicemailData?.summary?.length ?? 0}
+              icon={<PhoneCall size={20} />}
+            />
+          </Grid>
+
+          <FilterBar
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setVmExtensionFilter('');
+                  setVmReadFilter('all');
+                }}
+              >
+                Reset Filters
+              </Button>
+            }
+            filters={
+              <Inline gap="3" align="center" wrap={false} className="flex-wrap md:flex-nowrap">
+                <div className="w-48">
+                  <Input
+                    placeholder="Filter by Extension..."
+                    value={vmExtensionFilter}
+                    onChange={(e) => setVmExtensionFilter(e.target.value)}
+                  />
+                </div>
+                <div className="w-44">
+                  <Select
+                    value={vmReadFilter}
+                    onChange={(e) => setVmReadFilter(e.target.value as any)}
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="unread">Unread Only</option>
+                    <option value="read">Read Only</option>
+                  </Select>
+                </div>
+              </Inline>
+            }
+          />
+
+          <DataTable
+            columns={voicemailColumns}
+            data={voicemailData?.messages || []}
+            isLoading={voicemailLoading}
+            emptyTitle="No voicemail messages found"
+          />
+        </Stack>
+      )}
 
       {/* Data Tables */}
       {activeTab === 'summary' && (
