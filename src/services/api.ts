@@ -336,6 +336,27 @@ export const apiService = {
     if (!res.ok) throw new Error('Failed to delete route');
   },
 
+  async getInternalRoutingPolicy(token: string, tenantId?: string) {
+    const query = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/internal-policy${query}`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error('Failed to fetch internal routing policy');
+    return res.json();
+  },
+
+  async updateInternalRoutingPolicy(token: string, allowInternalCalls: boolean, tenantId?: string) {
+    const query = tenantId ? `?tenant_id=${tenantId}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/v1/routing/internal-policy${query}`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ allow_internal_calls: allowInternalCalls }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to update internal routing policy');
+    }
+    return res.json();
+  },
+
   // Queues CRUD
   async getQueues(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/queues`, { headers: getHeaders(token) });

@@ -12,6 +12,8 @@ import {
   FormField,
   Modal,
   Badge,
+  Switch,
+  Card,
 } from './ui';
 import { DataTable, FilterBar } from './patterns';
 
@@ -27,6 +29,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const [extensions, setExtensions] = useState<any[]>([]);
   const [queues, setQueues] = useState<any[]>([]);
   const [ivrs, setIvrs] = useState<any[]>([]);
+  const [huntGroups, setHuntGroups] = useState<any[]>([]);
+  const [conferences, setConferences] = useState<any[]>([]);
   const [dids, setDids] = useState<any[]>([]);
   const [gateways, setGateways] = useState<any[]>([]);
   const [trunks, setTrunks] = useState<any[]>([]);
@@ -35,6 +39,11 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
+
+  // Internal Calling Policy State
+  const [allowInternalCalls, setAllowInternalCalls] = useState<boolean>(true);
+  const [updatingInternalPolicy, setUpdatingInternalPolicy] = useState<boolean>(false);
+  const [policyTenantId, setPolicyTenantId] = useState<string>(user?.role === 'SUPER_ADMIN' ? '' : (user?.tenant_id || ''));
 
   const [formData, setFormData] = useState({
     name: '',
@@ -62,7 +71,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [rData, tData, extData, qData, ivrData, didData, gData, trData] = await Promise.allSettled([
+      const [rData, tData, extData, qData, ivrData, didData, gData, trData, hgData, confData, polData] = await Promise.allSettled([
         apiService.getRoutes(token),
         user?.role === 'SUPER_ADMIN' ? apiService.getTenants(token) : Promise.resolve([]),
         apiService.getExtensions(token),
@@ -71,16 +80,29 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
         apiService.getDids(token),
         apiService.getGateways(token),
         apiService.getTrunks(token),
+        apiService.getHuntGroups(token),
+        apiService.getConferences(token),
+        apiService.getInternalRoutingPolicy(token, (user?.role === 'SUPER_ADMIN' ? policyTenantId : user?.tenant_id) || undefined),
       ]);
 
       if (rData.status === 'fulfilled') setRoutes(rData.value);
-      if (tData.status === 'fulfilled') setTenants(tData.value);
+      if (tData.status === 'fulfilled') {
+        setTenants(tData.value);
+        if (user?.role === 'SUPER_ADMIN' && tData.value.length > 0 && !policyTenantId) {
+          setPolicyTenantId(tData.value[0].id);
+        }
+      }
       if (extData.status === 'fulfilled') setExtensions(extData.value);
       if (qData.status === 'fulfilled') setQueues(qData.value);
       if (ivrData.status === 'fulfilled') setIvrs(ivrData.value);
       if (didData.status === 'fulfilled') setDids(didData.value);
       if (gData.status === 'fulfilled') setGateways(gData.value);
       if (trData.status === 'fulfilled') setTrunks(trData.value);
+      if (hgData.status === 'fulfilled') setHuntGroups(hgData.value);
+      if (confData.status === 'fulfilled') setConferences(confData.value);
+      if (polData.status === 'fulfilled' && polData.value) {
+        setAllowInternalCalls(polData.value.allow_internal_calls ?? true);
+      }
     } catch (err) {
       console.error('Failed to load routing data:', err);
     } finally {
@@ -91,6 +113,36 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
   useEffect(() => {
     loadData();
   }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const tid = user?.role === 'SUPER_ADMIN' ? policyTenantId : user?.tenant_id;
+    if (user?.role === 'SUPER_ADMIN' && !tid) return;
+    apiService.getInternalRoutingPolicy(token, tid || undefined)
+      .then(res => {
+        if (res && res.allow_internal_calls !== undefined) {
+          setAllowInternalCalls(res.allow_internal_calls);
+        }
+      })
+      .catch(err => console.error('Failed to load internal policy for tenant:', err));
+  }, [policyTenantId, token, user?.role, user?.tenant_id]);
+
+  const handleToggleInternalCalls = async (newVal: boolean) => {
+    try {
+      setUpdatingInternalPolicy(true);
+      const tid = (user?.role === 'SUPER_ADMIN' ? policyTenantId : user?.tenant_id) || undefined;
+      await apiService.updateInternalRoutingPolicy(token, newVal, tid);
+      setAllowInternalCalls(newVal);
+      showSuccessModal(
+        'Internal Calling Policy Updated',
+        `Internal extension-to-extension calling is now ${newVal ? 'ENABLED' : 'DISABLED (calls rejected with 403 Forbidden)'}.`
+      );
+    } catch (err: any) {
+      showErrorModal('Update Failed', err.message || 'Could not update internal calling policy');
+    } finally {
+      setUpdatingInternalPolicy(false);
+    }
+  };
 
   // Combine Gateways and Trunks for selection
   const combinedGateways = useMemo(() => {
@@ -142,6 +194,16 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     return ivrs.filter(i => i.tenant_id === activeCreateTenantId);
   }, [ivrs, activeCreateTenantId]);
 
+  const filteredHuntGroups = useMemo(() => {
+    if (!activeCreateTenantId) return huntGroups;
+    return huntGroups.filter(h => h.tenant_id === activeCreateTenantId);
+  }, [huntGroups, activeCreateTenantId]);
+
+  const filteredConferences = useMemo(() => {
+    if (!activeCreateTenantId) return conferences;
+    return conferences.filter(c => c.tenant_id === activeCreateTenantId);
+  }, [conferences, activeCreateTenantId]);
+
   const filteredDids = useMemo(() => {
     if (!activeCreateTenantId) return dids;
     return dids.filter(d => d.tenant_id === activeCreateTenantId || !d.tenant_id);
@@ -159,6 +221,16 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
           value: q.queue_number,
           label: q.queue_number + ' — ' + q.name
         }));
+      case 'hunt_group':
+        return filteredHuntGroups.map(h => ({
+          value: h.extension_number,
+          label: `${h.extension_number} — ${h.name} (${h.strategy || 'simultaneous'})`
+        }));
+      case 'conference':
+        return filteredConferences.map(c => ({
+          value: c.extension_number,
+          label: `${c.extension_number} — ${c.name} (PIN: ${c.pin || 'None'})`
+        }));
       case 'ivr':
         return filteredIvrs.map(i => ({
           value: i.name,
@@ -172,7 +244,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       default:
         return [];
     }
-  }, [formData.destination_type, filteredExtensions, filteredQueues, filteredIvrs]);
+  }, [formData.destination_type, filteredExtensions, filteredQueues, filteredHuntGroups, filteredConferences, filteredIvrs]);
 
   const handleTenantChange = (newTenantId: string) => {
     setFormData(prev => ({
@@ -209,6 +281,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     let def = '';
     if (newType === 'queue' && filteredQueues.length > 0) def = filteredQueues[0].queue_number;
     else if (newType === 'extension' && filteredExtensions.length > 0) def = filteredExtensions[0].extension_number;
+    else if (newType === 'hunt_group' && filteredHuntGroups.length > 0) def = filteredHuntGroups[0].extension_number;
+    else if (newType === 'conference' && filteredConferences.length > 0) def = filteredConferences[0].extension_number;
     else if (newType === 'ivr' && filteredIvrs.length > 0) def = filteredIvrs[0].name;
     else if (newType === 'voicemail' && filteredExtensions.length > 0) def = filteredExtensions[0].extension_number;
     else if (newType === 'gateway' && combinedGateways.length > 0) {
@@ -298,6 +372,16 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     return ivrs.filter(i => i.tenant_id === activeEditTenantId);
   }, [ivrs, activeEditTenantId]);
 
+  const editFilteredHuntGroups = useMemo(() => {
+    if (!activeEditTenantId) return huntGroups;
+    return huntGroups.filter(h => h.tenant_id === activeEditTenantId);
+  }, [huntGroups, activeEditTenantId]);
+
+  const editFilteredConferences = useMemo(() => {
+    if (!activeEditTenantId) return conferences;
+    return conferences.filter(c => c.tenant_id === activeEditTenantId);
+  }, [conferences, activeEditTenantId]);
+
   const editFilteredDids = useMemo(() => {
     if (!activeEditTenantId) return dids;
     return dids.filter(d => d.tenant_id === activeEditTenantId || !d.tenant_id);
@@ -315,6 +399,16 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
           value: q.queue_number,
           label: q.queue_number + ' — ' + q.name
         }));
+      case 'hunt_group':
+        return editFilteredHuntGroups.map(h => ({
+          value: h.extension_number,
+          label: `${h.extension_number} — ${h.name} (${h.strategy || 'simultaneous'})`
+        }));
+      case 'conference':
+        return editFilteredConferences.map(c => ({
+          value: c.extension_number,
+          label: `${c.extension_number} — ${c.name} (PIN: ${c.pin || 'None'})`
+        }));
       case 'ivr':
         return editFilteredIvrs.map(i => ({
           value: i.name,
@@ -328,7 +422,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
       default:
         return [];
     }
-  }, [editFormData.destination_type, editFilteredExtensions, editFilteredQueues, editFilteredIvrs]);
+  }, [editFormData.destination_type, editFilteredExtensions, editFilteredQueues, editFilteredHuntGroups, editFilteredConferences, editFilteredIvrs]);
 
   const handleEditTenantChange = (newTenantId: string) => {
     setEditFormData(prev => ({
@@ -342,6 +436,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
     let def = '';
     if (newType === 'queue' && editFilteredQueues.length > 0) def = editFilteredQueues[0].queue_number;
     else if (newType === 'extension' && editFilteredExtensions.length > 0) def = editFilteredExtensions[0].extension_number;
+    else if (newType === 'hunt_group' && editFilteredHuntGroups.length > 0) def = editFilteredHuntGroups[0].extension_number;
+    else if (newType === 'conference' && editFilteredConferences.length > 0) def = editFilteredConferences[0].extension_number;
     else if (newType === 'ivr' && editFilteredIvrs.length > 0) def = editFilteredIvrs[0].name;
     else if (newType === 'voicemail' && editFilteredExtensions.length > 0) def = editFilteredExtensions[0].extension_number;
 
@@ -470,6 +566,51 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
         />
       }
     >
+      {/* INTERNAL CALLING POLICY CARD */}
+      <div style={{ marginBottom: '20px' }}>
+        <Card
+          title="Internal Extension Routing Policy"
+          subtitle="Configure whether extensions can call each other directly within this tenant"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ maxWidth: '650px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--pbx-text-primary)', marginBottom: '4px' }}>
+                Allow Internal Extension-to-Extension Calls
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--pbx-text-muted)', lineHeight: '1.4' }}>
+                When disabled, internal extension calls will be immediately rejected with <code>403 Forbidden (CALL_REJECTED)</code>, preventing any internal dialed extensions from ringing.
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                <div style={{ minWidth: '180px' }}>
+                  <Select
+                    value={policyTenantId}
+                    onChange={e => setPolicyTenantId(e.target.value)}
+                    disabled={updatingInternalPolicy}
+                  >
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Switch
+                  checked={allowInternalCalls}
+                  onChange={handleToggleInternalCalls}
+                  disabled={updatingInternalPolicy}
+                  label={allowInternalCalls ? 'Allowed' : 'Disabled'}
+                />
+                <Badge variant={allowInternalCalls ? 'success' : 'danger'}>
+                  {allowInternalCalls ? 'Enabled' : 'Blocked (403)'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <DataTable
         columns={columns}
         data={filteredRoutes}
@@ -587,6 +728,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     <>
                       <option value="queue">Call Queue</option>
                       <option value="extension">Extension</option>
+                      <option value="hunt_group">Hunt Group</option>
+                      <option value="conference">Conference Room</option>
                       <option value="ivr">IVR Menu Flow</option>
                       <option value="voicemail">Voicemail Box</option>
                     </>
@@ -624,7 +767,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                 hint={
                   user?.role === 'SUPER_ADMIN' && !formData.tenant_id
                     ? 'Select a Target Tenant first to view available targets'
-                    : `(${formData.destination_type === 'queue' ? filteredQueues.length + ' queue(s)' : formData.destination_type === 'ivr' ? filteredIvrs.length + ' IVR flow(s)' : filteredExtensions.length + ' extension(s)'} available)`
+                    : `(${formData.destination_type === 'queue' ? filteredQueues.length + ' queue(s)' : formData.destination_type === 'ivr' ? filteredIvrs.length + ' IVR flow(s)' : formData.destination_type === 'hunt_group' ? filteredHuntGroups.length + ' hunt group(s)' : formData.destination_type === 'conference' ? filteredConferences.length + ' conference(s)' : filteredExtensions.length + ' extension(s)'} available)`
                 }
               >
                 {destinationOptions.length > 0 ? (
@@ -634,7 +777,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     required
                     disabled={user?.role === 'SUPER_ADMIN' && !formData.tenant_id}
                   >
-                    <option value="">-- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                    <option value="">-- Select {formData.destination_type === 'queue' ? 'Call Queue' : formData.destination_type === 'ivr' ? 'IVR Flow' : formData.destination_type === 'hunt_group' ? 'Hunt Group' : formData.destination_type === 'conference' ? 'Conference' : 'Extension'} --</option>
                     {destinationOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
@@ -764,6 +907,8 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     <>
                       <option value="queue">Call Queue</option>
                       <option value="extension">Extension</option>
+                      <option value="hunt_group">Hunt Group</option>
+                      <option value="conference">Conference Room</option>
                       <option value="ivr">IVR Menu Flow</option>
                       <option value="voicemail">Voicemail Box</option>
                     </>
@@ -802,7 +947,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                     onChange={e => setEditFormData({ ...editFormData, destination: e.target.value })}
                     required
                   >
-                    <option value="">-- Select {editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : 'Extension'} --</option>
+                    <option value="">-- Select {editFormData.destination_type === 'queue' ? 'Call Queue' : editFormData.destination_type === 'ivr' ? 'IVR Flow' : editFormData.destination_type === 'hunt_group' ? 'Hunt Group' : editFormData.destination_type === 'conference' ? 'Conference' : 'Extension'} --</option>
                     {editDestinationOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
