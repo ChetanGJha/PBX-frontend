@@ -103,22 +103,46 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     };
   }, []);
 
-  // WebSocket Connection for Real-Time Live Reports
+  // Keep latest filters in ref so WebSocket listener never needs to recreate connection on filter changes
+  const filtersRef = useRef({
+    activeTab,
+    selectedTenant,
+    directionFilter,
+    dispositionFilter,
+    startDate,
+    endDate
+  });
+
+  useEffect(() => {
+    filtersRef.current = {
+      activeTab,
+      selectedTenant,
+      directionFilter,
+      dispositionFilter,
+      startDate,
+      endDate
+    };
+  }, [activeTab, selectedTenant, directionFilter, dispositionFilter, startDate, endDate]);
+
+  // WebSocket Connection for Real-Time Live Reports (Stable connection on token)
   useEffect(() => {
     if (!token) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use host from current browser window (nginx proxies /ws to api:8000)
-    const wsUrl = `${protocol}//${window.location.host}/ws/reports?token=${encodeURIComponent(token)}`;
+    let isMounted = true;
     let reconnectTimer: any = null;
     let pingInterval: any = null;
 
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/reports?token=${encodeURIComponent(token)}`;
+
     const connectWs = () => {
+      if (!isMounted) return;
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          if (!isMounted) return;
           setWsConnected(true);
           pingInterval = setInterval(() => {
             if (ws.readyState === WebSocket.OPEN) {
@@ -128,26 +152,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         };
 
         ws.onmessage = (event) => {
+          if (!isMounted) return;
           try {
             if (event.data === 'pong') return;
             const payload = JSON.parse(event.data);
+            const { activeTab: curTab, selectedTenant: curTenant, directionFilter: curDir, dispositionFilter: curDisp, startDate: curStart, endDate: curEnd } = filtersRef.current;
+
             if (payload.event === 'cdr.created' || payload.type === 'cdr.created') {
               const cdr = payload.data;
               setLivePulse(true);
-              setTimeout(() => setLivePulse(false), 2000);
+              setTimeout(() => { if (isMounted) setLivePulse(false); }, 2000);
 
               // Prepend to CDR table if viewing CDR tab
               setReportData((prev) => {
-                if (activeTab === 'cdr') {
-                  const matchesTenant = !selectedTenant || cdr.tenant_id === selectedTenant;
-                  const matchesDir = directionFilter === 'all' || cdr.direction === directionFilter;
+                if (curTab === 'cdr') {
+                  const matchesTenant = !curTenant || cdr.tenant_id === curTenant;
+                  const matchesDir = curDir === 'all' || cdr.direction === curDir;
                   let matchesDisp = true;
-                  if (dispositionFilter !== 'all') {
+                  if (curDisp !== 'all') {
                     const isAnswered = cdr.billsec > 0 || cdr.hangup_cause === 'NORMAL_CLEARING';
-                    if (dispositionFilter === 'ANSWERED') matchesDisp = isAnswered;
-                    else if (dispositionFilter === 'NO_ANSWER') matchesDisp = !isAnswered && ['NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE'].includes(cdr.hangup_cause);
-                    else if (dispositionFilter === 'BUSY') matchesDisp = !isAnswered && ['USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
-                    else if (dispositionFilter === 'FAILED') matchesDisp = !isAnswered && !['NORMAL_CLEARING', 'NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE', 'USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
+                    if (curDisp === 'ANSWERED') matchesDisp = isAnswered;
+                    else if (curDisp === 'NO_ANSWER') matchesDisp = !isAnswered && ['NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE'].includes(cdr.hangup_cause);
+                    else if (curDisp === 'BUSY') matchesDisp = !isAnswered && ['USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
+                    else if (curDisp === 'FAILED') matchesDisp = !isAnswered && !['NORMAL_CLEARING', 'NO_ANSWER', 'ORIGINATOR_CANCEL', 'NORMAL_TEMPORARY_FAILURE', 'NO_USER_RESPONSE', 'USER_BUSY', 'CALL_REJECTED'].includes(cdr.hangup_cause);
                   }
                   if (matchesTenant && matchesDir && matchesDisp) {
                     return [cdr, ...prev];
@@ -157,17 +184,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
               });
 
               // If viewing disposition or summary tab, refresh metrics
-              if (activeTab === 'disposition') {
+              if (curTab === 'disposition') {
                 loadDispositionData();
-              } else if (activeTab === 'voicemail') {
+              } else if (curTab === 'voicemail') {
                 loadVoicemailData();
-              } else if (activeTab === 'summary') {
-                apiService.getTenantSummaryReport(token, startDate, endDate).then(setReportData).catch(console.error);
+              } else if (curTab === 'summary') {
+                apiService.getTenantSummaryReport(token, curStart, curEnd).then(setReportData).catch(console.error);
               }
             } else if (payload.type === 'voicemail.created' || payload.event === 'voicemail.created') {
               setLivePulse(true);
-              setTimeout(() => setLivePulse(false), 2000);
-              if (activeTab === 'voicemail') {
+              setTimeout(() => { if (isMounted) setLivePulse(false); }, 2000);
+              if (curTab === 'voicemail') {
                 loadVoicemailData();
               }
             }
@@ -177,12 +204,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
         };
 
         ws.onclose = () => {
+          if (!isMounted) return;
           setWsConnected(false);
           if (pingInterval) clearInterval(pingInterval);
-          reconnectTimer = setTimeout(connectWs, 3000);
+          reconnectTimer = setTimeout(connectWs, 5000);
         };
 
         ws.onerror = () => {
+          if (!isMounted) return;
           setWsConnected(false);
         };
       } catch (e) {
@@ -193,13 +222,17 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ token, user }) => {
     connectWs();
 
     return () => {
+      isMounted = false;
       if (pingInterval) clearInterval(pingInterval);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
-  }, [token, activeTab, selectedTenant, directionFilter, dispositionFilter, startDate, endDate]);
+  }, [token]);
 
   const handlePlayRecording = async (rec: any) => {
     const recId = rec.recording_id || rec.id;

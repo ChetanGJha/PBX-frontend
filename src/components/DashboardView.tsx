@@ -114,13 +114,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ token, user, setAc
 
     connectWs();
 
-    // Safety periodic refresh every 15 seconds
-    const interval = setInterval(() => {
-      fetchMetrics();
-    }, 15000);
-
     return () => {
-      clearInterval(interval);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) ws.close();
     };

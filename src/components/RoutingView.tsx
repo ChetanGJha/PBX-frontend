@@ -201,7 +201,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
   const filteredConferences = useMemo(() => {
     if (!activeCreateTenantId) return conferences;
-    return conferences.filter(c => c.tenant_id === activeCreateTenantId);
+    return conferences.filter(c => c.tenant_id === activeCreateTenantId || !c.tenant_id);
   }, [conferences, activeCreateTenantId]);
 
   const filteredDids = useMemo(() => {
@@ -379,7 +379,7 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
 
   const editFilteredConferences = useMemo(() => {
     if (!activeEditTenantId) return conferences;
-    return conferences.filter(c => c.tenant_id === activeEditTenantId);
+    return conferences.filter(c => c.tenant_id === activeEditTenantId || !c.tenant_id);
   }, [conferences, activeEditTenantId]);
 
   const editFilteredDids = useMemo(() => {
@@ -940,7 +940,15 @@ export const RoutingView: React.FC<RoutingViewProps> = ({ token, user }) => {
                 </Select>
               </FormField>
             ) : (
-              <FormField label="Destination Target" required>
+              <FormField
+                label="Destination Target"
+                required
+                hint={
+                  editDestinationOptions.length === 0
+                    ? `No ${editFormData.destination_type}s found for this tenant. Create one or enter target number manually.`
+                    : `(${editDestinationOptions.length} available)`
+                }
+              >
                 {editDestinationOptions.length > 0 ? (
                   <Select
                     value={editFormData.destination}
