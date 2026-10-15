@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Input,
+  Select,
   FormField,
   Badge,
   Modal,
@@ -26,6 +27,7 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
   const { showSuccessModal, showErrorModal } = useToast();
   const [conferences, setConferences] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
+  const [selectedTenantFilter, setSelectedTenantFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -77,7 +79,7 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
       wait_for_moderator: false,
       announce_join_leave: true,
       enabled: true,
-      tenant_id: user?.tenant_id || (tenants[0]?.id || '')
+      tenant_id: user?.role === 'SUPER_ADMIN' ? (selectedTenantFilter || (tenants[0]?.id || '')) : (user?.tenant_id || '')
     });
     setShowModal(true);
   };
@@ -94,7 +96,7 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
       wait_for_moderator: !!c.wait_for_moderator,
       announce_join_leave: !!c.announce_join_leave,
       enabled: c.enabled !== false,
-      tenant_id: c.tenant_id || ''
+      tenant_id: c.tenant_id || (user?.role === 'SUPER_ADMIN' ? (tenants[0]?.id || '') : '')
     });
     setShowModal(true);
   };
@@ -135,12 +137,24 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
     }
   };
 
-  const filtered = conferences.filter(c =>
-    (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.extension_number || '').includes(search)
-  );
+  const filtered = conferences.filter(c => {
+    const matchesSearch =
+      (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (c.extension_number || '').includes(search);
+    const matchesTenant = !selectedTenantFilter || c.tenant_id === selectedTenantFilter;
+    return matchesSearch && matchesTenant;
+  });
 
   const columns = [
+    ...(user?.role === 'SUPER_ADMIN' ? [{
+      key: 'tenant_name',
+      header: 'Tenant Organization',
+      render: (c: any) => (
+        <Badge variant="neutral">
+          {c.tenant_name || tenants.find(t => t.id === c.tenant_id)?.name || 'Default / Global'}
+        </Badge>
+      )
+    }] : []),
     {
       key: 'name',
       header: 'Room Name',
@@ -257,9 +271,24 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
           onSearchChange={setSearch}
           searchPlaceholder="Search conference rooms or extension..."
           actions={
-            <div className="text-xs text-[var(--pbx-text-muted)]">
-              Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> from any extension to join
-            </div>
+            <Inline gap="3" align="center">
+              {user?.role === 'SUPER_ADMIN' && tenants.length > 0 && (
+                <div className="w-56">
+                  <Select
+                    value={selectedTenantFilter}
+                    onChange={e => setSelectedTenantFilter(e.target.value)}
+                  >
+                    <option value="">All Tenants</option>
+                    {tenants.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+              <div className="text-xs text-[var(--pbx-text-muted)]">
+                Dial <span className="font-mono font-bold text-[var(--pbx-text-primary)]">3000-3999</span> to join
+              </div>
+            </Inline>
           }
         />
       }
@@ -297,6 +326,21 @@ export const ConferencesView: React.FC<ConferencesViewProps> = ({ token, user })
       >
         <form onSubmit={handleSubmit}>
           <Stack gap="4">
+            {user?.role === 'SUPER_ADMIN' && (
+              <FormField label="Tenant Organization" required hint="Tenant owning this conference room">
+                <Select
+                  value={formData.tenant_id}
+                  onChange={e => setFormData({ ...formData, tenant_id: e.target.value })}
+                  required
+                >
+                  <option value="">-- Select Tenant Organization --</option>
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.domain})</option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
+
             <FormField label="Room Name" required>
               <Input
                 required
