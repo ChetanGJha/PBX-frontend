@@ -36,7 +36,41 @@ export interface User {
   tenant_domain?: string;
   sip_domain?: string;
   allowed_modules?: string[];
+  tenant?: {
+    id?: string;
+    name?: string;
+    domain?: string;
+    sip_domain?: string;
+  };
 }
+
+export const MODULE_ALIASES: Record<string, string[]> = {
+  'call-routing': ['call-routing', 'routing'],
+  'ivr': ['ivr', 'ivrs'],
+  'hunt-groups': ['hunt-groups', 'huntgroups'],
+  'audio-prompts': ['audio-prompts', 'audio'],
+  'call-forwarding': ['call-forwarding', 'callforwarding'],
+  'call-block': ['call-block', 'callblock'],
+  'business-hours': ['business-hours', 'businesshours'],
+  'email-settings': ['email-settings', 'emailsettings'],
+  'tenant-dids': ['tenant-dids', 'dids'],
+  'tenant-trunks': ['tenant-trunks', 'trunks'],
+  'tenant-users': ['tenant-users', 'users'],
+};
+
+export function isModuleAllowed(tab: string, allowedModules: string[] = []): boolean {
+  if (!allowedModules || allowedModules.length === 0) return false;
+  if (allowedModules.includes(tab) || allowedModules.includes('*')) return true;
+  const aliases = MODULE_ALIASES[tab] || [];
+  return aliases.some(alias => allowedModules.includes(alias));
+}
+
+export const normalizeModuleId = (mod: string): string => {
+  for (const [stdId, aliases] of Object.entries(MODULE_ALIASES)) {
+    if (aliases.includes(mod)) return stdId;
+  }
+  return mod;
+};
 
 export interface AuthState {
   token: string | null;

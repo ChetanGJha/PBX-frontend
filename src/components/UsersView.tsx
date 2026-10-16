@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import type { User as UserType } from '../types';
+import { normalizeModuleId } from '../types';
 import { UserPlus, RefreshCw, Trash2, Settings } from 'lucide-react';
 
 // Design System imports
@@ -11,27 +12,30 @@ import { DataTable, FilterBar } from './patterns';
 import type { Column } from './patterns';
 
 const AVAILABLE_MODULES = [
-  { id: 'dashboard', label: 'Dashboard Overview', icon: 'LayoutDashboard', desc: 'System status & KPI widgets' },
-  { id: 'tenants', label: 'Tenants Registry', icon: 'Building2', desc: 'Tenant provisioning' },
-  { id: 'users', label: 'User Administration', icon: 'Users', desc: 'RBAC user management' },
-  { id: 'extensions', label: 'Extensions & SIP', icon: 'Phone', desc: 'Extension provisioning' },
-  { id: 'trunks', label: 'SIP Trunks & Gateways', icon: 'Server', desc: 'Upstream trunk routing' },
-  { id: 'dids', label: 'Inbound DIDs', icon: 'PhoneIncoming', desc: 'Phone number assignment' },
-  { id: 'routing', label: 'Dialplan & Outbound', icon: 'GitMerge', desc: 'Call routing logic' },
-  { id: 'queues', label: 'Call Queues & ACD', icon: 'Users2', desc: 'Call distribution' },
-  { id: 'huntgroups', label: 'Ring / Hunt Groups', icon: 'PhoneCall', desc: 'Multi-extension ringing' },
-  { id: 'ivrs', label: 'IVR Auto-Attendants', icon: 'GitFork', desc: 'Interactive voice response' },
-  { id: 'voicemail', label: 'Voicemail & Recording', icon: 'Voicemail', desc: 'Voicemail boxes' },
-  { id: 'callforwarding', label: 'Call Forwarding', icon: 'PhoneForwarded', desc: 'Forwarding rules' },
-  { id: 'audio', label: 'Audio Prompts Library', icon: 'Music', desc: 'Audio prompt assets' },
-  { id: 'businesshours', label: 'Business Hours & Time', icon: 'Clock', desc: 'Schedule-based routing' },
-  { id: 'conferences', label: 'Conference Bridges', icon: 'Users', desc: 'Multi-party conferencing' },
-  { id: 'callblock', label: 'Call Blocking / Blacklist', icon: 'ShieldAlert', desc: 'Inbound spam block' },
-  { id: 'contacts', label: 'Phonebook Contacts', icon: 'BookOpen', desc: 'Tenant contacts' },
-  { id: 'emailsettings', label: 'SMTP & Notification', icon: 'Mail', desc: 'Email alerts' },
-  { id: 'reports', label: 'CDR & Analytics', icon: 'BarChart2', desc: 'Call detail records' },
-  { id: 'xmlcurlconsole', label: 'xml_curl Console', icon: 'Code', desc: 'FreeSWITCH XML Debugger' },
-  { id: 'xmlcurltester', label: 'xml_curl Route Tester', icon: 'Terminal', desc: 'Dialplan Simulator' },
+  { id: 'dashboard', label: 'Dashboard Overview', desc: 'KPI metrics & status' },
+  { id: 'tenant-users', label: 'Admins & Users', desc: 'Tenant user administration' },
+  { id: 'extensions', label: 'SIP Extensions', desc: 'Extension provisioning' },
+  { id: 'tenant-dids', label: 'Assigned Inbound DIDs', desc: 'Inbound phone numbers' },
+  { id: 'tenant-trunks', label: 'Gateways / Trunks', desc: 'Upstream gateway routing' },
+  { id: 'call-routing', label: 'Call Routing & Outbound', desc: 'Dialplan and routing' },
+  { id: 'queues', label: 'Call Queues & ACD', desc: 'Queue distribution' },
+  { id: 'hunt-groups', label: 'Ring / Hunt Groups', desc: 'Multi-extension ringing' },
+  { id: 'ivr', label: 'IVR Flows & Auto-Attendant', desc: 'Interactive voice response' },
+  { id: 'voicemail', label: 'Voicemail & Recording', desc: 'Voicemail boxes' },
+  { id: 'call-forwarding', label: 'Call Forwarding Rules', desc: 'Call redirection rules' },
+  { id: 'audio-prompts', label: 'Audio Prompts Library', desc: 'WAV prompts & greetings' },
+  { id: 'conferences', label: 'Conference Bridges', desc: 'Multi-party conferencing' },
+  { id: 'call-block', label: 'Call Blocking / Blacklist', desc: 'Inbound spam rejection' },
+  { id: 'business-hours', label: 'Business Hours & Time', desc: 'Schedule-based rules' },
+  { id: 'contacts', label: 'Phonebook Contacts', desc: 'Shared contacts directory' },
+  { id: 'email-settings', label: 'SMTP & Notifications', desc: 'Email alerts configuration' },
+  { id: 'reports', label: 'CDR & Analytics', desc: 'Call detail records & analytics' },
+  // Global only modules (Super Admin)
+  { id: 'tenants', label: 'Tenants Registry (Global)', desc: 'Platform tenant provisioning', globalOnly: true },
+  { id: 'users', label: 'Global Platform Users', desc: 'Superadmin user management', globalOnly: true },
+  { id: 'trunks', label: 'Global SIP Trunks', desc: 'Global trunk inventory', globalOnly: true },
+  { id: 'dids', label: 'Global DID Inventory', desc: 'Global DID pool management', globalOnly: true },
+  { id: 'xmlcurl', label: 'FreeSWITCH Console', desc: 'FreeSWITCH XML Debugger', globalOnly: true },
 ];
 
 interface UsersViewProps {
@@ -66,6 +70,10 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
   const [permModalUser, setPermModalUser] = useState<UserType | null>(null);
   const [editModules, setEditModules] = useState<string[]>([]);
   const [savingPerms, setSavingPerms] = useState(false);
+
+  const modulesList = tenantScoped
+    ? AVAILABLE_MODULES.filter((m) => !(m as any).globalOnly)
+    : AVAILABLE_MODULES;
 
   const fetchData = async () => {
     try {
@@ -116,8 +124,11 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
 
       if (!tenantScoped && currentUser?.role === 'SUPER_ADMIN' && role !== 'SUPER_ADMIN' && targetTenantId) {
         payload.tenant_id = targetTenantId;
-      } else if (tenantScoped && currentUser?.tenant_id) {
-        payload.tenant_id = currentUser.tenant_id;
+      } else {
+        const resolvedTenantId = currentUser?.tenant_id || (currentUser as any)?.tenant?.id;
+        if (resolvedTenantId) {
+          payload.tenant_id = resolvedTenantId;
+        }
       }
 
       if (role === 'SUB_ADMIN') {
@@ -159,7 +170,9 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
 
   const openPermModal = (user: UserType) => {
     setPermModalUser(user);
-    setEditModules(user.allowed_modules || []);
+    const existing = user.allowed_modules || [];
+    const normalized = existing.map(normalizeModuleId);
+    setEditModules(Array.from(new Set(normalized)));
   };
 
   const handleSavePermissions = async (e: React.FormEvent) => {
@@ -422,7 +435,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
             {role === 'SUB_ADMIN' && (
               <FormField label="Allowed Modules">
                 <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto">
-                  {AVAILABLE_MODULES.map((m) => (
+                  {modulesList.map((m) => (
                     <Checkbox
                       key={m.id}
                       label={m.label}
@@ -457,7 +470,7 @@ export const UsersView: React.FC<UsersViewProps> = ({ token, currentUser, tenant
         <form id="edit-perms-form" onSubmit={handleSavePermissions}>
           <Stack gap="3">
             <div className="grid grid-cols-2 gap-2">
-              {AVAILABLE_MODULES.map((m) => (
+              {modulesList.map((m) => (
                 <Checkbox
                   key={m.id}
                   label={m.label}
