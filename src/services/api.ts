@@ -861,6 +861,46 @@ export const apiService = {
     return true;
   },
 
+  async getLiveConferences(token: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/live`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch live conference status');
+    return res.json();
+  },
+
+  async getConferenceLive(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/${id}/live`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch conference live status');
+    return res.json();
+  },
+
+  async terminateConference(token: string, id: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/${id}/terminate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to terminate conference');
+    }
+    return res.json();
+  },
+
+  async kickConferenceMember(token: string, id: string, memberId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/v1/conferences/${id}/kick/${memberId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to drop participant');
+    }
+    return res.json();
+  },
+
   // ─── Call Block (Blacklist) ──────────────────────────────────────────────────
   async getCallBlocks(token: string) {
     const res = await fetch(`${API_BASE_URL}/api/v1/call-block`, {

@@ -30,6 +30,7 @@ import { DesignSystemShowcase } from './components/DesignSystemShowcase';
 import { Modal, Button } from './components/ui';
 import { apiService } from './services/api';
 import type { SystemStatus, User, Tenant, Extension } from './types';
+import { isModuleAllowed } from './types';
 
 // ─── Role Permissions Matrix ──────────────────────────────────────────────────
 const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -53,7 +54,7 @@ const canAccess = (user: User | null, tab: string) => {
 
   // If sub-admin or custom allowed_modules
   if (role === 'SUB_ADMIN' || (user.allowed_modules && user.allowed_modules.length > 0)) {
-    return (user.allowed_modules || []).includes(tab);
+    return isModuleAllowed(tab, user.allowed_modules);
   }
 
   // Tenant master admin has full access to tenant suite

@@ -5,6 +5,7 @@ import {
   HelpCircle, ArrowLeftRight, UserCog, Layers, List, Users2, Ban, Contact, Clock, Mail, GitBranch
 } from 'lucide-react';
 import type { User as UserType } from '../types';
+import { isModuleAllowed } from '../types';
 import { Avatar, Badge } from './ui';
 
 import logoSvg from '../assets/Logo.svg';
@@ -98,7 +99,7 @@ function isItemVisible(item: NavItem, user: UserType | null, groupLabel?: string
   }
 
   if (role === 'SUB_ADMIN' || (user.allowed_modules && user.allowed_modules.length > 0)) {
-    return (user.allowed_modules || []).includes(item.id);
+    return isModuleAllowed(item.id, user.allowed_modules);
   }
 
   if (role === 'TENANT_ADMIN') {
